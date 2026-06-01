@@ -296,6 +296,7 @@ export default function InspectionDetailScreen() {
   const progress = inspection.checklist_items.length > 0
     ? Math.round((inspection.checkedCount / inspection.checklist_items.length) * 100)
     : 0;
+  const totalPhotos = inspection.checklist_items.reduce((sum, item) => sum + (item.photos?.length || 0), 0);
 
   return (
     <Screen>
@@ -349,7 +350,14 @@ export default function InspectionDetailScreen() {
         {inspection.status !== 'completed' && (
           <View style={styles.actionBar}>
             <TouchableOpacity style={styles.actionBarButton} onPress={takePhoto}>
-              <Feather name="camera" size={20} color="#6C63FF" />
+              <View style={styles.actionBarIconContainer}>
+                <Feather name="camera" size={20} color="#6C63FF" />
+                {totalPhotos > 0 && (
+                  <View style={styles.actionBarBadge}>
+                    <Text style={styles.actionBarBadgeText}>{totalPhotos}</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.actionBarButtonText}>拍照</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBarButton} onPress={() => setScannerVisible(true)}>
@@ -417,16 +425,27 @@ export default function InspectionDetailScreen() {
                   )}
 
                   {item.photos && item.photos.length > 0 && (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoRow}>
-                      {item.photos.map((photo, idx) => (
-                        <TouchableOpacity key={idx} onPress={() => {
-                          setSelectedPhoto(photo);
-                          setPhotoModalVisible(true);
-                        }}>
-                          <Image source={{ uri: photo }} style={styles.thumbnail} />
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
+                    <View style={styles.photoSection}>
+                      <View style={styles.photoHeader}>
+                        <Feather name="image" size={14} color="#6C63FF" />
+                        <Text style={styles.photoCountText}>照片 ({item.photos.length})</Text>
+                      </View>
+                      <View style={styles.photoRow}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          {item.photos.map((photo, idx) => (
+                            <TouchableOpacity key={idx} onPress={() => {
+                              setSelectedPhoto(photo);
+                              setPhotoModalVisible(true);
+                            }} style={styles.photoContainer}>
+                              <Image source={{ uri: photo }} style={styles.thumbnail} />
+                              <View style={styles.photoBadge}>
+                                <Text style={styles.photoBadgeText}>{idx + 1}</Text>
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    </View>
                   )}
                 </View>
               ))}
@@ -751,6 +770,26 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
   },
+  actionBarIconContainer: {
+    position: 'relative',
+  },
+  actionBarBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    backgroundColor: '#6C63FF',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  actionBarBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
   actionBarButtonText: {
     fontSize: 14,
     fontWeight: '600',
@@ -838,7 +877,44 @@ const styles = StyleSheet.create({
     color: '#6C63FF',
   },
   photoRow: {
+    marginTop: 8,
+  },
+  photoSection: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 12,
     marginTop: 12,
+  },
+  photoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  photoCountText: {
+    fontSize: 13,
+    color: '#6C63FF',
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  photoContainer: {
+    position: 'relative',
+    marginRight: 8,
+  },
+  photoBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: 'rgba(108, 99, 255, 0.9)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
   },
   thumbnail: {
     width: 60,
