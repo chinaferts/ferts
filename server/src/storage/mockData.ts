@@ -153,12 +153,43 @@ export function mockGetInspections(filters?: { status?: string; checklist_id?: s
 export function mockGetInspection(id: string) {
   const inspection = inspections.find(i => i.id === id);
   if (inspection) {
-    const records = mockGetInspectionRecords(id);
+    let records = mockGetInspectionRecords(id);
+    
+    // 如果没有记录且使用了通用模板(id=0)，自动补充通用清单项
+    if (records.length === 0 && (String(inspection.checklist_id) === '0' || inspection.checklist_id === 0)) {
+      records = UNIVERSAL_CHECKLIST_ITEMS.map(item => ({
+        id: String(nextRecordId++),
+        inspection_id: id,
+        checklist_item_id: item.id,
+        item_name: item.name,
+        item_description: item.description,
+        item_category: item.category,
+        result: 'unchecked',
+        score: null,
+        notes: null,
+        created_at: new Date().toISOString()
+      }));
+      // 添加到全局记录中
+      inspectionRecords.push(...records);
+    }
+    
     const defectList = mockGetDefects(id);
     return { ...inspection, inspection_records: records, defects: defectList };
   }
   return null;
 }
+
+// 通用验货模板清单项（硬编码）
+const UNIVERSAL_CHECKLIST_ITEMS = [
+  { id: 'u1', checklist_id: '0', name: '仓库照片', description: '拍摄大货仓库照片及码堆情况', category: '仓库', is_required: true, item_order: 1 },
+  { id: 'u2', checklist_id: '0', name: '外箱检查', description: '检查外箱箱唛及尺寸重量', category: '外箱', is_required: true, item_order: 2 },
+  { id: 'u3', checklist_id: '0', name: '内箱检查', description: '检查内箱唛头及规格重量', category: '内箱', is_required: true, item_order: 3 },
+  { id: 'u4', checklist_id: '0', name: '产品细节', description: '拍摄产品细节、尺寸和重量照', category: '产品', is_required: true, item_order: 4 },
+  { id: 'u5', checklist_id: '0', name: '彩盒检查', description: '检查彩盒信息及规格重量', category: '彩盒', is_required: true, item_order: 5 },
+  { id: 'u6', checklist_id: '0', name: '条码扫描', description: '扫描所有含有条码的地方', category: '条码', is_required: true, item_order: 6 },
+  { id: 'u7', checklist_id: '0', name: '签样对比', description: '与签样进行对比', category: '对比', is_required: true, item_order: 7 },
+  { id: 'u8', checklist_id: '0', name: '组装测试', description: '按说明书指示组装并拍照', category: '组装', is_required: false, item_order: 8 }
+];
 
 export function mockCreateInspection(data: any) {
   const newInspection = {
@@ -173,8 +204,16 @@ export function mockCreateInspection(data: any) {
   inspections.unshift(newInspection);
   
   // 如果有 checklist_id，从模板复制清单项到 inspectionRecords
-  if (data.checklist_id) {
-    const templateItems = checklistItems.filter(item => item.checklist_id === data.checklist_id);
+  if (data.checklist_id !== undefined && data.checklist_id !== null && data.checklist_id !== '') {
+    let templateItems: any[] = [];
+    
+    // 如果是通用模板 (id=0 或 '0')
+    if (String(data.checklist_id) === '0' || data.checklist_id === 0) {
+      templateItems = UNIVERSAL_CHECKLIST_ITEMS;
+    } else {
+      templateItems = checklistItems.filter(item => String(item.checklist_id) === String(data.checklist_id));
+    }
+    
     templateItems.forEach(item => {
       inspectionRecords.push({
         id: String(nextRecordId++),

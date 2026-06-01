@@ -211,7 +211,8 @@ router.post('/', async (req: Request, res: Response) => {
       notes 
     } = req.body;
 
-    const effectiveChecklistId = templateId || checklist_id;
+    // 处理 templateId=0 的情况（通用模板）
+    const effectiveChecklistId = (templateId === 0 || templateId === '0') ? 0 : (templateId || checklist_id);
 
     if (!isSupabaseConfigured()) {
       const newInspection = mockCreateInspection({
