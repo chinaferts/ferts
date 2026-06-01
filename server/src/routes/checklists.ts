@@ -136,7 +136,17 @@ router.put('/:id', async (req: Request, res: Response) => {
     const { name, description, categories } = req.body;
 
     if (!isSupabaseConfigured()) {
-      const updated = mockUpdateChecklist(id, { name, description, category: categories });
+      // 将前端发送的categories格式转换为后端需要的格式
+      const category = (categories || []).map((cat: any, idx: number) => ({
+        category_id: cat.id || idx + 1,
+        category_name: cat.name,
+        items: (cat.items || []).map((item: string, i: number) => ({
+          item_id: i + 1,
+          item_name: item,
+          is_critical: false,
+        })),
+      }));
+      const updated = mockUpdateChecklist(id, { name, description, category });
       if (!updated) {
         return res.status(404).json({ success: false, error: '清单不存在' });
       }
