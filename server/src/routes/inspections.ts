@@ -534,10 +534,9 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
 
 // 上传检查照片
 router.post('/:id/photos', async (req: Request, res: Response) => {
-  // 文件上传通过 multer 在 index.ts 中处理
-  // 这个路由用于返回上传结果
   try {
     const { id } = req.params;
+    const { record_id } = req.body; // 清单项记录ID
     const file = req.file;
 
     if (!file) {
@@ -547,7 +546,8 @@ router.post('/:id/photos', async (req: Request, res: Response) => {
     const photoUrl = `/uploads/${file.filename}`;
 
     if (!isSupabaseConfigured()) {
-      return res.json({ success: true, data: { photoUrl, inspection_id: id } });
+      // Mock 模式：返回成功响应
+      return res.json({ success: true, data: { photoUrl, inspection_id: id, record_id } });
     }
 
     const client = requireSupabaseClient();
@@ -556,7 +556,8 @@ router.post('/:id/photos', async (req: Request, res: Response) => {
       .insert({
         inspection_id: parseInt(id as string),
         photo_url: photoUrl,
-        photo_type: 'checklist'
+        photo_type: 'checklist',
+        record_id: record_id ? parseInt(record_id) : null
       })
       .select()
       .single();

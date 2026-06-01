@@ -4,6 +4,7 @@ import { Screen } from '@/components/Screen';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { createFormDataFile } from '@/utils';
 import CustomCamera from '@/components/CustomCamera';
 
 interface ChecklistItem {
@@ -301,19 +302,48 @@ export default function InspectionDetailScreen() {
         <CustomCamera
           visible={cameraVisible}
           onClose={() => setCameraVisible(false)}
-          onComplete={(photos) => {
+          onComplete={async (photos) => {
             // 使用 ref 获取最新的 inspection 避免闭包问题
             const currentInspection = inspectionRef.current;
             if (!currentInspection) return;
-            // 保存照片到目标清单项
+            
+            const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
             const photoUris = photos.map(p => p.uri);
+            const targetRecordId = tempPhotoTarget.record_id;
+            
+            // 将照片添加到本地状态
             const updatedItems = currentInspection.checklist_items.map(item => {
-              if (item.record_id === tempPhotoTarget.record_id) {
+              if (item.record_id === targetRecordId) {
                 return { ...item, photos: [...(item.photos || []), ...photoUris] };
               }
               return item;
             });
             setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
+            
+            // 上传照片到服务器
+            try {
+              for (let i = 0; i < photos.length; i++) {
+                const photo = photos[i];
+                const filename = photo.uri.split('/').pop() || `photo_${Date.now()}_${i}.jpg`;
+                const match = /\.(\w+)$/.exec(filename);
+                const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
+                
+                const fileObj = await createFormDataFile(photo.uri, filename, mimeType);
+                
+                const formData = new FormData();
+                formData.append('record_id', String(targetRecordId));
+                formData.append('photo', fileObj as any);
+                
+                await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
+                  method: 'POST',
+                  body: formData,
+                });
+              }
+            } catch (error) {
+              console.error('上传照片失败:', error);
+              // 即使上传失败，也继续关闭相机
+            }
+            
             setCameraVisible(false);
             setTempPhotoTarget(null);
             setTempPhotos([]);
