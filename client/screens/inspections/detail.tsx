@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image, Platform } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -60,6 +60,12 @@ export default function InspectionDetailScreen() {
   // 相机相关状态
   const [cameraVisible, setCameraVisible] = useState(false);
   const [cameraPhotoTarget, setCameraPhotoTarget] = useState<ChecklistItem | null>(null);
+  
+  // 使用 ref 跟踪 inspection 以避免闭包问题
+  const inspectionRef = useRef(inspection);
+  useEffect(() => {
+    inspectionRef.current = inspection;
+  }, [inspection]);
 
   const fetchInspection = async () => {
     if (!id) return;
@@ -296,9 +302,12 @@ export default function InspectionDetailScreen() {
           visible={cameraVisible}
           onClose={() => setCameraVisible(false)}
           onComplete={(photos) => {
+            // 使用 ref 获取最新的 inspection 避免闭包问题
+            const currentInspection = inspectionRef.current;
+            if (!currentInspection) return;
             // 保存照片到目标清单项
             const photoUris = photos.map(p => p.uri);
-            const updatedItems = inspection.checklist_items.map(item => {
+            const updatedItems = currentInspection.checklist_items.map(item => {
               if (item.record_id === tempPhotoTarget.record_id) {
                 return { ...item, photos: [...(item.photos || []), ...photoUris] };
               }
