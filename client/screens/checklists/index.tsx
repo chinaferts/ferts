@@ -142,14 +142,35 @@ export default function ChecklistsScreen() {
         {/* 新建按钮 */}
         <TouchableOpacity 
           style={styles.fab}
-          onPress={() => Alert.alert('提示', '新建模板功能开发中')}
+          onPress={() => {
+            Alert.prompt(
+              '新建模板',
+              '请输入模板名称',
+              async (name) => {
+                if (name && name.trim()) {
+                  try {
+                    const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+                    const response = await fetch(`${baseUrl}/api/v1/checklists`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ name: name.trim(), description: '' }),
+                    });
+                    if (response.ok) {
+                      fetchTemplates();
+                    }
+                  } catch (error) {
+                    console.error('Failed to create template:', error);
+                  }
+                }
+              },
+              'plain-text'
+            );
+          }}
+          activeOpacity={0.8}
         >
-          <LinearGradient
-            colors={['#6C63FF', '#896BFF']}
-            style={styles.fabGradient}
-          >
+          <View style={styles.fabGradient}>
             <Feather name="plus" size={28} color="#FFFFFF" />
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
       </View>
     </Screen>
