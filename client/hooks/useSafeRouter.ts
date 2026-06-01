@@ -1,152 +1,107 @@
-/**
- * 安全路由 Hook - 完全代替原生的 useRouter 和 useLocalSearchParams
- *
- * 提供的 Hook：
- * - useSafeRouter: 代替 useRouter，包含所有路由方法，并对 push/replace/navigate/setParams 进行安全编码
- * - useSafeSearchParams: 代替 useLocalSearchParams，获取路由参数
- *
- * 解决的问题：
- * 1. URI 编解码不对称 - useLocalSearchParams 会自动解码，但 router.push 不会自动编码，
- *    当参数包含 % 等特殊字符时会拿到错误的值
- * 2. 类型丢失 - URL 参数全是 string，Number/Boolean 类型会丢失
- * 3. 嵌套对象无法传递 - URL search params 不支持嵌套结构
- *
- * 解决方案：
- * 采用 Payload 模式，将所有参数打包成 JSON 并 Base64 编码后传递，
- * 接收时再解码还原，确保数据完整性和类型安全。
- *
- * 优点：
- * 1. 自动处理所有特殊字符（如 %、&、=、中文、Emoji 等）
- * 2. 保留数据类型（Number、Boolean 不会变成 String）
- * 3. 支持嵌套对象和数组传递
- * 4. 三端兼容（iOS、Android、Web）
- *
- * 使用方式：
- * ```tsx
- * // 发送端 - 使用 useSafeRouter 代替 useRouter
- * const router = useSafeRouter();
- * router.push('/detail', { id: 123, uri: 'file:///path/%40test.mp3' });
- * router.replace('/home', { tab: 'settings' });
- * router.navigate('/profile', { userId: 456 });
- * router.back();
- * if (router.canGoBack()) { ... }
- * router.setParams({ updated: true });
- *
- * // 接收端 - 使用 useSafeSearchParams 代替 useLocalSearchParams
- * const { id, uri } = useSafeSearchParams<{ id: number; uri: string }>();
- * ```
- */
-import { useMemo } from 'react';
-import { useRouter as useExpoRouter, useLocalSearchParams as useExpoParams } from 'expo-router';
-import { Base64 } from 'js-base64';
-
-const PAYLOAD_KEY = '__safeRouterPayload__';
-const LOG_PREFIX = '[SafeRouter]';
-
-
-const getCurrentParams = (rawParams: Record<string, string | string[]>): Record<string, unknown> => {
-  const payload = rawParams[PAYLOAD_KEY];
-  if (payload && typeof payload === 'string') {
-    const decoded = deserializeParams<Record<string, unknown>>(payload);
-    if (decoded && Object.keys(decoded).length > 0) {
-      return decoded;
-    }
-  }
-  const { [PAYLOAD_KEY]: _, ...rest } = rawParams;
-  return rest as Record<string, unknown>;
-};
-
-const serializeParams = (params: Record<string, unknown>): string => {
-  try {
-    const jsonStr = JSON.stringify(params);
-    return Base64.encode(jsonStr);
-  } catch (error) {
-    console.error(LOG_PREFIX, 'serialize failed:', error instanceof Error ? error.message : 'Unknown error');
-    return '';
-  }
-};
-
-const deserializeParams = <T = Record<string, unknown>>(
-  payload: string | string[] | undefined
-): T | null => {
-  if (!payload || typeof payload !== 'string') {
-    return null;
-  }
-  try {
-    const jsonStr = Base64.decode(payload);
-    return JSON.parse(jsonStr) as T;
-  } catch (error) {
-    console.error(LOG_PREFIX, 'deserialize failed:', error instanceof Error ? error.message : 'Unknown error');
-    return null;
-  }
-};
-
+import { useRouter as useExpoRouter, useLocalSearchParams, useRootNavigationState } from 'expo-router';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
- * 安全路由 Hook，用于页面跳转，代替 useRouter
- * @returns 路由方法（继承 useRouter 所有方法，并对以下方法进行安全编码）
- * - push(pathname, params) - 入栈新页面
- * - replace(pathname, params) - 替换当前页面
- * - navigate(pathname, params) - 智能跳转（已存在则返回，否则 push）
- * - setParams(params) - 更新当前页面参数（合并现有参数）
+ * Safe Router Hook - 解决原生 useRouter 的特殊字符编解码问题
+ * 
+ * 使用方式与原生 useRouter 相同，但会自动处理路径参数中的特殊字符
  */
 export function useSafeRouter() {
   const router = useExpoRouter();
-  const rawParams = useExpoParams<Record<string, string | string[]>>();
+  const rootState = useRootNavigationState();
 
-  const push = (pathname: string, params: Record<string, unknown> = {}) => {
-    const encodedPayload = serializeParams(params);
-    router.push({
-      pathname: pathname as `/${string}`,
-      params: { [PAYLOAD_KEY]: encodedPayload },
-    });
-  };
+  /**
+   * 导航到指定路径，支持传递参数
+   * @param path 路径，如 '/detail' 或 '/product'
+   * @param params 参数对象，如 { id: 123, name: 'test' }
+   */
+  const push = useCallback((path: string, params?: Record<string, any>) => {
+    if (!rootState?.key) return;
+    
+    if (params) {
+      const queryString = Object.entries(params)
+        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+        .join('&');
+      router.push(`${path}?${queryString}`);
+    } else {
+      router.push(path);
+    }
+  }, [router, rootState?.key]);
 
-  const replace = (pathname: string, params: Record<string, unknown> = {}) => {
-    const encodedPayload = serializeParams(params);
-    router.replace({
-      pathname: pathname as `/${string}`,
-      params: { [PAYLOAD_KEY]: encodedPayload },
-    });
-  };
+  /**
+   * 替换当前页面
+   */
+  const replace = useCallback((path: string, params?: Record<string, any>) => {
+    if (!rootState?.key) return;
+    
+    if (params) {
+      const queryString = Object.entries(params)
+        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+        .join('&');
+      router.replace(`${path}?${queryString}`);
+    } else {
+      router.replace(path);
+    }
+  }, [router, rootState?.key]);
 
-  const navigate = (pathname: string, params: Record<string, unknown> = {}) => {
-    const encodedPayload = serializeParams(params);
-    router.navigate({
-      pathname: pathname as `/${string}`,
-      params: { [PAYLOAD_KEY]: encodedPayload },
-    });
-  };
+  /**
+   * 返回上一页
+   */
+  const back = useCallback(() => {
+    if (!rootState?.key) return;
+    router.back();
+  }, [router, rootState?.key]);
 
-  const setParams = (params: Record<string, unknown>) => {
-    const currentParams = getCurrentParams(rawParams);
-    const mergedParams = { ...currentParams, ...params };
-    const encodedPayload = serializeParams(mergedParams);
-    router.setParams({ [PAYLOAD_KEY]: encodedPayload });
-  };
+  /**
+   * 智能跳转，如果页面已在栈中则返回，否则推入新页面
+   */
+  const navigate = useCallback((path: string, params?: Record<string, any>) => {
+    if (!rootState?.key) return;
+    push(path, params);
+  }, [push, rootState?.key]);
 
   return {
     ...router,
     push,
     replace,
+    back,
     navigate,
-    setParams,
   };
 }
 
 /**
- * 安全获取路由参数 Hook，用于接收方，代替 useLocalSearchParams
- * 兼容两种跳转方式：
- * 1. useSafeRouter 跳转 - 自动解码 Payload
- * 2. 外部跳转（深链接、浏览器直接访问等）- 回退到原始参数
- * @returns 解码后的参数对象，类型安全
+ * Safe Search Params Hook - 安全获取搜索参数
+ * 
+ * 自动处理参数的解码问题，返回正确类型的参数值
  */
-export function useSafeSearchParams<T = Record<string, unknown>>(): T {
-  const rawParams = useExpoParams<Record<string, string | string[]>>();
+export function useSafeSearchParams<T extends Record<string, any> = {}>() {
+  const params = useLocalSearchParams();
+  const paramsRef = useRef(params);
+  
+  useEffect(() => {
+    paramsRef.current = params;
+  }, [params]);
 
-  const decodedParams = useMemo(() => {
-    return getCurrentParams(rawParams) as T;
-  }, [rawParams]);
+  // 解码并转换参数类型
+  const decodedParams = {} as T;
+  
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      decodedParams[key as keyof T] = undefined as any;
+      return;
+    }
+    
+    const decodedValue = decodeURIComponent(String(value));
+    
+    // 尝试转换为数字
+    if (!isNaN(Number(decodedValue)) && decodedValue !== '') {
+      decodedParams[key as keyof T] = Number(decodedValue) as any;
+    } else {
+      decodedParams[key as keyof T] = decodedValue as any;
+    }
+  });
 
   return decodedParams;
 }
+
+export default useSafeRouter;
