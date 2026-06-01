@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Dimensions, Alert } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
@@ -71,9 +71,10 @@ interface RecentInspectionProps {
   status: 'pending' | 'in_progress' | 'completed';
   date: string;
   progress: number;
+  onPress?: (id: number) => void;
 }
 
-function RecentInspectionCard({ item }: { item: RecentInspectionProps }) {
+function RecentInspectionCard({ item, onPress }: { item: RecentInspectionProps; onPress?: (id: number) => void }) {
   const statusConfig = {
     pending: { label: '待开始', color: '#FDCB6E', bg: 'rgba(253,203,110,0.15)' },
     in_progress: { label: '进行中', color: '#0EA5E9', bg: 'rgba(14,165,233,0.15)' },
@@ -85,7 +86,7 @@ function RecentInspectionCard({ item }: { item: RecentInspectionProps }) {
   return (
     <TouchableOpacity 
       style={styles.inspectionCardOuter} 
-      onPress={() => Alert.alert('提示', '查看验货详情功能开发中')}
+      onPress={() => onPress ? onPress(item.id) : Alert.alert('提示', '查看验货详情功能开发中')}
     >
       <View style={styles.inspectionCardInner}>
         <View style={styles.inspectionHeader}>
@@ -121,6 +122,7 @@ function RecentInspectionCard({ item }: { item: RecentInspectionProps }) {
 }
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
@@ -129,6 +131,10 @@ export default function DashboardScreen() {
     completed: 0,
   });
   const [recentInspections, setRecentInspections] = useState<RecentInspectionProps[]>([]);
+
+  const handleInspectionPress = (id: number) => {
+    router.push(`/inspections/${id}`);
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -288,7 +294,7 @@ export default function DashboardScreen() {
           </View>
           {recentInspections.length > 0 ? (
             recentInspections.map((item) => (
-              <RecentInspectionCard key={item.id} item={item} />
+              <RecentInspectionCard key={item.id} item={item} onPress={handleInspectionPress} />
             ))
           ) : (
             <View style={styles.emptyState}>
