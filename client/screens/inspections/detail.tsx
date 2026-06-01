@@ -377,6 +377,25 @@ export default function InspectionDetailScreen() {
                     )}
                   </View>
 
+                  {/* 照片预览 - 显示在拍照按钮上方 */}
+                  {item.photos && item.photos.length > 0 && (
+                    <View style={styles.photoSection}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoPreviewScroll}>
+                        {item.photos.map((photo, idx) => (
+                          <TouchableOpacity key={idx} onPress={() => {
+                            setSelectedPhoto(photo);
+                            setPhotoModalVisible(true);
+                          }} style={styles.photoContainer}>
+                            <Image source={{ uri: photo }} style={styles.thumbnail} />
+                            <View style={styles.photoBadge}>
+                              <Text style={styles.photoBadgeText}>{idx + 1}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+
                   {item.status === 'unchecked' && inspection.status !== 'completed' && (
                     <View style={styles.actionButtons}>
                       <TouchableOpacity
@@ -403,30 +422,6 @@ export default function InspectionDetailScreen() {
                         <Feather name="camera" size={18} color="#6C63FF" />
                         <Text style={styles.photoButtonText}>拍照</Text>
                       </TouchableOpacity>
-                    </View>
-                  )}
-
-                  {item.photos && item.photos.length > 0 && (
-                    <View style={styles.photoSection}>
-                      <View style={styles.photoHeader}>
-                        <Feather name="image" size={14} color="#6C63FF" />
-                        <Text style={styles.photoCountText}>照片 ({item.photos.length})</Text>
-                      </View>
-                      <View style={styles.photoRow}>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          {item.photos.map((photo, idx) => (
-                            <TouchableOpacity key={idx} onPress={() => {
-                              setSelectedPhoto(photo);
-                              setPhotoModalVisible(true);
-                            }} style={styles.photoContainer}>
-                              <Image source={{ uri: photo }} style={styles.thumbnail} />
-                              <View style={styles.photoBadge}>
-                                <Text style={styles.photoBadgeText}>{idx + 1}</Text>
-                              </View>
-                            </TouchableOpacity>
-                          ))}
-                        </ScrollView>
-                      </View>
                     </View>
                   )}
                 </View>
@@ -929,6 +924,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
+  },
+  photoPreviewScroll: {
+    marginBottom: 8,
   },
   photoHeader: {
     flexDirection: 'row',
