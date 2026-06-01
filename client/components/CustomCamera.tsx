@@ -11,10 +11,9 @@ import {
   Platform,
 } from 'react-native';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
-import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface PhotoItem {
   uri: string;
@@ -37,6 +36,7 @@ export default function CustomCamera({
   const [permission, requestPermission] = useCameraPermissions();
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [facing, setFacing] = useState<CameraType>('back');
+  const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('auto');
   const cameraRef = useRef<CameraView>(null);
 
   // 重置照片列表当相机重新打开时
@@ -62,7 +62,7 @@ export default function CustomCamera({
         <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
           <Text style={styles.permissionButtonText}>授予权限</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+        <TouchableOpacity style={styles.closeButtonIOS} onPress={onClose}>
           <Ionicons name="close" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -79,7 +79,7 @@ export default function CustomCamera({
         if (photo?.uri) {
           const newPhoto: PhotoItem = {
             uri: photo.uri,
-            timestamp: Date.now(),
+            timestamp: Date.now() + Math.random(),
           };
           setPhotos((prev) => [...prev, newPhoto]);
         }
@@ -106,6 +106,36 @@ export default function CustomCamera({
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
   };
 
+  const cycleFlashMode = () => {
+    setFlashMode((current) => {
+      if (current === 'off') return 'auto';
+      if (current === 'auto') return 'on';
+      return 'off';
+    });
+  };
+
+  const getFlashIcon = () => {
+    switch (flashMode) {
+      case 'on':
+        return 'flash';
+      case 'auto':
+        return 'flash';
+      default:
+        return 'flash-off';
+    }
+  };
+
+  const getFlashLabel = () => {
+    switch (flashMode) {
+      case 'on':
+        return 'ON';
+      case 'auto':
+        return 'A';
+      default:
+        return '';
+    }
+  };
+
   const handleClose = () => {
     if (photos.length > 0) {
       Alert.alert(
@@ -130,65 +160,77 @@ export default function CustomCamera({
       >
         {/* 顶部区域 */}
         <View style={styles.topBar}>
-          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+          {/* 关闭按钮 */}
+          <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.title}>{itemName}</Text>
-          <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
-            <Ionicons name="camera-reverse" size={24} color="#fff" />
+
+          {/* 闪光灯 */}
+          <TouchableOpacity style={styles.flashButton} onPress={cycleFlashMode}>
+            <Ionicons name={getFlashIcon() as any} size={22} color="#fff" />
+            {flashMode !== 'off' && (
+              <View style={styles.flashLabel}>
+                <Text style={styles.flashLabelText}>{getFlashLabel()}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* 翻转摄像头 */}
+          <TouchableOpacity style={styles.iconButton} onPress={toggleCameraFacing}>
+            <Ionicons name="camera-reverse" size={28} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* 预览区域 - 拍照按钮上方 */}
-        <View style={styles.previewContainer}>
-          {photos.length > 0 && (
-            <View style={styles.previewSection}>
-              <View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.previewScrollContent}
-                >
-                {photos.map((photo, index) => (
-                  <View key={photo.timestamp} style={styles.previewItem}>
-                    <Image source={{ uri: photo.uri }} style={styles.previewImage} />
-                    <View style={styles.previewIndex}>
-                      <Text style={styles.previewIndexText}>{index + 1}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => removePhoto(photo.timestamp)}
-                    >
-                      <Ionicons name="close-circle" size={22} color="#ff3b30" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                </ScrollView>
-              </View>
-              <Text style={styles.photoCount}>{photos.length} 张照片</Text>
+        {/* 底部区域 */}
+        <View style={styles.bottomBar}>
+          {/* 左侧：取消按钮 */}
+          <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
+            <Text style={styles.cancelText}>取消</Text>
+          </TouchableOpacity>
+
+          {/* 中间：快门按钮 */}
+          <TouchableOpacity style={styles.shutterButton} onPress={takePicture}>
+            <View style={styles.shutterButtonInner}>
+              <View style={styles.shutterButtonCore} />
             </View>
-          )}
+          </TouchableOpacity>
+
+          {/* 右侧：完成按钮 */}
+          <TouchableOpacity
+            style={[styles.doneButton, photos.length === 0 && styles.doneButtonDisabled]}
+            onPress={handleComplete}
+            disabled={photos.length === 0}
+          >
+            <Text style={[styles.doneText, photos.length === 0 && styles.doneTextDisabled]}>
+              完成
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* 底部区域 - 拍照按钮和完成按钮 */}
-        <View style={styles.bottomContainer}>
-          <View style={styles.bottomContent}>
-            {/* 拍照按钮 - 左侧 */}
-            <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-              <View style={styles.captureButtonInner} />
-            </TouchableOpacity>
-
-            {/* 完成按钮 - 拍照按钮右侧 */}
-            <TouchableOpacity
-              style={[styles.completeButton, photos.length === 0 && styles.completeButtonDisabled]}
-              onPress={handleComplete}
-              disabled={photos.length === 0}
+        {/* 预览栏 - 底部 */}
+        {photos.length > 0 && (
+          <View style={styles.previewStrip}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.previewScrollContent}
             >
-              <Ionicons name="checkmark-circle" size={24} color="#fff" />
-              <Text style={styles.completeButtonText}>完成</Text>
-            </TouchableOpacity>
+              {photos.map((photo, index) => (
+                <View key={photo.timestamp} style={styles.previewItem}>
+                  <Image source={{ uri: photo.uri }} style={styles.previewImage} />
+                  <TouchableOpacity
+                    style={styles.previewRemove}
+                    onPress={() => removePhoto(photo.timestamp)}
+                  >
+                    <View style={styles.previewRemoveCircle}>
+                      <Ionicons name="close" size={12} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
           </View>
-        </View>
+        )}
       </CameraView>
     </View>
   );
@@ -227,6 +269,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+
+  // iOS 风格顶部栏
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -234,118 +278,68 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
     paddingBottom: 10,
-    backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  closeButton: {
+  iconButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  flipButton: {
+  closeButtonIOS: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 30,
+    left: 20,
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  previewContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 100 : 80,
-    left: 0,
-    right: 0,
-    bottom: 180,
-    justifyContent: 'flex-end',
-    paddingBottom: 20,
-  },
-  previewSection: {
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 16,
-    padding: 12,
-    marginHorizontal: 16,
-  },
-  previewScrollContent: {
-    paddingRight: 8,
-  },
-  previewItem: {
-    position: 'relative',
-    marginRight: 10,
-  },
-  previewImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  previewIndex: {
-    position: 'absolute',
-    top: -4,
-    left: -4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#4F46E5',
+  flashButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    width: 44,
+    height: 44,
   },
-  previewIndexText: {
-    color: '#fff',
-    fontSize: 11,
+  flashLabel: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: '#FF9500',
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+  flashLabelText: {
+    color: '#000',
+    fontSize: 9,
     fontWeight: 'bold',
   },
-  removeButton: {
+
+  // iOS 风格底部栏
+  bottomBar: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 11,
-  },
-  photoCount: {
-    color: '#fff',
-    fontSize: 13,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  bottomContainer: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 50 : 30,
+    bottom: 0,
     left: 0,
     right: 0,
-  },
-  bottomContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: 40,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    paddingTop: 20,
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  completeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#34C759',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    marginRight: 20,
+  cancelButton: {
+    width: 60,
+    alignItems: 'flex-start',
   },
-  completeButtonDisabled: {
-    backgroundColor: 'rgba(52,199,89,0.4)',
-  },
-  completeButtonText: {
+  cancelText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-    marginLeft: 6,
+    fontSize: 17,
+    fontWeight: '400',
   },
-  captureButton: {
+  shutterButton: {
     width: 75,
     height: 75,
     borderRadius: 37.5,
@@ -353,16 +347,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 4,
-    borderColor: '#fff',
+    borderColor: 'rgba(255,255,255,0.6)',
   },
-  captureButtonInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  shutterButtonInner: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shutterButtonCore: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: '#fff',
   },
-  placeholder: {
-    width: 80,
-    marginLeft: 20,
+  doneButton: {
+    width: 60,
+    alignItems: 'flex-end',
+  },
+  doneButtonDisabled: {
+    opacity: 0.5,
+  },
+  doneText: {
+    color: '#007AFF',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  doneTextDisabled: {
+    color: '#8E8E93',
+  },
+
+  // 预览栏
+  previewStrip: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 130 : 110,
+    left: 0,
+    right: 0,
+  },
+  previewScrollContent: {
+    paddingHorizontal: 16,
+  },
+  previewItem: {
+    position: 'relative',
+    marginRight: 8,
+  },
+  previewImage: {
+    width: 55,
+    height: 55,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  previewRemove: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+  },
+  previewRemoveCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
