@@ -79,12 +79,24 @@ export default function NewInspectionScreen() {
       const result = await response.json();
       if (result.success && result.data) {
         const templates = Array.isArray(result.data) ? result.data : [];
-        setTemplateList(templates.map((t: any) => ({
-          id: t.id,
-          name: t.name,
-          categories: t.category?.length || 0,
-          items: t.category?.reduce((sum: number, cat: any) => sum + (cat.items?.length || 0), 0) || 0
-        })));
+        setTemplateList(templates.map((t: any) => {
+          // 处理 category 可能是数组或字符串的情况
+          const categories = Array.isArray(t.category) 
+            ? t.category 
+            : (t.category ? [t.category] : []);
+          
+          const categoryCount = categories.length;
+          const itemCount = Array.isArray(t.category) 
+            ? t.category.reduce((sum: number, cat: any) => sum + (cat.items?.length || 0), 0)
+            : 0;
+          
+          return {
+            id: parseInt(t.id, 10),
+            name: t.name,
+            categories: categoryCount,
+            items: itemCount
+          };
+        }));
       }
     } catch (error) {
       console.error('Failed to load templates:', error);
@@ -266,13 +278,6 @@ export default function NewInspectionScreen() {
   };
 
   const samplePlan = quantity ? getSamplePlan(parseInt(quantity, 10), aql) : null;
-
-  const templates: ChecklistTemplate[] = [
-    { id: 1, name: '电子产品通用模板', categories: 3, items: 15 },
-    { id: 2, name: '服装纺织模板', categories: 4, items: 20 },
-    { id: 3, name: '玩具安全模板', categories: 5, items: 25 },
-    { id: 4, name: '食品包装模板', categories: 3, items: 18 },
-  ];
 
   const aqlOptions = [
     { value: '0.40', label: 'AQL 0.40 (严)' },
