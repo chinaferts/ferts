@@ -336,14 +336,9 @@ export default function ChecklistDetailScreen() {
               <TouchableOpacity 
                 style={styles.useButton}
                 onPress={() => {
-                  Alert.alert(
-                    '使用模板',
-                    '确定要使用此模板创建验货任务吗？',
-                    [
-                      { text: '取消', style: 'cancel' },
-                      { text: '确定', onPress: () => expoRouter.push({ pathname: '/inspections/new', params: { templateId: template?.id } }) },
-                    ]
-                  );
+                  if (template?.id) {
+                    expoRouter.push(`/inspections/new?templateId=${template.id}`);
+                  }
                 }}
               >
                 <Feather name="check-circle" size={18} color="#FFFFFF" />
