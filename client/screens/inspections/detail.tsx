@@ -368,11 +368,42 @@ export default function InspectionDetailScreen() {
         )}
 
         {/* 验货清单 */}
-        {categories.map(category => (
-          <View key={category} style={styles.section}>
-            <Text style={styles.sectionTitle}>{category}</Text>
-            {inspection.checklist_items
-              .filter(item => item.category === category)
+        {categories.map(category => {
+          // 获取该分类下所有清单项的照片
+          const categoryItems = inspection.checklist_items.filter(item => item.category === category);
+          const categoryPhotos = categoryItems.flatMap(item => item.photos || []);
+
+          return (
+            <View key={category} style={styles.section}>
+              <View style={styles.categoryHeader}>
+                <Text style={styles.sectionTitle}>{category}</Text>
+                {/* 分类照片汇总 */}
+                {categoryPhotos.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.categoryPhotosPreview}
+                    onPress={() => {
+                      if (categoryPhotos.length > 0) {
+                        setSelectedPhoto(categoryPhotos[0]);
+                        setPhotoModalVisible(true);
+                      }
+                    }}
+                  >
+                    <View style={styles.categoryPhotosRow}>
+                      {categoryPhotos.slice(0, 4).map((photo, idx) => (
+                        <Image key={idx} source={{ uri: photo }} style={styles.categoryPhotoThumb} />
+                      ))}
+                      {categoryPhotos.length > 4 && (
+                        <View style={styles.categoryPhotoMore}>
+                          <Text style={styles.categoryPhotoMoreText}>+{categoryPhotos.length - 4}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.categoryPhotosCount}>{categoryPhotos.length}张照片</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {inspection.checklist_items
+                .filter(item => item.category === category)
               .map(item => (
                 <View key={item.record_id} style={styles.checklistItem}>
                   <View style={styles.checklistHeader}>
@@ -449,8 +480,9 @@ export default function InspectionDetailScreen() {
                   )}
                 </View>
               ))}
-          </View>
-        ))}
+            </View>
+          );
+        })}
 
         {/* 缺陷记录 */}
         {inspection.defects.length > 0 && (
@@ -803,6 +835,44 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2D3436',
     marginBottom: 12,
+  },
+  categoryHeader: {
+    marginBottom: 12,
+  },
+  categoryPhotosPreview: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 8,
+  },
+  categoryPhotosRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  categoryPhotoThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: '#E0E0E0',
+  },
+  categoryPhotoMore: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: 'rgba(108,99,255,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryPhotoMoreText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  categoryPhotosCount: {
+    fontSize: 12,
+    color: '#6C63FF',
+    marginTop: 6,
+    textAlign: 'center',
   },
   checklistItem: {
     backgroundColor: '#FFFFFF',
