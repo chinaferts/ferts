@@ -214,7 +214,8 @@ router.post('/', async (req: Request, res: Response) => {
     // 处理 templateId=0 的情况（通用模板）
     const effectiveChecklistId = (templateId === 0 || templateId === '0') ? 0 : (templateId || checklist_id);
 
-    if (!isSupabaseConfigured()) {
+    // 如果是通用模板 (templateId=0) 或 Supabase 未配置，使用 mock 模式
+    if (effectiveChecklistId === 0 || !isSupabaseConfigured()) {
       const newInspection = mockCreateInspection({
         checklist_id: effectiveChecklistId,
         supplier_name: supplier || supplier_name,
