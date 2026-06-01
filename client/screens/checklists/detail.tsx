@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 
@@ -29,6 +29,7 @@ interface ChecklistDetail {
 export default function ChecklistDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useSafeRouter();
+  const expoRouter = useRouter();
   const [template, setTemplate] = useState<ChecklistDetail | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<ChecklistDetail | null>(null);
@@ -340,7 +341,7 @@ export default function ChecklistDetailScreen() {
                     '确定要使用此模板创建验货任务吗？',
                     [
                       { text: '取消', style: 'cancel' },
-                      { text: '确定', onPress: () => router.navigate('/inspections/new') },
+                      { text: '确定', onPress: () => expoRouter.push({ pathname: '/inspections/new', params: { templateId: template?.id } }) },
                     ]
                   );
                 }}
