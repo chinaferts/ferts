@@ -50,12 +50,13 @@ export default function ChecklistDetailScreen() {
           id: data.id,
           name: data.name,
           description: data.description || '',
-          categories: (data.categories || []).map((cat: any, idx: number) => ({
-            id: cat.id || cat.category_id || idx,
-            name: cat.name || cat.category_name || '',
+          categories: ((data.categories || data.category) || []).map((cat: any, idx: number) => ({
+            id: cat.id || cat.category_id || `cat_${idx}`,
+            name: cat.name || cat.category_name || cat.category_name || '',
             items: (cat.items || []).map((item: any, i: number) => ({
-              id: typeof item === 'object' ? (item.id || i) : i,
-              name: typeof item === 'object' ? item.name : item,
+              id: typeof item === 'object' ? (item.item_id || item.id || i) : i,
+              name: typeof item === 'object' ? (item.item_name || item.name) : item,
+              isCritical: typeof item === 'object' ? (item.is_critical || item.isCritical || false) : false,
             })),
           })),
           usageCount: data.usage_count || data.usageCount || 0,
