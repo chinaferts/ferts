@@ -655,6 +655,8 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   section: {
     backgroundColor: '#FFFFFF',
