@@ -54,6 +54,9 @@ export default function InspectionDetailScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [scannerVisible, setScannerVisible] = useState(false);
   const [scannedCodes, setScannedCodes] = useState<string[]>([]);
+  // 拍照临时状态 - 用于新流程：先拍照到预览区，完成后再保存
+  const [tempPhotoTarget, setTempPhotoTarget] = useState<ChecklistItem | null>(null);
+  const [tempPhotos, setTempPhotos] = useState<string[]>([]);
 
   const fetchInspection = async () => {
     if (!id) return;
@@ -135,10 +138,16 @@ export default function InspectionDetailScreen() {
     }
   };
 
-  // 拍照功能 - 接受一个 item 参数确保正确关联
+  // 拍照功能 - 先添加到临时区域，完成后统一保存
   const takePhoto = async (item?: ChecklistItem) => {
     const targetItem = item || selectedItem;
     if (!targetItem) return;
+    
+    // 如果没有设置临时目标，先设置
+    if (!tempPhotoTarget || tempPhotoTarget.record_id !== targetItem.record_id) {
+      setTempPhotoTarget(targetItem);
+      setTempPhotos([]);
+    }
     
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
@@ -154,21 +163,21 @@ export default function InspectionDetailScreen() {
 
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
-      // 为检查项添加照片 - 使用 record_id 字符串比较确保类型一致
-      const targetRecordId = String(targetItem.record_id);
-      const updatedItems = inspection?.checklist_items.map(i =>
-        String(i.record_id) === targetRecordId
-          ? { ...i, photos: [...(i.photos || []), uri] }
-          : i
-      );
-      setInspection(prev => prev ? { ...prev, checklist_items: updatedItems || [] } : null);
+      // 添加到临时照片列表
+      setTempPhotos(prev => [...prev, uri]);
     }
   };
 
-  // 从相册选择 - 接受一个 item 参数确保正确关联
+  // 从相册选择 - 先添加到临时区域，完成后统一保存
   const pickImage = async (item?: ChecklistItem) => {
     const targetItem = item || selectedItem;
     if (!targetItem) return;
+    
+    // 如果没有设置临时目标，先设置
+    if (!tempPhotoTarget || tempPhotoTarget.record_id !== targetItem.record_id) {
+      setTempPhotoTarget(targetItem);
+      setTempPhotos([]);
+    }
     
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -184,15 +193,40 @@ export default function InspectionDetailScreen() {
 
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
-      // 为检查项添加照片 - 使用 record_id 字符串比较确保类型一致
-      const targetRecordId = String(targetItem.record_id);
-      const updatedItems = inspection?.checklist_items.map(i =>
-        String(i.record_id) === targetRecordId
-          ? { ...i, photos: [...(i.photos || []), uri] }
-          : i
-      );
-      setInspection(prev => prev ? { ...prev, checklist_items: updatedItems || [] } : null);
+      // 添加到临时照片列表
+      setTempPhotos(prev => [...prev, uri]);
     }
+  };
+
+  // 完成拍照 - 将临时照片保存到清单项
+  const handleCompletePhotos = () => {
+    if (!tempPhotoTarget || tempPhotos.length === 0) {
+      // 如果没有照片，清除状态
+      setTempPhotoTarget(null);
+      setTempPhotos([]);
+      return;
+    }
+    
+    // 将临时照片保存到对应的清单项
+    const targetRecordId = String(tempPhotoTarget.record_id);
+    const updatedItems = inspection?.checklist_items.map(i =>
+      String(i.record_id) === targetRecordId
+        ? { ...i, photos: [...(i.photos || []), ...tempPhotos] }
+        : i
+    );
+    
+    // 更新检查状态为已检查
+    const updatedItemsWithStatus = updatedItems?.map(i =>
+      String(i.record_id) === targetRecordId
+        ? { ...i, result: 'pass' }
+        : i
+    );
+    
+    setInspection(prev => prev ? { ...prev, checklist_items: updatedItemsWithStatus || [] } : null);
+    
+    // 清除临时状态
+    setTempPhotoTarget(null);
+    setTempPhotos([]);
   };
 
   // 添加缺陷
@@ -377,53 +411,84 @@ export default function InspectionDetailScreen() {
                     )}
                   </View>
 
-                  {/* 照片预览 - 显示在操作按钮上方 */}
-                  {item.photos && item.photos.length > 0 && (
-                    <View style={styles.photoPreviewSection}>
-                      <Text style={styles.photoPreviewLabel}>已拍照片 ({item.photos.length})</Text>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoPreviewScroll}>
-                        {item.photos.map((photo, idx) => (
-                          <TouchableOpacity key={idx} onPress={() => {
-                            setSelectedPhoto(photo);
-                            setPhotoModalVisible(true);
-                          }} style={styles.photoContainer}>
-                            <Image source={{ uri: photo }} style={styles.photoThumb} />
-                            <View style={styles.photoBadge}>
-                              <Text style={styles.photoBadgeText}>{idx + 1}</Text>
+                  {/* 临时拍照预览区 - 仅对当前选中的清单项显示 */}
+                  {tempPhotoTarget && String(tempPhotoTarget.record_id) === String(item.record_id) ? (
+                    <View style={styles.tempPhotoSection}>
+                      <View style={styles.tempPhotoHeader}>
+                        <Text style={styles.tempPhotoTitle}>拍照中 - {item.name}</Text>
+                        <Text style={styles.tempPhotoCount}>已拍 {tempPhotos.length} 张</Text>
+                      </View>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tempPhotoScroll}>
+                        {tempPhotos.map((uri, idx) => (
+                          <TouchableOpacity key={idx} style={styles.tempPhotoContainer}>
+                            <Image source={{ uri }} style={styles.tempPhotoThumb} />
+                            <View style={styles.tempPhotoBadge}>
+                              <Text style={styles.tempPhotoBadgeText}>{idx + 1}</Text>
                             </View>
                           </TouchableOpacity>
                         ))}
+                        {/* 继续拍照按钮 */}
+                        <TouchableOpacity style={styles.addPhotoButton} onPress={() => takePhoto(item)}>
+                          <Feather name="camera" size={24} color="#6C63FF" />
+                          <Text style={styles.addPhotoText}>继续拍</Text>
+                        </TouchableOpacity>
                       </ScrollView>
+                      {/* 完成按钮 */}
+                      <TouchableOpacity style={styles.completePhotoButton} onPress={handleCompletePhotos}>
+                        <Feather name="check" size={20} color="#FFFFFF" />
+                        <Text style={styles.completePhotoText}>完成 ({tempPhotos.length}张)</Text>
+                      </TouchableOpacity>
                     </View>
-                  )}
+                  ) : (
+                    <>
+                      {/* 已保存的照片预览 */}
+                      {item.photos && item.photos.length > 0 && (
+                        <View style={styles.photoPreviewSection}>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoPreviewScroll}>
+                            {item.photos.map((photo, idx) => (
+                              <TouchableOpacity key={idx} onPress={() => {
+                                setSelectedPhoto(photo);
+                                setPhotoModalVisible(true);
+                              }} style={styles.photoContainer}>
+                                <Image source={{ uri: photo }} style={styles.photoThumb} />
+                                <View style={styles.photoBadge}>
+                                  <Text style={styles.photoBadgeText}>{idx + 1}</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
 
-                  {item.status === 'unchecked' && inspection.status !== 'completed' && (
-                    <View style={styles.actionButtons}>
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.passButton]}
-                        onPress={() => updateChecklistItem(item, 'pass')}
-                      >
-                        <Feather name="check" size={18} color="#00B894" />
-                        <Text style={styles.passButtonText}>合格</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.failButton]}
-                        onPress={() => {
-                          setSelectedItem(item);
-                          setDefectModalVisible(true);
-                        }}
-                      >
-                        <Feather name="x" size={18} color="#FF6B6B" />
-                        <Text style={styles.failButtonText}>不合格</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.photoButton]}
-                        onPress={() => takePhoto(item)}
-                      >
-                        <Feather name="camera" size={18} color="#6C63FF" />
-                        <Text style={styles.photoButtonText}>拍照</Text>
-                      </TouchableOpacity>
-                    </View>
+                      {item.status === 'unchecked' && inspection.status !== 'completed' && (
+                        <View style={styles.actionButtons}>
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.passButton]}
+                            onPress={() => updateChecklistItem(item, 'pass')}
+                          >
+                            <Feather name="check" size={18} color="#00B894" />
+                            <Text style={styles.passButtonText}>合格</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.failButton]}
+                            onPress={() => {
+                              setSelectedItem(item);
+                              setDefectModalVisible(true);
+                            }}
+                          >
+                            <Feather name="x" size={18} color="#FF6B6B" />
+                            <Text style={styles.failButtonText}>不合格</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.photoButton]}
+                            onPress={() => takePhoto(item)}
+                          >
+                            <Feather name="camera" size={18} color="#6C63FF" />
+                            <Text style={styles.photoButtonText}>拍照</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </>
                   )}
                 </View>
               ))}
@@ -879,6 +944,89 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // 临时拍照区域样式
+  tempPhotoSection: {
+    backgroundColor: 'rgba(108,99,255,0.1)',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+  },
+  tempPhotoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  tempPhotoTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6C63FF',
+  },
+  tempPhotoCount: {
+    fontSize: 13,
+    color: '#6C63FF',
+  },
+  tempPhotoScroll: {
+    flexDirection: 'row',
+  },
+  tempPhotoContainer: {
+    marginRight: 10,
+    position: 'relative',
+  },
+  tempPhotoThumb: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#6C63FF',
+  },
+  tempPhotoBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#6C63FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tempPhotoBadgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  addPhotoButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#6C63FF',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(108,99,255,0.05)',
+  },
+  addPhotoText: {
+    fontSize: 11,
+    color: '#6C63FF',
+    marginTop: 4,
+  },
+  completePhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6C63FF',
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginTop: 12,
+    gap: 8,
+  },
+  completePhotoText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   actionButtons: {
     flexDirection: 'row',
