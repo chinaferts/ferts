@@ -153,40 +153,89 @@ export default function NewInspectionScreen() {
     { value: '4.0', label: 'AQL 4.0 (宽松)' },
   ];
 
-  // AQL标准抽样表 (根据产品数量自动计算抽样数量)
-  const calculateSampleSize = (qty: number, aqlLevel: string): number => {
-    // AQL 2.5 抽样表
-    if (qty <= 50) return 20;
-    if (qty <= 90) return 32;
-    if (qty <= 150) return 50;
-    if (qty <= 280) return 80;
-    if (qty <= 500) return 125;
-    if (qty <= 1200) return 200;
-    if (qty <= 3200) return 315;
-    if (qty <= 10000) return 500;
-    if (qty <= 35000) return 800;
-    return 1250;
+  // AQL标准抽样表 (ISO 2859-1)
+  // 批量范围 -> 样本代码 -> 样本大小
+  const LOT_SIZE_RANGES = [
+    { min: 2, max: 8, code: 'A', sampleSize: 2 },
+    { min: 9, max: 15, code: 'B', sampleSize: 3 },
+    { min: 16, max: 25, code: 'C', sampleSize: 5 },
+    { min: 26, max: 50, code: 'D', sampleSize: 8 },
+    { min: 51, max: 90, code: 'E', sampleSize: 13 },
+    { min: 91, max: 150, code: 'F', sampleSize: 20 },
+    { min: 151, max: 280, code: 'G', sampleSize: 32 },
+    { min: 281, max: 500, code: 'H', sampleSize: 50 },
+    { min: 501, max: 1200, code: 'J', sampleSize: 80 },
+    { min: 1201, max: 3200, code: 'K', sampleSize: 125 },
+    { min: 3201, max: 10000, code: 'L', sampleSize: 200 },
+    { min: 10001, max: 35000, code: 'M', sampleSize: 315 },
+    { min: 35001, max: 150000, code: 'N', sampleSize: 500 },
+    { min: 150001, max: 500000, code: 'O', sampleSize: 800 },
+    { min: 500001, max: Infinity, code: 'P', sampleSize: 1250 },
+  ];
+
+  // AQL等级 -> 允收数(Ac)和拒收数(Re)
+  const AQL_VALUES: Record<string, { ac: number; re: number }> = {
+    '0.065': { ac: 0, re: 1 },
+    '0.10': { ac: 0, re: 1 },
+    '0.15': { ac: 0, re: 1 },
+    '0.25': { ac: 0, re: 1 },
+    '0.40': { ac: 0, re: 1 },
+    '0.65': { ac: 1, re: 2 },
+    '1.0': { ac: 1, re: 2 },
+    '1.5': { ac: 2, re: 3 },
+    '2.5': { ac: 3, re: 4 },
+    '4.0': { ac: 5, re: 6 },
   };
 
-  // 产品数量变化时自动计算抽样数量
+  // 根据产品数量获取样本代码和样本大小
+  const getSampleCodeAndSize = (qty: number): { code: string; sampleSize: number } => {
+    const range = LOT_SIZE_RANGES.find(r => qty >= r.min && qty <= r.max);
+    return range || { code: 'P', sampleSize: 1250 };
+  };
+
+  // 根据产品数量和AQL等级计算抽样方案
+  const calculateSamplePlan = (qty: number, aqlLevel: string): { code: string; sampleSize: number; ac: number; re: number } => {
+    const { code, sampleSize } = getSampleCodeAndSize(qty);
+    const aqlInfo = AQL_VALUES[aqlLevel] || AQL_VALUES['2.5'];
+    return {
+      code,
+      sampleSize,
+      ac: aqlInfo.ac,
+      re: aqlInfo.re,
+    };
+  };
+
+  // 根据产品数量和AQL计算抽样数量
+  const calculateSampleSize = (qty: number, aqlLevel: string): number => {
+    const plan = calculateSamplePlan(qty, aqlLevel);
+    return plan.sampleSize;
+  };
+
+  // 抽样方案状态
+  const [samplePlan, setSamplePlan] = useState<{ code: string; sampleSize: number; ac: number; re: number } | null>(null);
+
+  // 产品数量变化时自动计算抽样方案
   const handleQuantityChange = (text: string) => {
     setQuantity(text);
     const qty = parseInt(text, 10);
     if (!isNaN(qty) && qty > 0) {
-      const calculated = calculateSampleSize(qty, aql);
-      setSampleSize(calculated.toString());
+      const plan = calculateSamplePlan(qty, aql);
+      setSamplePlan(plan);
+      setSampleSize(plan.sampleSize.toString());
     } else {
+      setSamplePlan(null);
       setSampleSize('');
     }
   };
 
-  // AQL变化时重新计算抽样数量
+  // AQL变化时重新计算抽样方案
   const handleAqlChange = (value: string) => {
     setAql(value);
     const qty = parseInt(quantity, 10);
     if (!isNaN(qty) && qty > 0) {
-      const calculated = calculateSampleSize(qty, value);
-      setSampleSize(calculated.toString());
+      const plan = calculateSamplePlan(qty, value);
+      setSamplePlan(plan);
+      setSampleSize(plan.sampleSize.toString());
     }
   };
 
@@ -390,9 +439,20 @@ export default function NewInspectionScreen() {
             <Text style={styles.label}>抽样数量</Text>
             <View style={styles.sampleSizeDisplay}>
               <Feather name="check-circle" size={20} color="#4F46E5" />
-              <Text style={styles.sampleSizeText}>
-                {sampleSize ? `${sampleSize} 件（自动计算）` : '请输入产品数量'}
-              </Text>
+              <View style={styles.samplePlanInfo}>
+                {samplePlan ? (
+                  <>
+                    <Text style={styles.sampleSizeText}>
+                      样本代码: {samplePlan.code} | 抽样: {samplePlan.sampleSize} 件
+                    </Text>
+                    <Text style={styles.sampleSizeSubtext}>
+                      AQL {aql}% | 允收数(Ac): {samplePlan.ac} | 拒收数(Re): {samplePlan.re}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.sampleSizeText}>请输入产品数量</Text>
+                )}
+              </View>
             </View>
           </View>
         </View>
@@ -578,6 +638,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#4F46E5',
     fontWeight: '500',
+  },
+  samplePlanInfo: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  sampleSizeSubtext: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
   optionsGrid: {
     flexDirection: 'row',
