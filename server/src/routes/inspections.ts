@@ -22,7 +22,8 @@ router.get('/', async (req: Request, res: Response) => {
 
     if (!isSupabaseConfigured()) {
       const filters: any = {};
-      if (status) filters.status = status as string;
+      // status为'all'时不过滤
+      if (status && status !== 'all') filters.status = status as string;
       if (checklist_id) filters.checklist_id = checklist_id as string;
       return res.json({ success: true, data: mockGetInspections(filters) });
     }
@@ -30,7 +31,8 @@ router.get('/', async (req: Request, res: Response) => {
     const client = getSupabaseClient();
     let query = client.from('inspections').select('*').order('created_at', { ascending: false });
 
-    if (status) {
+    // status为'all'时返回全部数据
+    if (status && status !== 'all') {
       query = query.eq('status', status);
     }
     if (checklist_id) {
