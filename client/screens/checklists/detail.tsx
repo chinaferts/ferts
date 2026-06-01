@@ -1,7 +1,7 @@
-import { useState, useCallback, use } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 
@@ -21,8 +21,8 @@ interface ChecklistDetail {
   updatedAt: string;
 }
 
-export default function ChecklistDetailScreen({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function ChecklistDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useSafeRouter();
   const [template, setTemplate] = useState<ChecklistDetail | null>(null);
 

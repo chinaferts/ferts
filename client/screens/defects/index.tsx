@@ -29,7 +29,36 @@ export default function DefectsScreen() {
   const [activeTab, setActiveTab] = useState<'all' | 'open' | 'resolved'>('all');
   const [defects, setDefects] = useState<DefectRecord[]>([]);
 
-  const fetchDefects = async () => {
+  useFocusEffect(
+    useCallback(() => {
+      const fetchDefects = async () => {
+        try {
+          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+          const response = await fetch(`${baseUrl}/api/v1/defects?status=${activeTab}`);
+          if (response.ok) {
+            const result = await response.json();
+            const list = result.data || result || [];
+            setDefects(list.map((d: any) => ({
+              id: d.id,
+              supplier: d.supplier_name || d.supplier || '',
+              product: d.product_name || d.product || '',
+              inspectionDate: d.inspection_date || d.inspectionDate || '',
+              defectName: d.defect_name || d.defectName || '',
+              severity: d.severity || 'minor',
+              description: d.description || '',
+              status: d.status || 'open',
+            })));
+          }
+        } catch (error) {
+          console.error('Failed to fetch defects:', error);
+        }
+      };
+      fetchDefects();
+    }, [activeTab])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/defects?status=${activeTab}`);
@@ -50,17 +79,6 @@ export default function DefectsScreen() {
     } catch (error) {
       console.error('Failed to fetch defects:', error);
     }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchDefects();
-    }, [activeTab])
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchDefects();
     setRefreshing(false);
   };
 

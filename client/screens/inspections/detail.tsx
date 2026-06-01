@@ -1,7 +1,7 @@
-import { useState, useCallback, use } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -38,8 +38,8 @@ interface InspectionDetail {
   defects: Defect[];
 }
 
-export default function InspectionDetailScreen({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function InspectionDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useSafeRouter();
   const [inspection, setInspection] = useState<InspectionDetail | null>(null);
   const [defectModalVisible, setDefectModalVisible] = useState(false);
@@ -51,47 +51,47 @@ export default function InspectionDetailScreen({ params }: { params: Promise<{ i
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
-  const fetchInspection = async () => {
-    try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-      const response = await fetch(`${baseUrl}/api/v1/inspections/${id}`);
-      if (response.ok) {
-        const result = await response.json();
-        const data = result.data || result;
-        setInspection({
-          id: data.id,
-          supplier: data.supplier_name || data.supplier || '',
-          product: data.product_name || data.product || '',
-          status: data.status || 'pending',
-          date: data.inspection_date || data.date || '',
-          aql: data.aql || '2.5',
-          sampleSize: data.sample_size || data.sampleSize || 0,
-          checkedCount: data.checked_count || data.checkedCount || 0,
-          defectCount: data.defect_count || data.defectCount || 0,
-          checklist: (data.checklist_items || data.checklist || []).map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            category: item.category || '',
-            status: item.status || 'unchecked',
-            notes: item.notes,
-            photos: item.photos || [],
-          })),
-          defects: (data.defects || []).map((d: any) => ({
-            id: d.id,
-            itemName: d.item_name || d.itemName || '',
-            severity: d.severity || 'minor',
-            description: d.description || '',
-            photos: d.photos || [],
-          })),
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch inspection:', error);
-    }
-  };
-
   useFocusEffect(
     useCallback(() => {
+      const fetchInspection = async () => {
+        if (!id) return;
+        try {
+          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+          const response = await fetch(`${baseUrl}/api/v1/inspections/${id}`);
+          if (response.ok) {
+            const result = await response.json();
+            const data = result.data || result;
+            setInspection({
+              id: data.id,
+              supplier: data.supplier_name || data.supplier || '',
+              product: data.product_name || data.product || '',
+              status: data.status || 'pending',
+              date: data.inspection_date || data.date || '',
+              aql: data.aql || '2.5',
+              sampleSize: data.sample_size || data.sampleSize || 0,
+              checkedCount: data.checked_count || data.checkedCount || 0,
+              defectCount: data.defect_count || data.defectCount || 0,
+              checklist: (data.checklist_items || data.checklist || []).map((item: any) => ({
+                id: item.id,
+                name: item.name,
+                category: item.category || '',
+                status: item.status || 'unchecked',
+                notes: item.notes,
+                photos: item.photos || [],
+              })),
+              defects: (data.defects || []).map((d: any) => ({
+                id: d.id,
+                itemName: d.item_name || d.itemName || '',
+                severity: d.severity || 'minor',
+                description: d.description || '',
+                photos: d.photos || [],
+              })),
+            });
+          }
+        } catch (error) {
+          console.error('Failed to fetch inspection:', error);
+        }
+      };
       fetchInspection();
     }, [id])
   );
