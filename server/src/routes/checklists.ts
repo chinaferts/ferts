@@ -133,10 +133,10 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, description, category } = req.body;
+    const { name, description, categories } = req.body;
 
     if (!isSupabaseConfigured()) {
-      const updated = mockUpdateChecklist(id, { name, description, category });
+      const updated = mockUpdateChecklist(id, { name, description, category: categories });
       if (!updated) {
         return res.status(404).json({ success: false, error: '清单不存在' });
       }

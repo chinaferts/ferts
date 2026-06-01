@@ -112,7 +112,12 @@ export default function ChecklistDetailScreen() {
       });
       
       if (response.ok) {
-        Alert.alert('成功', '模板已保存');
+        Alert.alert('成功', '模板已保存', [
+          {
+            text: '确定',
+            onPress: () => router.back(),
+          },
+        ]);
         setIsEditing(false);
         setEditData(null);
         fetchTemplate();
