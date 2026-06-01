@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, FlatList, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Modal, Keyboard } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +16,7 @@ interface ChecklistTemplate {
 const STORAGE_KEYS = {
   SUPPLIERS: '@inspection_suppliers',
   PRODUCTS: '@inspection_products',
+  PRODUCT_NOS: '@inspection_product_nos',
 };
 
 export default function NewInspectionScreen() {
@@ -33,16 +34,20 @@ export default function NewInspectionScreen() {
   // 历史记录状态
   const [supplierHistory, setSupplierHistory] = useState<string[]>([]);
   const [productHistory, setProductHistory] = useState<string[]>([]);
-  const [showSupplierSuggestions, setShowSupplierSuggestions] = useState(false);
-  const [showProductSuggestions, setShowProductSuggestions] = useState(false);
+  const [productNoHistory, setProductNoHistory] = useState<string[]>([]);
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showProductNoModal, setShowProductNoModal] = useState(false);
   const [filteredSuppliers, setFilteredSuppliers] = useState<string[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<string[]>([]);
+  const [filteredProductNos, setFilteredProductNos] = useState<string[]>([]);
 
   // 加载历史记录
   const loadHistory = useCallback(async () => {
     try {
       const suppliersJson = await AsyncStorage.getItem(STORAGE_KEYS.SUPPLIERS);
       const productsJson = await AsyncStorage.getItem(STORAGE_KEYS.PRODUCTS);
+      const productNosJson = await AsyncStorage.getItem(STORAGE_KEYS.PRODUCT_NOS);
 
       if (suppliersJson) {
         const suppliers = JSON.parse(suppliersJson);
@@ -54,6 +59,11 @@ export default function NewInspectionScreen() {
         setProductHistory(products);
         setFilteredProducts(products);
       }
+      if (productNosJson) {
+        const productNos = JSON.parse(productNosJson);
+        setProductNoHistory(productNos);
+        setFilteredProductNos(productNos);
+      }
     } catch (error) {
       console.error('Failed to load history:', error);
     }
@@ -64,12 +74,23 @@ export default function NewInspectionScreen() {
   }, [loadHistory]);
 
   // 保存历史记录
-  const saveToHistory = async (type: 'supplier' | 'product', value: string) => {
+  const saveToHistory = async (type: 'supplier' | 'product' | 'productNo', value: string) => {
     if (!value.trim()) return;
 
     try {
-      const key = type === 'supplier' ? STORAGE_KEYS.SUPPLIERS : STORAGE_KEYS.PRODUCTS;
-      const history = type === 'supplier' ? [...supplierHistory] : [...productHistory];
+      let key: string;
+      let history: string[];
+
+      if (type === 'supplier') {
+        key = STORAGE_KEYS.SUPPLIERS;
+        history = [...supplierHistory];
+      } else if (type === 'product') {
+        key = STORAGE_KEYS.PRODUCTS;
+        history = [...productHistory];
+      } else {
+        key = STORAGE_KEYS.PRODUCT_NOS;
+        history = [...productNoHistory];
+      }
 
       // 如果已存在，先移除
       const index = history.indexOf(value);
@@ -88,9 +109,12 @@ export default function NewInspectionScreen() {
       if (type === 'supplier') {
         setSupplierHistory(trimmed);
         setFilteredSuppliers(trimmed);
-      } else {
+      } else if (type === 'product') {
         setProductHistory(trimmed);
         setFilteredProducts(trimmed);
+      } else {
+        setProductNoHistory(trimmed);
+        setFilteredProductNos(trimmed);
       }
     } catch (error) {
       console.error('Failed to save history:', error);
@@ -105,10 +129,8 @@ export default function NewInspectionScreen() {
         s.toLowerCase().includes(text.toLowerCase())
       );
       setFilteredSuppliers(filtered);
-      setShowSupplierSuggestions(filtered.length > 0);
     } else {
       setFilteredSuppliers(supplierHistory);
-      setShowSupplierSuggestions(supplierHistory.length > 0);
     }
   };
 
@@ -120,23 +142,103 @@ export default function NewInspectionScreen() {
         p.toLowerCase().includes(text.toLowerCase())
       );
       setFilteredProducts(filtered);
-      setShowProductSuggestions(filtered.length > 0);
     } else {
       setFilteredProducts(productHistory);
-      setShowProductSuggestions(productHistory.length > 0);
+    }
+  };
+
+  // 货号输入变化
+  const handleProductNoChange = (text: string) => {
+    setProductNo(text);
+    if (text.trim()) {
+      const filtered = productNoHistory.filter(p =>
+        p.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredProductNos(filtered);
+    } else {
+      setFilteredProductNos(productNoHistory);
     }
   };
 
   // 选择建议项
   const selectSupplier = (value: string) => {
     setSupplier(value);
-    setShowSupplierSuggestions(false);
+    setShowSupplierModal(false);
   };
 
   const selectProduct = (value: string) => {
     setProduct(value);
-    setShowProductSuggestions(false);
+    setShowProductModal(false);
   };
+
+  const selectProductNo = (value: string) => {
+    setProductNo(value);
+    setShowProductNoModal(false);
+  };
+
+  // AQL标准抽样表
+  const getSamplePlan = (qty: number, aqlLevel: string) => {
+    const batchRanges = [
+      { max: 50, code: 'A', size: 2 },
+      { max: 90, code: 'B', size: 3 },
+      { max: 150, code: 'C', size: 5 },
+      { max: 280, code: 'D', size: 8 },
+      { max: 500, code: 'E', size: 13 },
+      { max: 1200, code: 'F', size: 20 },
+      { max: 3200, code: 'G', size: 32 },
+      { max: 10000, code: 'H', size: 50 },
+      { max: 35000, code: 'J', size: 80 },
+      { max: 150000, code: 'K', size: 125 },
+      { max: 500000, code: 'L', size: 200 },
+      { max: Infinity, code: 'M', size: 315 },
+    ];
+
+    const aqlValues = aqlLevel.split(',').map(v => parseFloat(v.trim()));
+    const aqlLevels: Record<string, { ac: number; re: number }> = {
+      '0.010': { ac: 0, re: 1 }, '0.015': { ac: 0, re: 1 }, '0.025': { ac: 0, re: 1 },
+      '0.040': { ac: 0, re: 1 }, '0.065': { ac: 0, re: 1 }, '0.10': { ac: 0, re: 1 },
+      '0.15': { ac: 0, re: 1 }, '0.25': { ac: 0, re: 1 }, '0.40': { ac: 0, re: 1 },
+      '0.65': { ac: 1, re: 2 }, '1.0': { ac: 1, re: 2 },
+      '1.5': { ac: 2, re: 3 }, '2.5': { ac: 3, re: 4 },
+      '4.0': { ac: 5, re: 6 },
+    };
+
+    const range = batchRanges.find(r => qty <= r.max);
+    const primaryAql = aqlValues[0].toString();
+    const aqlInfo = aqlLevels[primaryAql] || { ac: 1, re: 2 };
+
+    return {
+      code: range?.code || 'M',
+      sampleSize: range?.size || 315,
+      aql: primaryAql,
+      ac: aqlInfo.ac,
+      re: aqlInfo.re,
+    };
+  };
+
+  // 产品数量变化
+  const handleQuantityChange = (text: string) => {
+    setQuantity(text);
+    const qty = parseInt(text, 10);
+    if (qty > 0) {
+      const plan = getSamplePlan(qty, aql);
+      setSampleSize(plan.sampleSize.toString());
+    } else {
+      setSampleSize('');
+    }
+  };
+
+  // AQL变化
+  const handleAqlChange = (value: string) => {
+    setAql(value);
+    const qty = parseInt(quantity, 10);
+    if (qty > 0) {
+      const plan = getSamplePlan(qty, value);
+      setSampleSize(plan.sampleSize.toString());
+    }
+  };
+
+  const samplePlan = quantity ? getSamplePlan(parseInt(quantity, 10), aql) : null;
 
   const templates: ChecklistTemplate[] = [
     { id: 1, name: '电子产品通用模板', categories: 3, items: 15 },
@@ -146,100 +248,18 @@ export default function NewInspectionScreen() {
   ];
 
   const aqlOptions = [
+    { value: '0.40', label: 'AQL 0.40 (非常严格)' },
     { value: '0.65', label: 'AQL 0.65 (严格)' },
     { value: '1.0', label: 'AQL 1.0' },
     { value: '1.5', label: 'AQL 1.5' },
-    { value: '2.5', label: 'AQL 2.5 (常规)' },
+    { value: '2.5', label: 'AQL 2.5 (常用)' },
     { value: '4.0', label: 'AQL 4.0 (宽松)' },
   ];
 
-  // AQL标准抽样表 (ISO 2859-1)
-  // 批量范围 -> 样本代码 -> 样本大小
-  const LOT_SIZE_RANGES = [
-    { min: 2, max: 8, code: 'A', sampleSize: 2 },
-    { min: 9, max: 15, code: 'B', sampleSize: 3 },
-    { min: 16, max: 25, code: 'C', sampleSize: 5 },
-    { min: 26, max: 50, code: 'D', sampleSize: 8 },
-    { min: 51, max: 90, code: 'E', sampleSize: 13 },
-    { min: 91, max: 150, code: 'F', sampleSize: 20 },
-    { min: 151, max: 280, code: 'G', sampleSize: 32 },
-    { min: 281, max: 500, code: 'H', sampleSize: 50 },
-    { min: 501, max: 1200, code: 'J', sampleSize: 80 },
-    { min: 1201, max: 3200, code: 'K', sampleSize: 125 },
-    { min: 3201, max: 10000, code: 'L', sampleSize: 200 },
-    { min: 10001, max: 35000, code: 'M', sampleSize: 315 },
-    { min: 35001, max: 150000, code: 'N', sampleSize: 500 },
-    { min: 150001, max: 500000, code: 'O', sampleSize: 800 },
-    { min: 500001, max: Infinity, code: 'P', sampleSize: 1250 },
-  ];
-
-  // AQL等级 -> 允收数(Ac)和拒收数(Re)
-  const AQL_VALUES: Record<string, { ac: number; re: number }> = {
-    '0.065': { ac: 0, re: 1 },
-    '0.10': { ac: 0, re: 1 },
-    '0.15': { ac: 0, re: 1 },
-    '0.25': { ac: 0, re: 1 },
-    '0.40': { ac: 0, re: 1 },
-    '0.65': { ac: 1, re: 2 },
-    '1.0': { ac: 1, re: 2 },
-    '1.5': { ac: 2, re: 3 },
-    '2.5': { ac: 3, re: 4 },
-    '4.0': { ac: 5, re: 6 },
-  };
-
-  // 根据产品数量获取样本代码和样本大小
-  const getSampleCodeAndSize = (qty: number): { code: string; sampleSize: number } => {
-    const range = LOT_SIZE_RANGES.find(r => qty >= r.min && qty <= r.max);
-    return range || { code: 'P', sampleSize: 1250 };
-  };
-
-  // 根据产品数量和AQL等级计算抽样方案
-  const calculateSamplePlan = (qty: number, aqlLevel: string): { code: string; sampleSize: number; ac: number; re: number } => {
-    const { code, sampleSize } = getSampleCodeAndSize(qty);
-    const aqlInfo = AQL_VALUES[aqlLevel] || AQL_VALUES['2.5'];
-    return {
-      code,
-      sampleSize,
-      ac: aqlInfo.ac,
-      re: aqlInfo.re,
-    };
-  };
-
-  // 根据产品数量和AQL计算抽样数量
-  const calculateSampleSize = (qty: number, aqlLevel: string): number => {
-    const plan = calculateSamplePlan(qty, aqlLevel);
-    return plan.sampleSize;
-  };
-
-  // 抽样方案状态
-  const [samplePlan, setSamplePlan] = useState<{ code: string; sampleSize: number; ac: number; re: number } | null>(null);
-
-  // 产品数量变化时自动计算抽样方案
-  const handleQuantityChange = (text: string) => {
-    setQuantity(text);
-    const qty = parseInt(text, 10);
-    if (!isNaN(qty) && qty > 0) {
-      const plan = calculateSamplePlan(qty, aql);
-      setSamplePlan(plan);
-      setSampleSize(plan.sampleSize.toString());
-    } else {
-      setSamplePlan(null);
-      setSampleSize('');
-    }
-  };
-
-  // AQL变化时重新计算抽样方案
-  const handleAqlChange = (value: string) => {
-    setAql(value);
-    const qty = parseInt(quantity, 10);
-    if (!isNaN(qty) && qty > 0) {
-      const plan = calculateSamplePlan(qty, value);
-      setSamplePlan(plan);
-      setSampleSize(plan.sampleSize.toString());
-    }
-  };
-
+  // 提交处理
   const handleCreate = async () => {
+    Keyboard.dismiss();
+
     if (!supplier.trim()) {
       Alert.alert('提示', '请输入供应商名称');
       return;
@@ -264,6 +284,9 @@ export default function NewInspectionScreen() {
     // 保存到历史记录
     await saveToHistory('supplier', supplier);
     await saveToHistory('product', product);
+    if (productNo.trim()) {
+      await saveToHistory('productNo', productNo);
+    }
 
     setLoading(true);
     try {
@@ -284,7 +307,6 @@ export default function NewInspectionScreen() {
       });
 
       if (response.ok) {
-        // 跳转到验货页面并刷新
         router.replace('/inspections');
       } else {
         Alert.alert('错误', '创建验货任务失败');
@@ -298,9 +320,52 @@ export default function NewInspectionScreen() {
     }
   };
 
+  // 历史建议Modal组件
+  const HistoryModal = ({ visible, onClose, title, data, onSelect }: {
+    visible: boolean;
+    onClose: () => void;
+    title: string;
+    data: string[];
+    onSelect: (value: string) => void;
+  }) => (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Feather name="x" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalList}>
+            {data.length === 0 ? (
+              <Text style={styles.emptyText}>暂无历史记录</Text>
+            ) : (
+              data.map((item, index) => (
+                <TouchableOpacity
+                  key={`${item}-${index}`}
+                  style={styles.modalItem}
+                  onPress={() => onSelect(item)}
+                >
+                  <Feather name="clock" size={16} color="#4F46E5" />
+                  <Text style={styles.modalItemText}>{item}</Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   return (
     <Screen>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* 基本信息 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>基本信息</Text>
@@ -319,59 +384,52 @@ export default function NewInspectionScreen() {
             </View>
           </View>
 
+          {/* 货号 */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>货号</Text>
-            <View style={styles.inputWrapper}>
-              <Feather name="tag" size={20} color="#B2BEC3" />
-              <TextInput
-                style={styles.input}
-                placeholder="请输入货号"
-                placeholderTextColor="#B2BEC3"
-                value={productNo}
-                onChangeText={setProductNo}
-              />
+            <View style={styles.inputWithButton}>
+              <View style={styles.inputWrapper}>
+                <Feather name="tag" size={20} color="#B2BEC3" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="请输入货号"
+                  placeholderTextColor="#B2BEC3"
+                  value={productNo}
+                  onChangeText={handleProductNoChange}
+                />
+              </View>
+              {productNoHistory.length > 0 && (
+                <TouchableOpacity
+                  style={styles.historyButton}
+                  onPress={() => setShowProductNoModal(true)}
+                >
+                  <Feather name="clock" size={20} color="#4F46E5" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
           {/* 供应商名称 */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>供应商名称</Text>
-            <View style={styles.inputWrapperWithSuggestions}>
+            <View style={styles.inputWithButton}>
               <View style={styles.inputWrapper}>
                 <Feather name="home" size={20} color="#B2BEC3" />
                 <TextInput
                   style={styles.input}
-                  placeholder="请输入或选择供应商"
+                  placeholder="请输入供应商名称"
                   placeholderTextColor="#B2BEC3"
                   value={supplier}
                   onChangeText={handleSupplierChange}
-                  onFocus={() => {
-                    if (supplierHistory.length > 0) {
-                      setShowSupplierSuggestions(true);
-                    }
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => setShowSupplierSuggestions(false), 200);
-                  }}
                 />
               </View>
-              {showSupplierSuggestions && filteredSuppliers.length > 0 && (
-                <View style={styles.suggestionsContainer}>
-                  <FlatList
-                    data={filteredSuppliers.slice(0, 5)}
-                    keyExtractor={(item) => item}
-                    keyboardShouldPersistTaps="handled"
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        style={styles.suggestionItem}
-                        onPress={() => selectSupplier(item)}
-                      >
-                        <Feather name="clock" size={16} color="#B2BEC3" />
-                        <Text style={styles.suggestionText}>{item}</Text>
-                      </TouchableOpacity>
-                    )}
-                  />
-                </View>
+              {supplierHistory.length > 0 && (
+                <TouchableOpacity
+                  style={styles.historyButton}
+                  onPress={() => setShowSupplierModal(true)}
+                >
+                  <Feather name="clock" size={20} color="#4F46E5" />
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -379,42 +437,24 @@ export default function NewInspectionScreen() {
           {/* 产品名称 */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>产品名称</Text>
-            <View style={styles.inputWrapperWithSuggestions}>
+            <View style={styles.inputWithButton}>
               <View style={styles.inputWrapper}>
                 <Feather name="box" size={20} color="#B2BEC3" />
                 <TextInput
                   style={styles.input}
-                  placeholder="请输入或选择产品"
+                  placeholder="请输入产品名称"
                   placeholderTextColor="#B2BEC3"
                   value={product}
                   onChangeText={handleProductChange}
-                  onFocus={() => {
-                    if (productHistory.length > 0) {
-                      setShowProductSuggestions(true);
-                    }
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => setShowProductSuggestions(false), 200);
-                  }}
                 />
               </View>
-              {showProductSuggestions && filteredProducts.length > 0 && (
-                <View style={styles.suggestionsContainer}>
-                  <FlatList
-                    data={filteredProducts.slice(0, 5)}
-                    keyExtractor={(item) => item}
-                    keyboardShouldPersistTaps="handled"
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        style={styles.suggestionItem}
-                        onPress={() => selectProduct(item)}
-                      >
-                        <Feather name="clock" size={16} color="#B2BEC3" />
-                        <Text style={styles.suggestionText}>{item}</Text>
-                      </TouchableOpacity>
-                    )}
-                  />
-                </View>
+              {productHistory.length > 0 && (
+                <TouchableOpacity
+                  style={styles.historyButton}
+                  onPress={() => setShowProductModal(true)}
+                >
+                  <Feather name="clock" size={20} color="#4F46E5" />
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -437,7 +477,7 @@ export default function NewInspectionScreen() {
 
           {/* 抽样数量 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>抽样数量</Text>
+            <Text style={styles.label}>抽样数量（AQL自动计算）</Text>
             <View style={styles.sampleSizeDisplay}>
               <Feather name="check-circle" size={20} color="#4F46E5" />
               <View style={styles.samplePlanInfo}>
@@ -447,86 +487,124 @@ export default function NewInspectionScreen() {
                       样本代码: {samplePlan.code} | 抽样: {samplePlan.sampleSize} 件
                     </Text>
                     <Text style={styles.sampleSizeSubtext}>
-                      AQL {aql}% | 允收数(Ac): {samplePlan.ac} | 拒收数(Re): {samplePlan.re}
+                      AQL {samplePlan.aql} | 允收数(Ac): {samplePlan.ac} | 拒收数(Re): {samplePlan.re}
                     </Text>
                   </>
                 ) : (
-                  <Text style={styles.sampleSizeText}>请输入产品数量</Text>
+                  <Text style={styles.sampleSizeSubtext}>
+                    请输入产品数量以计算抽样数量
+                  </Text>
                 )}
               </View>
             </View>
           </View>
+
+          {/* AQL设置 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>AQL质量等级</Text>
+            <View style={styles.optionsGrid}>
+              {aqlOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.optionButton,
+                    aql === option.value && styles.optionButtonActive,
+                  ]}
+                  onPress={() => handleAqlChange(option.value)}
+                >
+                  <Text
+                    style={[
+                      styles.optionButtonText,
+                      aql === option.value && styles.optionButtonTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         </View>
 
-        {/* AQL设置 */}
+        {/* 验货清单 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>AQL 设置</Text>
-          <Text style={styles.sectionSubtitle}>可接受质量水平，决定抽样数量和合格判定标准</Text>
+          <Text style={styles.sectionTitle}>验货清单</Text>
+          <Text style={styles.sectionSubtitle}>选择一个验货清单模板开始验货</Text>
 
-          <View style={styles.optionsGrid}>
-            {aqlOptions.map((option) => (
+          <View style={styles.templateList}>
+            {templates.map((template) => (
               <TouchableOpacity
-                key={option.value}
-                style={[styles.optionButton, aql === option.value && styles.optionButtonActive]}
-                onPress={() => handleAqlChange(option.value)}
+                key={template.id}
+                style={[
+                  styles.templateCard,
+                  selectedTemplate?.id === template.id && styles.templateCardActive,
+                ]}
+                onPress={() => setSelectedTemplate(template)}
               >
-                <Text style={[styles.optionText, aql === option.value && styles.optionTextActive]}>
-                  {option.label}
-                </Text>
+                <View style={styles.templateInfo}>
+                  <Text style={styles.templateName}>{template.name}</Text>
+                  <Text style={styles.templateMeta}>
+                    {template.categories}个分类 · {template.items}个检查项
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.radioCircle,
+                    selectedTemplate?.id === template.id && styles.radioCircleActive,
+                  ]}
+                >
+                  {selectedTemplate?.id === template.id && <View style={styles.radioInner} />}
+                </View>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* 验货清单模板 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>验货清单模板</Text>
-          <Text style={styles.sectionSubtitle}>选择要使用的检查清单模板</Text>
-
-          {templates.map((template) => (
-            <TouchableOpacity
-              key={template.id}
-              style={[
-                styles.templateCard,
-                selectedTemplate?.id === template.id && styles.templateCardActive
-              ]}
-              onPress={() => setSelectedTemplate(template)}
+        {/* 创建按钮 */}
+        <View style={styles.createButtonContainer}>
+          <TouchableOpacity
+            style={[styles.createButton, loading && styles.createButtonDisabled]}
+            onPress={handleCreate}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={loading ? ['#9CA3AF', '#9CA3AF'] : ['#4F46E5', '#7C3AED']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.createButtonGradient}
             >
-              <View style={styles.templateInfo}>
-                <Text style={styles.templateName}>{template.name}</Text>
-                <Text style={styles.templateMeta}>
-                  {template.categories} 个分类 · {template.items} 个检查项
-                </Text>
-              </View>
-              <View style={[
-                styles.radioCircle,
-                selectedTemplate?.id === template.id && styles.radioCircleActive
-              ]}>
-                {selectedTemplate?.id === template.id && <View style={styles.radioInner} />}
-              </View>
-            </TouchableOpacity>
-          ))}
+              <Text style={styles.createButtonText}>
+                {loading ? '创建中...' : '创建验货任务'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
-        {/* 创建按钮 */}
-        <TouchableOpacity
-          style={[styles.createButton, loading && styles.createButtonDisabled]}
-          onPress={handleCreate}
-          disabled={loading}
-        >
-          <LinearGradient
-            colors={loading ? ['#9CA3AF', '#9CA3AF'] : ['#4F46E5', '#7C3AED']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.createButtonGradient}
-          >
-            <Text style={styles.createButtonText}>
-              {loading ? '创建中...' : '创建验货任务'}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
         <View style={styles.bottomPadding} />
+
+        {/* 历史记录Modal */}
+        <HistoryModal
+          visible={showSupplierModal}
+          onClose={() => setShowSupplierModal(false)}
+          title="选择供应商"
+          data={filteredSuppliers}
+          onSelect={selectSupplier}
+        />
+        <HistoryModal
+          visible={showProductModal}
+          onClose={() => setShowProductModal(false)}
+          title="选择产品"
+          data={filteredProducts}
+          onSelect={selectProduct}
+        />
+        <HistoryModal
+          visible={showProductNoModal}
+          onClose={() => setShowProductNoModal(false)}
+          title="选择货号"
+          data={filteredProductNos}
+          onSelect={selectProductNo}
+        />
       </ScrollView>
     </Screen>
   );
@@ -564,19 +642,13 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     marginBottom: 16,
-    zIndex: 1,
   },
-  inputWrapperWithSuggestions: {
-    position: 'relative',
-    zIndex: 100,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
+  inputWithButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   inputWrapper: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
@@ -592,36 +664,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1F2937',
   },
-  suggestionsContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
+  historyButton: {
+    width: 44,
+    height: 44,
+    marginLeft: 8,
+    backgroundColor: '#EEF2FF',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginTop: 4,
-    maxHeight: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-    zIndex: 1000,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    justifyContent: 'center',
   },
-  suggestionText: {
-    flex: 1,
-    marginLeft: 10,
+  label: {
     fontSize: 14,
+    fontWeight: '500',
     color: '#374151',
+    marginBottom: 8,
   },
   sampleSizeDisplay: {
     flexDirection: 'row',
@@ -634,8 +690,6 @@ const styles = StyleSheet.create({
     borderColor: '#4F46E5',
   },
   sampleSizeText: {
-    flex: 1,
-    marginLeft: 10,
     fontSize: 15,
     color: '#4F46E5',
     fontWeight: '500',
@@ -657,22 +711,24 @@ const styles = StyleSheet.create({
   optionButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   optionButtonActive: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#4F46E5',
     borderColor: '#4F46E5',
   },
-  optionText: {
+  optionButtonText: {
     fontSize: 13,
     color: '#6B7280',
   },
-  optionTextActive: {
-    color: '#4F46E5',
-    fontWeight: '500',
+  optionButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  templateList: {
+    gap: 12,
   },
   templateCard: {
     flexDirection: 'row',
@@ -719,8 +775,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#4F46E5',
   },
-  createButton: {
+  createButtonContainer: {
     marginTop: 8,
+  },
+  createButton: {
     borderRadius: 14,
     overflow: 'hidden',
   },
@@ -738,5 +796,52 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  // Modal样式
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    maxHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  modalList: {
+    padding: 8,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 4,
+  },
+  modalItemText: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 15,
+    color: '#1F2937',
+  },
+  emptyText: {
+    textAlign: 'center',
+    padding: 20,
+    color: '#9CA3AF',
+    fontSize: 14,
   },
 });
