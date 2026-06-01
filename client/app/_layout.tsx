@@ -47,14 +47,15 @@ export default function RootLayout() {
               headerShown: false
             }}
           >
-            <Stack.Screen name="(tabs)" options={{ title: "" }} />
-            <Stack.Screen name="(auth)" options={{ title: "" }} />
-            <Stack.Screen name="inspections" options={{ title: "验货任务" }} />
-            <Stack.Screen name="inspections/new" options={{ title: "新建验货" }} />
-            <Stack.Screen name="checklists" options={{ title: "清单模板" }} />
-            <Stack.Screen name="checklists/[id]" options={{ title: "清单详情" }} />
-            <Stack.Screen name="defects" options={{ title: "缺陷记录" }} />
-            <Stack.Screen name="account" options={{ title: "帐号设置" }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="inspections" options={{ headerShown: true, title: "验货任务", headerStyle: { backgroundColor: '#4F46E5' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '600' } }} />
+            <Stack.Screen name="inspections/new" options={{ headerShown: true, title: "新建验货", headerStyle: { backgroundColor: '#4F46E5' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '600' } }} />
+            <Stack.Screen name="checklists" options={{ headerShown: true, title: "清单模板", headerStyle: { backgroundColor: '#4F46E5' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '600' } }} />
+            <Stack.Screen name="checklists/[id]" options={{ headerShown: true, title: "清单详情", headerStyle: { backgroundColor: '#4F46E5' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '600' } }} />
+            <Stack.Screen name="defects" options={{ headerShown: true, title: "缺陷记录", headerStyle: { backgroundColor: '#4F46E5' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '600' } }} />
+            <Stack.Screen name="account" options={{ headerShown: true, title: "帐号设置", headerStyle: { backgroundColor: '#4F46E5' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '600' } }} />
+            <Stack.Screen name="inspections/[id]" options={{ headerShown: true, title: "验货详情", headerStyle: { backgroundColor: '#4F46E5' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '600' } }} />
           </Stack>
           <Toast />
         </AuthGuard>
