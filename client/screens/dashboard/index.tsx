@@ -135,9 +135,18 @@ export default function DashboardScreen() {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/inspections/dashboard`);
       if (response.ok) {
-        const data = await response.json();
-        setStats(data.stats || { total: 0, pending: 0, inProgress: 0, completed: 0 });
-        setRecentInspections(data.recent || []);
+        const result = await response.json();
+        const data = result.data || result;
+        setStats(data.stats || { total: data.total || 0, pending: data.pending || 0, inProgress: data.inProgress || 0, completed: data.completed || 0 });
+        const recentList = data.recentInspections || data.recent || [];
+        setRecentInspections(recentList.map((item: any) => ({
+          id: parseInt(item.id),
+          supplier: item.supplier_name || item.supplier || '',
+          product: item.product_name || item.product || '',
+          status: item.status || 'pending',
+          date: item.inspection_date || item.created_at || '',
+          progress: item.status === 'completed' ? 100 : item.status === 'in_progress' ? 50 : 0,
+        })));
       }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -154,14 +163,23 @@ export default function DashboardScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const fetchDashboardData = async () => {
+      const fetchDashboardDataInner = async () => {
         try {
           const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
           const response = await fetch(`${baseUrl}/api/v1/inspections/dashboard`);
           if (response.ok) {
-            const data = await response.json();
-            setStats(data.stats || { total: 0, pending: 0, inProgress: 0, completed: 0 });
-            setRecentInspections(data.recent || []);
+            const result = await response.json();
+            const data = result.data || result;
+            setStats(data.stats || { total: data.total || 0, pending: data.pending || 0, inProgress: data.inProgress || 0, completed: data.completed || 0 });
+            const recentList = data.recentInspections || data.recent || [];
+            setRecentInspections(recentList.map((item: any) => ({
+              id: parseInt(item.id),
+              supplier: item.supplier_name || item.supplier || '',
+              product: item.product_name || item.product || '',
+              status: item.status || 'pending',
+              date: item.inspection_date || item.created_at || '',
+              progress: item.status === 'completed' ? 100 : item.status === 'in_progress' ? 50 : 0,
+            })));
           }
         } catch (error) {
           console.error('Failed to fetch dashboard data:', error);
@@ -175,7 +193,7 @@ export default function DashboardScreen() {
           ]);
         }
       };
-      fetchDashboardData();
+      fetchDashboardDataInner();
     }, [])
   );
 
