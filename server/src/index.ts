@@ -4,6 +4,7 @@ import checklistsRouter from "./routes/checklists.js";
 import inspectionsRouter from "./routes/inspections.js";
 import defectsRouter from "./routes/defects.js";
 import photosRouter from "./routes/photos.js";
+import usersRouter from "./routes/users.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -24,6 +25,8 @@ app.use('/api/v1/checklists', checklistsRouter);
 app.use('/api/v1/inspections', inspectionsRouter);
 app.use('/api/v1/defects', defectsRouter);
 app.use('/api/v1/photos', photosRouter);
+app.use('/api/v1/users', usersRouter);
+app.use('/api/v1/auth', usersRouter);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -5,6 +5,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Inspection {
   id: number;
@@ -85,6 +86,7 @@ function InspectionCard({ item }: { item: Inspection }) {
 
 export default function InspectionsListScreen() {
   const router = useRouter();
+  const { isAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -216,17 +218,19 @@ export default function InspectionsListScreen() {
           }
         />
 
-        {/* 新建按钮 */}
-        <Link href="/inspections/new" asChild>
-          <TouchableOpacity style={styles.fab}>
-            <LinearGradient
-              colors={['#6C63FF', '#896BFF']}
-              style={styles.fabGradient}
-            >
-              <Feather name="plus" size={28} color="#FFFFFF" />
-            </LinearGradient>
-          </TouchableOpacity>
-        </Link>
+        {/* 新建按钮 - 仅管理员可见 */}
+        {isAdmin && (
+          <Link href="/inspections/new" asChild>
+            <TouchableOpacity style={styles.fab}>
+              <LinearGradient
+                colors={['#6C63FF', '#896BFF']}
+                style={styles.fabGradient}
+              >
+                <Feather name="plus" size={28} color="#FFFFFF" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </Link>
+        )}
       </View>
     </Screen>
   );

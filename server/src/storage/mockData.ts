@@ -244,3 +244,62 @@ export function mockGetDashboardStats() {
     recentDefects
   };
 }
+
+// 用户相关
+interface User {
+  id: string;
+  username: string;
+  name: string;
+  role: 'admin' | 'inspector';
+  email?: string;
+  phone?: string;
+  created_at: string;
+}
+
+let users: User[] = [
+  { id: '1', username: 'admin', name: '管理员', role: 'admin', email: 'admin@example.com', created_at: new Date().toISOString() },
+  { id: '2', username: 'inspector', name: '验货员A', role: 'inspector', email: 'inspector1@example.com', created_at: new Date().toISOString() },
+  { id: '3', username: 'inspector2', name: '验货员B', role: 'inspector', email: 'inspector2@example.com', created_at: new Date().toISOString() },
+];
+
+let currentUserId = '1'; // 默认管理员登录
+
+export function getMockUsers(): User[] {
+  return users;
+}
+
+export function getMockCurrentUser(): User | null {
+  return users.find(u => u.id === currentUserId) || null;
+}
+
+export function updateMockUser(id: string, updates: Partial<Pick<User, 'name' | 'phone' | 'email'>>): User | null {
+  const index = users.findIndex(u => u.id === id);
+  if (index === -1) return null;
+  
+  users[index] = { ...users[index], ...updates };
+  return users[index];
+}
+
+export function createMockUser(data: { name: string; phone?: string; email?: string; role?: 'admin' | 'inspector' }): User {
+  const id = (users.length + 1).toString();
+  const username = `user${id}`;
+  const newUser: User = {
+    id,
+    username,
+    name: data.name,
+    role: data.role || 'inspector',
+    email: data.email,
+    phone: data.phone,
+    created_at: new Date().toISOString()
+  };
+  users.push(newUser);
+  return newUser;
+}
+
+export function updateUserRole(id: string, role: 'admin' | 'inspector'): User | null {
+  const index = users.findIndex(u => u.id === id);
+  if (index === -1) return null;
+  
+  users[index].role = role;
+  return users[index];
+}

@@ -1,6 +1,9 @@
 import { Screen } from '@/components/Screen';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCSSVariable } from 'uniwind';
+import { Feather } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const [background, card, text, muted, accent, border] = useCSSVariable([
@@ -12,43 +15,94 @@ export default function ProfileScreen() {
     '--color-border',
   ]) as string[];
 
+  const { user, isAdmin, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    Alert.alert(
+      '退出登录',
+      '确定要退出登录吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '确定', onPress: logout, style: 'destructive' },
+      ]
+    );
+  };
+
   return (
     <Screen>
       <View style={styles.container}>
-        <View style={[styles.avatarContainer, { backgroundColor: accent }]}>
-          <Text style={styles.avatarText}>检</Text>
-        </View>
-        <Text style={[styles.name, { color: text }]}>验货员</Text>
-        <Text style={[styles.role, { color: muted }]}>质量检验员</Text>
-
-        <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
-          <View style={styles.menuItem}>
-            <Text style={[styles.menuText, { color: text }]}>账号设置</Text>
-            <Text style={{ color: muted }}>›</Text>
+        {/* User Info Card */}
+        <View style={[styles.userCard, { backgroundColor: card, borderColor: border }]}>
+          <View style={[styles.avatarContainer, { backgroundColor: accent }]}>
+            <Text style={styles.avatarText}>{user?.name?.[0] || 'U'}</Text>
           </View>
-          <View style={[styles.divider, { backgroundColor: border }]} />
-          <View style={styles.menuItem}>
-            <Text style={[styles.menuText, { color: text }]}>通知设置</Text>
-            <Text style={{ color: muted }}>›</Text>
-          </View>
-          <View style={[styles.divider, { backgroundColor: border }]} />
-          <View style={styles.menuItem}>
-            <Text style={[styles.menuText, { color: text }]}>关于我们</Text>
-            <Text style={{ color: muted }}>›</Text>
-          </View>
-          <View style={[styles.divider, { backgroundColor: border }]} />
-          <View style={styles.menuItem}>
-            <Text style={[styles.menuText, { color: text }]}>帮助与反馈</Text>
-            <Text style={{ color: muted }}>›</Text>
+          <View style={styles.userInfo}>
+            <Text style={[styles.userName, { color: text }]}>{user?.name || '用户'}</Text>
+            <Text style={[styles.userMeta, { color: muted }]}>@{user?.username || 'username'}</Text>
+            <View style={[styles.roleBadge, { backgroundColor: isAdmin ? '#EEF2FF' : '#ECFDF5' }]}>
+              <Text style={[styles.roleText, { color: isAdmin ? '#4F46E5' : '#059669' }]}>
+                {isAdmin ? '管理员' : '验货员'}
+              </Text>
+            </View>
           </View>
         </View>
 
+        {/* Settings Menu */}
+        <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/account')}
+          >
+            <View style={styles.menuLeft}>
+              <Feather name="settings" size={18} color="#6B7280" style={styles.menuIcon} />
+              <Text style={[styles.menuText, { color: text }]}>账号设置</Text>
+            </View>
+            <Text style={{ color: muted }}>›</Text>
+          </TouchableOpacity>
+          <View style={[styles.divider, { backgroundColor: border }]} />
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <Feather name="bell" size={18} color="#6B7280" style={styles.menuIcon} />
+              <Text style={[styles.menuText, { color: text }]}>通知设置</Text>
+            </View>
+            <Text style={{ color: muted }}>›</Text>
+          </TouchableOpacity>
+          <View style={[styles.divider, { backgroundColor: border }]} />
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <Feather name="info" size={18} color="#6B7280" style={styles.menuIcon} />
+              <Text style={[styles.menuText, { color: text }]}>关于我们</Text>
+            </View>
+            <Text style={{ color: muted }}>›</Text>
+          </TouchableOpacity>
+          <View style={[styles.divider, { backgroundColor: border }]} />
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <Feather name="message-circle" size={18} color="#6B7280" style={styles.menuIcon} />
+              <Text style={[styles.menuText, { color: text }]}>帮助与反馈</Text>
+            </View>
+            <Text style={{ color: muted }}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Version & Logout */}
         <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
           <View style={styles.menuItem}>
-            <Text style={[styles.menuText, { color: text }]}>版本</Text>
+            <View style={styles.menuLeft}>
+              <Feather name="smartphone" size={18} color="#6B7280" style={styles.menuIcon} />
+              <Text style={[styles.menuText, { color: text }]}>版本</Text>
+            </View>
             <Text style={{ color: muted }}>v1.0.0</Text>
           </View>
         </View>
+
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Text style={styles.logoutText}>退出登录</Text>
+        </TouchableOpacity>
       </View>
     </Screen>
   );
@@ -58,29 +112,52 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: 40,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+  userCard: {
+    width: '90%',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginRight: 16,
   },
   avatarText: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
   },
-  name: {
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 4,
   },
-  role: {
+  userMeta: {
     fontSize: 14,
-    marginBottom: 24,
+    marginBottom: 8,
+  },
+  roleBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   card: {
     width: '90%',
@@ -94,13 +171,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+  },
+  menuLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuIcon: {
+    marginRight: 12,
   },
   menuText: {
     fontSize: 15,
   },
   divider: {
     height: 1,
-    marginLeft: 20,
+    marginLeft: 46,
+  },
+  logoutButton: {
+    width: '90%',
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  logoutText: {
+    fontSize: 16,
+    color: '#EF4444',
+    fontWeight: '500',
   },
 });
