@@ -168,6 +168,7 @@ router.post('/', async (req: Request, res: Response) => {
         notes,
         order_no: orderNo,
         product_no: productNo,
+        quantity: quantity || null,
         aql,
         sample_size: sampleSize
       });
@@ -187,6 +188,7 @@ router.post('/', async (req: Request, res: Response) => {
         notes,
         order_no: orderNo,
         product_no: productNo,
+        quantity: quantity || null,
         aql,
         sample_size: sampleSize,
         status: 'pending'

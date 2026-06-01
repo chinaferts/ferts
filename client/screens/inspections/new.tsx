@@ -24,8 +24,9 @@ export default function NewInspectionScreen() {
   const [productNo, setProductNo] = useState('');
   const [supplier, setSupplier] = useState('');
   const [product, setProduct] = useState('');
+  const [quantity, setQuantity] = useState('');
   const [aql, setAql] = useState('2.5');
-  const [sampleSize, setSampleSize] = useState('80');
+  const [sampleSize, setSampleSize] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -152,13 +153,42 @@ export default function NewInspectionScreen() {
     { value: '4.0', label: 'AQL 4.0 (宽松)' },
   ];
 
-  const sampleSizeOptions = [
-    { value: '20', label: '20件' },
-    { value: '50', label: '50件' },
-    { value: '80', label: '80件' },
-    { value: '125', label: '125件' },
-    { value: '200', label: '200件' },
-  ];
+  // AQL标准抽样表 (根据产品数量自动计算抽样数量)
+  const calculateSampleSize = (qty: number, aqlLevel: string): number => {
+    // AQL 2.5 抽样表
+    if (qty <= 50) return 20;
+    if (qty <= 90) return 32;
+    if (qty <= 150) return 50;
+    if (qty <= 280) return 80;
+    if (qty <= 500) return 125;
+    if (qty <= 1200) return 200;
+    if (qty <= 3200) return 315;
+    if (qty <= 10000) return 500;
+    if (qty <= 35000) return 800;
+    return 1250;
+  };
+
+  // 产品数量变化时自动计算抽样数量
+  const handleQuantityChange = (text: string) => {
+    setQuantity(text);
+    const qty = parseInt(text, 10);
+    if (!isNaN(qty) && qty > 0) {
+      const calculated = calculateSampleSize(qty, aql);
+      setSampleSize(calculated.toString());
+    } else {
+      setSampleSize('');
+    }
+  };
+
+  // AQL变化时重新计算抽样数量
+  const handleAqlChange = (value: string) => {
+    setAql(value);
+    const qty = parseInt(quantity, 10);
+    if (!isNaN(qty) && qty > 0) {
+      const calculated = calculateSampleSize(qty, value);
+      setSampleSize(calculated.toString());
+    }
+  };
 
   const handleCreate = async () => {
     if (!supplier.trim()) {
@@ -167,6 +197,14 @@ export default function NewInspectionScreen() {
     }
     if (!product.trim()) {
       Alert.alert('提示', '请输入产品名称');
+      return;
+    }
+    if (!quantity.trim() || parseInt(quantity, 10) <= 0) {
+      Alert.alert('提示', '请输入有效的产品数量');
+      return;
+    }
+    if (!sampleSize) {
+      Alert.alert('提示', '请输入产品数量以计算抽样数量');
       return;
     }
     if (!selectedTemplate) {
@@ -189,6 +227,7 @@ export default function NewInspectionScreen() {
           productNo,
           supplier,
           product,
+          quantity: parseInt(quantity, 10),
           aql,
           sampleSize: Number(sampleSize),
           templateId: selectedTemplate.id,
@@ -329,6 +368,33 @@ export default function NewInspectionScreen() {
               )}
             </View>
           </View>
+
+          {/* 产品数量 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>产品数量</Text>
+            <View style={styles.inputWrapper}>
+              <Feather name="package" size={20} color="#B2BEC3" />
+              <TextInput
+                style={styles.input}
+                placeholder="请输入产品数量"
+                placeholderTextColor="#B2BEC3"
+                value={quantity}
+                onChangeText={handleQuantityChange}
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+
+          {/* 抽样数量 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>抽样数量</Text>
+            <View style={styles.sampleSizeDisplay}>
+              <Feather name="check-circle" size={20} color="#4F46E5" />
+              <Text style={styles.sampleSizeText}>
+                {sampleSize ? `${sampleSize} 件（自动计算）` : '请输入产品数量'}
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* AQL设置 */}
@@ -341,28 +407,9 @@ export default function NewInspectionScreen() {
               <TouchableOpacity
                 key={option.value}
                 style={[styles.optionButton, aql === option.value && styles.optionButtonActive]}
-                onPress={() => setAql(option.value)}
+                onPress={() => handleAqlChange(option.value)}
               >
                 <Text style={[styles.optionText, aql === option.value && styles.optionTextActive]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* 抽样数量 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>抽样数量</Text>
-
-          <View style={styles.optionsGrid}>
-            {sampleSizeOptions.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[styles.optionButton, sampleSize === option.value && styles.optionButtonActive]}
-                onPress={() => setSampleSize(option.value)}
-              >
-                <Text style={[styles.optionText, sampleSize === option.value && styles.optionTextActive]}>
                   {option.label}
                 </Text>
               </TouchableOpacity>
@@ -514,6 +561,23 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 14,
     color: '#374151',
+  },
+  sampleSizeDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#4F46E5',
+  },
+  sampleSizeText: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: '#4F46E5',
+    fontWeight: '500',
   },
   optionsGrid: {
     flexDirection: 'row',
