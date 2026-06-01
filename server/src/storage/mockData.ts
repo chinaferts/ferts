@@ -171,6 +171,26 @@ export function mockCreateInspection(data: any) {
     created_at: new Date().toISOString()
   };
   inspections.unshift(newInspection);
+  
+  // 如果有 checklist_id，从模板复制清单项到 inspectionRecords
+  if (data.checklist_id) {
+    const templateItems = checklistItems.filter(item => item.checklist_id === data.checklist_id);
+    templateItems.forEach(item => {
+      inspectionRecords.push({
+        id: String(nextRecordId++),
+        inspection_id: newInspection.id,
+        checklist_item_id: item.id,
+        item_name: item.name,
+        item_description: item.description,
+        item_category: item.category,
+        result: 'unchecked',
+        score: null,
+        notes: null,
+        created_at: new Date().toISOString()
+      });
+    });
+  }
+  
   return newInspection;
 }
 

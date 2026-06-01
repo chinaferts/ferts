@@ -125,14 +125,65 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     const client = getSupabaseClient();
+
+    // 获取验货记录基本信息
     const { data: inspection, error } = await client
       .from('inspections')
-      .select('*, inspection_records(*), defects(*)')
+      .select('*')
       .eq('id', id)
       .single();
 
     if (error) throw error;
-    res.json({ success: true, data: inspection });
+
+    // 获取检查记录及其关联的清单项
+    const { data: records } = await client
+      .from('inspection_records')
+      .select('*, checklist_items(*)')
+      .eq('inspection_id', id)
+      .order('created_at', { ascending: true });
+
+    // 获取缺陷记录
+    const { data: defects } = await client
+      .from('defects')
+      .select('*')
+      .eq('inspection_id', id);
+
+    // 获取检查照片
+    const { data: photos } = await client
+      .from('inspection_photos')
+      .select('*')
+      .eq('inspection_id', id);
+
+    // 组合数据
+    const checklist_items = (records || []).map((record: any) => {
+      const item = record.checklist_items;
+      return {
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        category: item.item_type || 'general',
+        status: record.result || 'unchecked',
+        notes: record.notes,
+        score: record.score,
+        record_id: record.id,
+        photos: photos?.filter((p: any) => p.record_id === record.id).map((p: any) => p.photo_url) || []
+      };
+    });
+
+    // 按分类分组
+    const categories = [...new Set(checklist_items.map((item: any) => item.category))];
+
+    const result = {
+      ...inspection,
+      checklist_items,
+      categories,
+      defects: defects || [],
+      photos: photos || [],
+      checkedCount: records?.filter((r: any) => r.result !== 'unchecked').length || 0,
+      defectCount: defects?.length || 0
+    };
+
+    res.json({ success: true, data: result });
   } catch (err: any) {
     console.error('获取验货详情失败:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -160,9 +211,11 @@ router.post('/', async (req: Request, res: Response) => {
       notes 
     } = req.body;
 
+    const effectiveChecklistId = templateId || checklist_id;
+
     if (!isSupabaseConfigured()) {
       const newInspection = mockCreateInspection({
-        checklist_id: templateId || checklist_id,
+        checklist_id: effectiveChecklistId,
         supplier_name: supplier || supplier_name,
         product_name: product || product_name,
         batch_number: orderNo || batch_number,
@@ -179,10 +232,12 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     const client = getSupabaseClient();
-    const { data, error } = await client
+
+    // 1. 创建验货记录
+    const { data: inspection, error: inspectionError } = await client
       .from('inspections')
       .insert({
-        checklist_id: templateId || checklist_id,
+        checklist_id: effectiveChecklistId,
         supplier_name: supplier || supplier_name,
         product_name: product || product_name,
         product_sku: productNo || product_sku,
@@ -196,8 +251,46 @@ router.post('/', async (req: Request, res: Response) => {
       .select()
       .single();
 
-    if (error) throw error;
-    res.json({ success: true, data });
+    if (inspectionError) throw inspectionError;
+
+    // 2. 如果有 checklist_id，从模板复制清单项到 inspection_records
+    if (effectiveChecklistId) {
+      console.log('Copying checklist items for checklist_id:', effectiveChecklistId);
+      
+      // 获取模板的清单项
+      const { data: checklistItems, error: itemsError } = await client
+        .from('checklist_items')
+        .select('*')
+        .eq('checklist_id', effectiveChecklistId)
+        .order('item_order', { ascending: true });
+
+      console.log('Found checklist items:', checklistItems?.length, 'items error:', itemsError);
+
+      if (!itemsError && checklistItems && checklistItems.length > 0) {
+        // 为每个清单项创建检查记录
+        const records = checklistItems.map((item: any) => ({
+          inspection_id: inspection.id,
+          item_id: item.id,
+          result: 'unchecked',
+          score: null,
+          notes: null
+        }));
+
+        const { error: recordsError } = await client
+          .from('inspection_records')
+          .insert(records);
+
+        console.log('Inserted inspection records, error:', recordsError);
+
+        if (recordsError) {
+          console.error('创建检查记录失败:', recordsError);
+        }
+      }
+    } else {
+      console.log('No effectiveChecklistId provided');
+    }
+
+    res.json({ success: true, data: inspection });
   } catch (err: any) {
     console.error('创建验货记录失败:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -364,6 +457,82 @@ router.get('/:id/records', async (req: Request, res: Response) => {
     res.json({ success: true, data });
   } catch (err: any) {
     console.error('获取验货记录项列表失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 更新检查记录结果
+router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
+  try {
+    const { id, recordId } = req.params;
+    const { result, notes } = req.body;
+
+    if (!isSupabaseConfigured()) {
+      return res.json({ success: true, data: { id: recordId, result, notes } });
+    }
+
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('inspection_records')
+      .update({
+        result: result,
+        notes: notes || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', recordId)
+      .eq('inspection_id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // 更新验货状态为进行中
+    await client
+      .from('inspections')
+      .update({ status: 'in_progress' })
+      .eq('id', id)
+      .eq('status', 'pending');
+
+    res.json({ success: true, data });
+  } catch (err: any) {
+    console.error('更新检查记录失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 上传检查照片
+router.post('/:id/photos', async (req: Request, res: Response) => {
+  // 文件上传通过 multer 在 index.ts 中处理
+  // 这个路由用于返回上传结果
+  try {
+    const { id } = req.params;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ success: false, error: '请上传图片文件' });
+    }
+
+    const photoUrl = `/uploads/${file.filename}`;
+
+    if (!isSupabaseConfigured()) {
+      return res.json({ success: true, data: { photoUrl, inspection_id: id } });
+    }
+
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('inspection_photos')
+      .insert({
+        inspection_id: parseInt(id as string),
+        photo_url: photoUrl,
+        photo_type: 'checklist'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    console.error('上传照片失败:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
