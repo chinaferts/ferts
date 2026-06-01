@@ -12,7 +12,7 @@ router.post('/', upload.single('photo'), async (req: Request, res: Response) => 
       return res.status(400).json({ success: false, error: '没有上传文件' });
     }
 
-    const { inspection_id, defect_id, category } = req.body;
+    const { inspection_id, defect_id, category, record_id } = req.body;
     const file = req.file;
 
     if (!isSupabaseConfigured()) {
@@ -25,6 +25,7 @@ router.post('/', upload.single('photo'), async (req: Request, res: Response) => 
           inspection_id,
           defect_id: defect_id || null,
           category: category || 'general',
+          record_id: record_id || null,
           photo_url: mockUrl,
           created_at: new Date().toISOString()
         }
@@ -39,20 +40,53 @@ router.post('/', upload.single('photo'), async (req: Request, res: Response) => 
       const url = await (storage as any).uploadBuffer(file.buffer, key, file.mimetype);
 
       const client = requireSupabaseClient();
-      const { data, error } = await client!
-        .from('inspection_photos')
-        .insert({
+      
+      // 先尝试包含 record_id 的插入
+      let data, error;
+      try {
+        const insertData: any = {
           inspection_id,
           defect_id: defect_id || null,
           category: category || 'general',
           photo_url: url,
           created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+        };
+        // 只有当 record_id 存在时才添加
+        if (record_id) {
+          insertData.record_id = record_id;
+        }
+        
+        const result = await client!
+          .from('inspection_photos')
+          .insert(insertData)
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      } catch (e) {
+        error = e;
+      }
+      
+      // 如果失败，尝试不带 record_id
+      if (error) {
+        console.log('插入照片失败，尝试不带record_id:', error);
+        const result = await client!
+          .from('inspection_photos')
+          .insert({
+            inspection_id,
+            defect_id: defect_id || null,
+            category: category || 'general',
+            photo_url: url,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
-      res.json({ success: true, data });
+      res.json({ success: true, data: { ...data, record_id } });
     } catch (storageError) {
       console.error('S3存储失败:', storageError);
       // 如果S3不可用，返回base64编码的数据
@@ -64,6 +98,7 @@ router.post('/', upload.single('photo'), async (req: Request, res: Response) => 
           inspection_id,
           defect_id: defect_id || null,
           category: category || 'general',
+          record_id: record_id || null,
           photo_url: `data:${file.mimetype};base64,${base64}`,
           created_at: new Date().toISOString()
         }
