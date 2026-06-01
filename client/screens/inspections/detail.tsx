@@ -112,9 +112,10 @@ export default function InspectionDetailScreen() {
       });
 
       if (response.ok) {
-        // 更新本地状态
+        // 更新本地状态 - 使用 record_id 字符串比较确保类型一致
+        const targetRecordId = String(item.record_id);
         const updatedItems = inspection.checklist_items.map(i =>
-          i.record_id === item.record_id ? { ...i, status } : i
+          String(i.record_id) === targetRecordId ? { ...i, status } : i
         );
         const checkedCount = updatedItems.filter(i => i.status !== 'unchecked').length;
         const defectCount = updatedItems.filter(i => i.status === 'fail').length;
@@ -151,9 +152,10 @@ export default function InspectionDetailScreen() {
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
       if (selectedItem) {
-        // 为检查项添加照片
+        // 为检查项添加照片 - 使用 record_id 字符串比较确保类型一致
+        const targetRecordId = String(selectedItem.record_id);
         const updatedItems = inspection?.checklist_items.map(i =>
-          i.record_id === selectedItem.record_id
+          String(i.record_id) === targetRecordId
             ? { ...i, photos: [...(i.photos || []), uri] }
             : i
         );
@@ -182,8 +184,10 @@ export default function InspectionDetailScreen() {
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
       if (selectedItem) {
+        // 为检查项添加照片 - 使用 record_id 字符串比较确保类型一致
+        const targetRecordId = String(selectedItem.record_id);
         const updatedItems = inspection?.checklist_items.map(i =>
-          i.record_id === selectedItem.record_id
+          String(i.record_id) === targetRecordId
             ? { ...i, photos: [...(i.photos || []), uri] }
             : i
         );
@@ -987,10 +991,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   thumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 8,
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    marginRight: 10,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#6C63FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   defectCard: {
     backgroundColor: '#FFFFFF',
