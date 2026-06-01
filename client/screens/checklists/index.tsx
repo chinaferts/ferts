@@ -55,45 +55,44 @@ export default function ChecklistsScreen() {
   };
 
   const renderTemplateCard = ({ item }: { item: ChecklistTemplate }) => (
-    <TouchableOpacity 
-      style={styles.cardOuter}
-      onPress={() => Alert.alert('提示', '查看详情功能开发中')}
-    >
-      <View style={styles.cardInner}>
-        <View style={styles.cardHeader}>
-          <View style={styles.iconContainer}>
-            <Feather name="list" size={22} color="#6C63FF" />
+    <Link href={`/checklists/${item.id}`} asChild>
+      <TouchableOpacity style={styles.cardOuter}>
+        <View style={styles.cardInner}>
+          <View style={styles.cardHeader}>
+            <View style={styles.iconContainer}>
+              <Feather name="list" size={22} color="#6C63FF" />
+            </View>
+            <View style={styles.cardInfo}>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+              <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color="#B2BEC3" />
           </View>
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
-            <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
-          </View>
-          <Feather name="chevron-right" size={20} color="#B2BEC3" />
-        </View>
         
-        <View style={styles.cardMeta}>
-          <View style={styles.metaItem}>
-            <Feather name="folder" size={14} color="#636E72" />
-            <Text style={styles.metaText}>{item.categories} 分类</Text>
+          <View style={styles.cardMeta}>
+            <View style={styles.metaItem}>
+              <Feather name="folder" size={14} color="#636E72" />
+              <Text style={styles.metaText}>{item.categories} 分类</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Feather name="check-square" size={14} color="#636E72" />
+              <Text style={styles.metaText}>{item.items} 检查项</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Feather name="trending-up" size={14} color="#636E72" />
+              <Text style={styles.metaText}>使用 {item.usageCount} 次</Text>
+            </View>
           </View>
-          <View style={styles.metaItem}>
-            <Feather name="check-square" size={14} color="#636E72" />
-            <Text style={styles.metaText}>{item.items} 检查项</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Feather name="trending-up" size={14} color="#636E72" />
-            <Text style={styles.metaText}>使用 {item.usageCount} 次</Text>
-          </View>
-        </View>
 
-        <View style={styles.cardFooter}>
-          <View style={styles.updateInfo}>
-            <Feather name="clock" size={12} color="#B2BEC3" />
-            <Text style={styles.updateText}>更新于 {item.updatedAt}</Text>
+          <View style={styles.cardFooter}>
+            <View style={styles.updateInfo}>
+              <Feather name="clock" size={12} color="#B2BEC3" />
+              <Text style={styles.updateText}>更新于 {item.updatedAt}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Link>
   );
 
   return (

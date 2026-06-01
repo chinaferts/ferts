@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, RefreshControl } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -30,59 +30,58 @@ function InspectionCard({ item }: { item: Inspection }) {
   const status = STATUS_CONFIG[item.status];
   
   return (
-    <TouchableOpacity 
-      style={styles.cardOuter}
-      onPress={() => Alert.alert('提示', '查看验货详情功能开发中')}
-    >
-      <View style={styles.cardInner}>
-        <View style={styles.cardHeader}>
-          <View style={styles.headerLeft}>
-            <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-            <Text style={styles.supplierName}>{item.supplier}</Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-            <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
-          </View>
-        </View>
-        
-        <View style={styles.cardBody}>
-          <Text style={styles.productName}>{item.product}</Text>
-          <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <Feather name="calendar" size={14} color="#636E72" />
-              <Text style={styles.metaText}>{item.date}</Text>
+    <Link href={`/inspections/${item.id}`} asChild>
+      <TouchableOpacity style={styles.cardOuter}>
+        <View style={styles.cardInner}>
+          <View style={styles.cardHeader}>
+            <View style={styles.headerLeft}>
+              <View style={[styles.statusDot, { backgroundColor: status.color }]} />
+              <Text style={styles.supplierName}>{item.supplier}</Text>
             </View>
-            {item.aql && (
-              <View style={styles.metaItem}>
-                <Feather name="target" size={14} color="#636E72" />
-                <Text style={styles.metaText}>AQL {item.aql}</Text>
-              </View>
-            )}
-            {item.sampleSize && (
-              <View style={styles.metaItem}>
-                <Feather name="layers" size={14} color="#636E72" />
-                <Text style={styles.metaText}>抽样 {item.sampleSize}件</Text>
-              </View>
-            )}
-          </View>
-        </View>
-        
-        <View style={styles.cardFooter}>
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <LinearGradient
-                colors={['#6C63FF', '#896BFF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.progressFill, { width: `${item.progress}%` }]}
-              />
+            <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+              <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
             </View>
-            <Text style={styles.progressText}>{item.progress}%</Text>
           </View>
-          <Feather name="chevron-right" size={18} color="#B2BEC3" />
+        
+          <View style={styles.cardBody}>
+            <Text style={styles.productName}>{item.product}</Text>
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <Feather name="calendar" size={14} color="#636E72" />
+                <Text style={styles.metaText}>{item.date}</Text>
+              </View>
+              {item.aql && (
+                <View style={styles.metaItem}>
+                  <Feather name="target" size={14} color="#636E72" />
+                  <Text style={styles.metaText}>AQL {item.aql}</Text>
+                </View>
+              )}
+              {item.sampleSize && (
+                <View style={styles.metaItem}>
+                  <Feather name="layers" size={14} color="#636E72" />
+                  <Text style={styles.metaText}>抽样 {item.sampleSize}件</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        
+          <View style={styles.cardFooter}>
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <LinearGradient
+                  colors={['#6C63FF', '#896BFF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.progressFill, { width: `${item.progress}%` }]}
+                />
+              </View>
+              <Text style={styles.progressText}>{item.progress}%</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color="#B2BEC3" />
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Link>
   );
 }
 
