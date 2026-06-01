@@ -1,9 +1,8 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 
 interface ChecklistTemplate {
@@ -19,6 +18,9 @@ interface ChecklistTemplate {
 export default function ChecklistsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const fetchTemplates = async () => {
     try {
@@ -52,6 +54,29 @@ export default function ChecklistsScreen() {
     setRefreshing(true);
     await fetchTemplates();
     setRefreshing(false);
+  };
+
+  const handleCreateTemplate = async () => {
+    if (!newTemplateName.trim() || creating) return;
+    
+    setCreating(true);
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const response = await fetch(`${baseUrl}/api/v1/checklists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newTemplateName.trim(), description: '' }),
+      });
+      if (response.ok) {
+        setNewTemplateName('');
+        setModalVisible(false);
+        fetchTemplates();
+      }
+    } catch (error) {
+      console.error('Failed to create template:', error);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const renderTemplateCard = ({ item }: { item: ChecklistTemplate }) => (
@@ -142,36 +167,56 @@ export default function ChecklistsScreen() {
         {/* 新建按钮 */}
         <TouchableOpacity 
           style={styles.fab}
-          onPress={() => {
-            Alert.prompt(
-              '新建模板',
-              '请输入模板名称',
-              async (name) => {
-                if (name && name.trim()) {
-                  try {
-                    const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-                    const response = await fetch(`${baseUrl}/api/v1/checklists`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ name: name.trim(), description: '' }),
-                    });
-                    if (response.ok) {
-                      fetchTemplates();
-                    }
-                  } catch (error) {
-                    console.error('Failed to create template:', error);
-                  }
-                }
-              },
-              'plain-text'
-            );
-          }}
+          onPress={() => setModalVisible(true)}
           activeOpacity={0.8}
         >
-          <View style={styles.fabGradient}>
+          <View style={styles.fabBg}>
             <Feather name="plus" size={28} color="#FFFFFF" />
           </View>
         </TouchableOpacity>
+
+        {/* 创建模板Modal */}
+        <Modal
+          visible={modalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <KeyboardAvoidingView 
+            style={styles.modalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>新建模板</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="请输入模板名称"
+                placeholderTextColor="#B2BEC3"
+                value={newTemplateName}
+                onChangeText={setNewTemplateName}
+                autoFocus
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.modalBtn, styles.cancelBtn]}
+                  onPress={() => {
+                    setNewTemplateName('');
+                    setModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.cancelBtnText}>取消</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalBtn, styles.confirmBtn]}
+                  onPress={handleCreateTemplate}
+                  disabled={!newTemplateName.trim() || creating}
+                >
+                  <Text style={styles.confirmBtnText}>{creating ? '创建中...' : '创建'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </View>
     </Screen>
   );
@@ -218,34 +263,34 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
     color: '#636E72',
+    marginTop: 2,
   },
   listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 120,
+    padding: 20,
+    paddingTop: 0,
   },
   cardOuter: {
     marginBottom: 12,
-    shadowColor: '#D1D9E6',
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    borderRadius: 20,
   },
   cardInner: {
-    backgroundColor: '#F0F0F3',
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 16,
+    shadowColor: '#D1D9E6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
   },
   iconContainer: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(108,99,255,0.12)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(108,99,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -262,82 +307,123 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#636E72',
     marginTop: 4,
-    lineHeight: 18,
   },
   cardMeta: {
     flexDirection: 'row',
+    marginTop: 12,
     gap: 16,
-    marginBottom: 12,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   metaText: {
     fontSize: 12,
     color: '#636E72',
-    marginLeft: 4,
   },
   cardFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E8E8EB',
+    justifyContent: 'flex-end',
+    marginTop: 8,
   },
   updateInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   updateText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#B2BEC3',
-    marginLeft: 4,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(108,99,255,0.1)',
-    borderRadius: 8,
-  },
-  editText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6C63FF',
-    marginLeft: 4,
   },
   emptyState: {
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 60,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3436',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#636E72',
     marginTop: 16,
   },
   emptySubtitle: {
-    fontSize: 13,
-    color: '#636E72',
-    marginTop: 4,
+    fontSize: 14,
+    color: '#B2BEC3',
+    marginTop: 8,
   },
   fab: {
     position: 'absolute',
-    bottom: 100,
     right: 20,
-    shadowColor: '#6C63FF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
+    bottom: 30,
+    zIndex: 10,
   },
-  fabGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  fabBg: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#6C63FF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#6C63FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '85%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2D3436',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalInput: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#2D3436',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    marginTop: 20,
+    gap: 12,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelBtn: {
+    backgroundColor: '#F5F5F5',
+  },
+  cancelBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#636E72',
+  },
+  confirmBtn: {
+    backgroundColor: '#6C63FF',
+  },
+  confirmBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
