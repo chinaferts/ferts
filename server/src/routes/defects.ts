@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { isSupabaseConfigured, getSupabaseClient } from '../storage/supabase.js';
+import { isSupabaseConfigured, requireSupabaseClient } from '../storage/supabase.js';
 import { mockGetDefects, mockCreateDefect, mockDeleteDefect } from '../storage/mockData.js';
 
 const router = Router();
@@ -17,8 +17,8 @@ router.get('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: defects });
     }
 
-    const client = getSupabaseClient();
-    let query = client.from('defects').select('*').order('created_at', { ascending: false });
+    const client = requireSupabaseClient();
+    let query = client!.from('defects').select('*').order('created_at', { ascending: false });
 
     if (inspection_id) {
       query = query.eq('inspection_id', inspection_id);
@@ -50,7 +50,7 @@ router.post('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: newDefect });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
     const { data, error } = await client
       .from('defects')
       .insert({
@@ -74,14 +74,14 @@ router.post('/', async (req: Request, res: Response) => {
 // 删除缺陷记录
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     if (!isSupabaseConfigured()) {
       mockDeleteDefect(id);
       return res.json({ success: true });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
     const { error } = await client
       .from('defects')
       .delete()

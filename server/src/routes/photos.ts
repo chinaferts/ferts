@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
-import { isSupabaseConfigured, getSupabaseClient } from '../storage/supabase.js';
+import { isSupabaseConfigured, requireSupabaseClient } from '../storage/supabase.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -33,12 +33,13 @@ router.post('/', upload.single('photo'), async (req: Request, res: Response) => 
 
     // 尝试使用S3存储
     try {
-      const { uploadFile } = await import('../storage/s3.js');
+      const { storage } = await import('../storage/s3.js');
       const key = `inspections/${inspection_id}/${Date.now()}-${file.originalname}`;
-      const url = await uploadFile(file.buffer, key, file.mimetype);
+      // 使用 uploadBuffer 方法上传文件
+      const url = await (storage as any).uploadBuffer(file.buffer, key, file.mimetype);
 
-      const client = getSupabaseClient();
-      const { data, error } = await client
+      const client = requireSupabaseClient();
+      const { data, error } = await client!
         .from('inspection_photos')
         .insert({
           inspection_id,
@@ -83,8 +84,8 @@ router.get('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: [] });
     }
 
-    const client = getSupabaseClient();
-    let query = client.from('inspection_photos').select('*').order('created_at', { ascending: false });
+    const client = requireSupabaseClient();
+    let query = client!.from('inspection_photos').select('*').order('created_at', { ascending: false });
 
     if (inspection_id) {
       query = query.eq('inspection_id', inspection_id);
@@ -112,8 +113,8 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return res.json({ success: true });
     }
 
-    const client = getSupabaseClient();
-    const { error } = await client
+    const client = requireSupabaseClient();
+    const { error } = await client!
       .from('inspection_photos')
       .delete()
       .eq('id', id);

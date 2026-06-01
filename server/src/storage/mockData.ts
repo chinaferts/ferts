@@ -74,8 +74,8 @@ let inspections = [
   }
 ];
 
-let inspectionRecords = [];
-let defects = [];
+let inspectionRecords: any[] = [];
+let defects: any[] = [];
 
 let nextChecklistId = 4;
 let nextChecklistItemId = 10;
@@ -156,7 +156,7 @@ export function mockGetInspection(id: string) {
     let records = mockGetInspectionRecords(id);
     
     // 如果没有记录且使用了通用模板(id=0)，自动补充通用清单项
-    if (records.length === 0 && (String(inspection.checklist_id) === '0' || inspection.checklist_id === 0)) {
+    if (records.length === 0 && String(inspection.checklist_id) === '0') {
       records = UNIVERSAL_CHECKLIST_ITEMS.map(item => ({
         id: String(nextRecordId++),
         inspection_id: id,

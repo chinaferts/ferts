@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { isSupabaseConfigured, getSupabaseClient } from '../storage/supabase.js';
+import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 import {
   mockGetChecklists,
   mockGetChecklist,
@@ -19,8 +19,8 @@ router.get('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: mockGetChecklists() });
     }
 
-    const client = getSupabaseClient();
-    const { data, error } = await client
+    const client = requireSupabaseClient();
+    const { data, error } = await client!!
       .from('checklists')
       .select('*')
       .eq('is_active', true)
@@ -37,7 +37,7 @@ router.get('/', async (req: Request, res: Response) => {
 // 获取单个清单详情
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     if (!isSupabaseConfigured()) {
       const checklist = mockGetChecklist(id);
@@ -47,8 +47,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.json({ success: true, data: checklist });
     }
 
-    const client = getSupabaseClient();
-    const { data, error } = await client
+    const client = requireSupabaseClient();
+    const { data, error } = await client!
       .from('checklists')
       .select('*, checklist_items(*)')
       .eq('id', id)
@@ -87,8 +87,8 @@ router.post('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: mockGetChecklist(newChecklist.id) });
     }
 
-    const client = getSupabaseClient();
-    const { data: checklist, error: checklistError } = await client
+    const client = requireSupabaseClient();
+    const { data: checklist, error: checklistError } = await client!
       .from('checklists')
       .insert({ name, description, category, is_active: true })
       .select()
@@ -107,7 +107,7 @@ router.post('/', async (req: Request, res: Response) => {
         order: index + 1
       }));
 
-      const { error: itemsError } = await client
+      const { error: itemsError } = await client!
         .from('checklist_items')
         .insert(itemsToInsert);
 
@@ -115,7 +115,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     // 重新获取完整数据
-    const { data: result, error: fetchError } = await client
+    const { data: result, error: fetchError } = await client!
       .from('checklists')
       .select('*, checklist_items(*)')
       .eq('id', checklist.id)
@@ -132,8 +132,8 @@ router.post('/', async (req: Request, res: Response) => {
 // 更新清单
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const { name, description, categories } = req.body;
+    const id = req.params.id as string;
+    const { name, description, category, categories } = req.body;
 
     if (!isSupabaseConfigured()) {
       // 将前端发送的categories格式转换为后端需要的格式
@@ -153,8 +153,8 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.json({ success: true, data: updated });
     }
 
-    const client = getSupabaseClient();
-    const { data, error } = await client
+    const client = requireSupabaseClient();
+    const { data, error } = await client!
       .from('checklists')
       .update({ name, description, category, updated_at: new Date().toISOString() })
       .eq('id', id)
@@ -172,15 +172,15 @@ router.put('/:id', async (req: Request, res: Response) => {
 // 删除清单
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     if (!isSupabaseConfigured()) {
       mockUpdateChecklist(id, { is_active: false });
       return res.json({ success: true });
     }
 
-    const client = getSupabaseClient();
-    const { error } = await client
+    const client = requireSupabaseClient();
+    const { error } = await client!
       .from('checklists')
       .update({ is_active: false })
       .eq('id', id);
@@ -210,8 +210,8 @@ router.post('/:id/items', async (req: Request, res: Response) => {
       return res.json({ success: true, data: newItem });
     }
 
-    const client = getSupabaseClient();
-    const { data: items, error: fetchError } = await client
+    const client = requireSupabaseClient();
+    const { data: items, error: fetchError } = await client!
       .from('checklist_items')
       .select('order')
       .eq('checklist_id', id)
@@ -220,7 +220,7 @@ router.post('/:id/items', async (req: Request, res: Response) => {
 
     const order = items && items.length > 0 ? items[0].order + 1 : 1;
 
-    const { data, error } = await client
+    const { data, error } = await client!
       .from('checklist_items')
       .insert({
         checklist_id: id,
@@ -244,15 +244,15 @@ router.post('/:id/items', async (req: Request, res: Response) => {
 // 删除检查项
 router.delete('/:checklistId/items/:itemId', async (req: Request, res: Response) => {
   try {
-    const { itemId } = req.params;
+    const itemId = req.params.itemId as string;
 
     if (!isSupabaseConfigured()) {
       mockDeleteChecklistItem(itemId);
       return res.json({ success: true });
     }
 
-    const client = getSupabaseClient();
-    const { error } = await client
+    const client = requireSupabaseClient();
+    const { error } = await client!
       .from('checklist_items')
       .delete()
       .eq('id', itemId);

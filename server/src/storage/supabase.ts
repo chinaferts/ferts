@@ -27,6 +27,15 @@ export function getSupabaseClient(token?: string): SupabaseClient | null {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
+// 确保返回非空的 client，用于 Supabase 模式下的路由
+export function requireSupabaseClient(token?: string): SupabaseClient {
+  const client = getSupabaseClient(token);
+  if (!client) {
+    throw new Error('Supabase is not configured. Please use mock mode.');
+  }
+  return client;
+}
+
 export function getSupabaseUrl() {
   return supabaseUrl;
 }

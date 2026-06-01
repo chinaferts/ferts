@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { isSupabaseConfigured, getSupabaseClient } from '../storage/supabase.js';
+import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 import {
   mockGetInspections,
   mockGetInspection,
@@ -28,7 +28,7 @@ router.get('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: mockGetInspections(filters) });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
     
     // 如果 Supabase 未配置或查询失败，使用 mock 数据
     if (!client) {
@@ -38,7 +38,7 @@ router.get('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: mockGetInspections(filters) });
     }
     
-    let query = client.from('inspections').select('*').order('created_at', { ascending: false });
+    let query = client!.from('inspections').select('*').order('created_at', { ascending: false });
 
     // status为'all'时返回全部数据
     if (status && status !== 'all') {
@@ -79,13 +79,13 @@ router.get('/dashboard', async (req: Request, res: Response) => {
       return res.json({ success: true, data: mockGetDashboardStats() });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
     
     const [totalResult, completedResult, inProgressResult, pendingResult] = await Promise.all([
-      client.from('inspections').select('id', { count: 'exact' }),
-      client.from('inspections').select('id', { count: 'exact' }).eq('status', 'completed'),
-      client.from('inspections').select('id', { count: 'exact' }).eq('status', 'in_progress'),
-      client.from('inspections').select('id', { count: 'exact' }).eq('status', 'pending')
+      client!.from('inspections').select('id', { count: 'exact' }),
+      client!.from('inspections').select('id', { count: 'exact' }).eq('status', 'completed'),
+      client!.from('inspections').select('id', { count: 'exact' }).eq('status', 'in_progress'),
+      client!.from('inspections').select('id', { count: 'exact' }).eq('status', 'pending')
     ]);
 
     const total = totalResult.count || 0;
@@ -93,7 +93,7 @@ router.get('/dashboard', async (req: Request, res: Response) => {
     const inProgress = inProgressResult.count || 0;
     const pending = pendingResult.count || 0;
 
-    const passRateResult = await client
+    const passRateResult = await client!
       .from('inspections')
       .select('failed_items')
       .eq('status', 'completed');
@@ -137,7 +137,7 @@ router.get('/dashboard', async (req: Request, res: Response) => {
 // 获取单个验货详情
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     if (!isSupabaseConfigured()) {
       const inspection = mockGetInspection(id);
@@ -147,7 +147,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.json({ success: true, data: inspection });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
 
     // 获取验货记录基本信息
     const { data: inspection, error } = await client
@@ -263,7 +263,7 @@ router.post('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: newInspection });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
 
     // 1. 创建验货记录
     const { data: inspection, error: inspectionError } = await client
@@ -272,8 +272,8 @@ router.post('/', async (req: Request, res: Response) => {
         checklist_id: effectiveChecklistId,
         supplier_name: supplier || supplier_name,
         product_name: product || product_name,
-        product_sku: productNo || product_sku,
-        order_number: orderNo || order_number,
+        product_sku: productNo || null,
+        order_number: orderNo || null,
         quantity: quantity || null,
         status: 'pending',
         inspector_name: inspector,
@@ -332,7 +332,7 @@ router.post('/', async (req: Request, res: Response) => {
 // 更新验货记录
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const updateData = req.body;
 
     if (!isSupabaseConfigured()) {
@@ -343,7 +343,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.json({ success: true, data: updated });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
     const { data, error } = await client
       .from('inspections')
       .update(updateData)
@@ -362,7 +362,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 // 提交验货记录（完成验货）
 router.post('/:id/submit', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { notes } = req.body;
 
     if (!isSupabaseConfigured()) {
@@ -386,7 +386,7 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
       return res.json({ success: true, data: updated });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
     
     // 获取记录数和缺陷数
     const { data: records } = await client
@@ -440,7 +440,7 @@ router.post('/:id/records', async (req: Request, res: Response) => {
       return res.json({ success: true, data: newRecord });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
     const { data, error } = await client
       .from('inspection_records')
       .insert({
@@ -472,13 +472,13 @@ router.post('/:id/records', async (req: Request, res: Response) => {
 // 获取验货记录项列表
 router.get('/:id/records', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     if (!isSupabaseConfigured()) {
       return res.json({ success: true, data: mockGetInspectionRecords(id) });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
     const { data, error } = await client
       .from('inspection_records')
       .select('*')
@@ -503,7 +503,7 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
       return res.json({ success: true, data: { id: recordId, result, notes } });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
     const { data, error } = await client
       .from('inspection_records')
       .update({
@@ -550,7 +550,7 @@ router.post('/:id/photos', async (req: Request, res: Response) => {
       return res.json({ success: true, data: { photoUrl, inspection_id: id } });
     }
 
-    const client = getSupabaseClient();
+    const client = requireSupabaseClient();
     const { data, error } = await client
       .from('inspection_photos')
       .insert({

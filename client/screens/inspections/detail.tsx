@@ -1,10 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image, Platform } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
+import CustomCamera from '@/components/CustomCamera';
 
 interface ChecklistItem {
   id: number;
@@ -57,6 +57,9 @@ export default function InspectionDetailScreen() {
   // 拍照临时状态 - 用于新流程：先拍照到预览区，完成后再保存
   const [tempPhotoTarget, setTempPhotoTarget] = useState<ChecklistItem | null>(null);
   const [tempPhotos, setTempPhotos] = useState<string[]>([]);
+  // 相机相关状态
+  const [cameraVisible, setCameraVisible] = useState(false);
+  const [cameraPhotoTarget, setCameraPhotoTarget] = useState<ChecklistItem | null>(null);
 
   const fetchInspection = async () => {
     if (!id) return;
@@ -138,64 +141,16 @@ export default function InspectionDetailScreen() {
     }
   };
 
-  // 拍照功能 - 先添加到临时区域，完成后统一保存
-  const takePhoto = async (item?: ChecklistItem) => {
+  // 拍照功能 - 打开相机页面
+  const takePhoto = (item?: ChecklistItem) => {
     const targetItem = item || selectedItem;
     if (!targetItem) return;
     
-    // 如果没有设置临时目标，先设置
-    if (!tempPhotoTarget || tempPhotoTarget.record_id !== targetItem.record_id) {
-      setTempPhotoTarget(targetItem);
-      setTempPhotos([]);
-    }
-    
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('权限不足', '需要相机权限才能拍照');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      // 添加到临时照片列表
-      setTempPhotos(prev => [...prev, uri]);
-    }
-  };
-
-  // 从相册选择 - 先添加到临时区域，完成后统一保存
-  const pickImage = async (item?: ChecklistItem) => {
-    const targetItem = item || selectedItem;
-    if (!targetItem) return;
-    
-    // 如果没有设置临时目标，先设置
-    if (!tempPhotoTarget || tempPhotoTarget.record_id !== targetItem.record_id) {
-      setTempPhotoTarget(targetItem);
-      setTempPhotos([]);
-    }
-    
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('权限不足', '需要相册权限才能选择图片');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      // 添加到临时照片列表
-      setTempPhotos(prev => [...prev, uri]);
-    }
+    // 设置临时目标
+    setTempPhotoTarget(targetItem);
+    setTempPhotos([]);
+    // 打开相机
+    setCameraVisible(true);
   };
 
   // 完成拍照 - 将临时照片保存到清单项
@@ -335,6 +290,27 @@ export default function InspectionDetailScreen() {
 
   return (
     <Screen>
+      {/* 自定义相机页面 */}
+      {cameraVisible && tempPhotoTarget && (
+        <CustomCamera
+          visible={cameraVisible}
+          onClose={() => setCameraVisible(false)}
+          onComplete={(photos) => {
+            // 保存照片到目标清单项
+            const photoUris = photos.map(p => p.uri);
+            const updatedItems = inspection.checklist_items.map(item => {
+              if (item.record_id === tempPhotoTarget.record_id) {
+                return { ...item, photos: [...(item.photos || []), ...photoUris] };
+              }
+              return item;
+            });
+            setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
+            setCameraVisible(false);
+            setTempPhotoTarget(null);
+            setTempPhotos([]);
+          }}
+        />
+      )}
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {/* 头部信息 */}
         <View style={styles.headerCard}>
@@ -418,21 +394,23 @@ export default function InspectionDetailScreen() {
                         <Text style={styles.tempPhotoTitle}>拍照中 - {item.name}</Text>
                         <Text style={styles.tempPhotoCount}>已拍 {tempPhotos.length} 张</Text>
                       </View>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tempPhotoScroll}>
-                        {tempPhotos.map((uri, idx) => (
-                          <TouchableOpacity key={idx} style={styles.tempPhotoContainer}>
-                            <Image source={{ uri }} style={styles.tempPhotoThumb} />
-                            <View style={styles.tempPhotoBadge}>
-                              <Text style={styles.tempPhotoBadgeText}>{idx + 1}</Text>
-                            </View>
+                      <View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tempPhotoScroll}>
+                          {tempPhotos.map((uri, idx) => (
+                            <TouchableOpacity key={idx} style={styles.tempPhotoContainer}>
+                              <Image source={{ uri }} style={styles.tempPhotoThumb} />
+                              <View style={styles.tempPhotoBadge}>
+                                <Text style={styles.tempPhotoBadgeText}>{idx + 1}</Text>
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                          {/* 继续拍照按钮 */}
+                          <TouchableOpacity style={styles.addPhotoButton} onPress={() => takePhoto(item)}>
+                            <Feather name="camera" size={24} color="#6C63FF" />
+                            <Text style={styles.addPhotoText}>继续拍</Text>
                           </TouchableOpacity>
-                        ))}
-                        {/* 继续拍照按钮 */}
-                        <TouchableOpacity style={styles.addPhotoButton} onPress={() => takePhoto(item)}>
-                          <Feather name="camera" size={24} color="#6C63FF" />
-                          <Text style={styles.addPhotoText}>继续拍</Text>
-                        </TouchableOpacity>
-                      </ScrollView>
+                        </ScrollView>
+                      </View>
                       {/* 完成按钮 */}
                       <TouchableOpacity style={styles.completePhotoButton} onPress={handleCompletePhotos}>
                         <Feather name="check" size={20} color="#FFFFFF" />
@@ -601,10 +579,7 @@ export default function InspectionDetailScreen() {
                 <Feather name="camera" size={20} color="#6C63FF" />
                 <Text style={styles.photoActionText}>拍照</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.photoActionButton} onPress={() => pickImage()}>
-                <Feather name="image" size={20} color="#6C63FF" />
-                <Text style={styles.photoActionText}>相册</Text>
-              </TouchableOpacity>
+
             </View>
 
             {defectPhotos.length > 0 && (
