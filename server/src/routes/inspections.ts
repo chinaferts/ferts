@@ -140,17 +140,36 @@ router.get('/:id', async (req: Request, res: Response) => {
 // 创建验货记录
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { checklist_id, supplier_name, product_name, batch_number, inspection_date, inspector, notes } = req.body;
+    const { 
+      orderNo, 
+      productNo, 
+      supplier, 
+      product, 
+      aql, 
+      sampleSize, 
+      templateId,
+      checklist_id, 
+      supplier_name, 
+      product_name, 
+      batch_number, 
+      inspection_date, 
+      inspector, 
+      notes 
+    } = req.body;
 
     if (!isSupabaseConfigured()) {
       const newInspection = mockCreateInspection({
-        checklist_id,
-        supplier_name,
-        product_name,
-        batch_number,
+        checklist_id: templateId || checklist_id,
+        supplier_name: supplier || supplier_name,
+        product_name: product || product_name,
+        batch_number: orderNo || batch_number,
         inspection_date,
         inspector,
-        notes
+        notes,
+        order_no: orderNo,
+        product_no: productNo,
+        aql,
+        sample_size: sampleSize
       });
       return res.json({ success: true, data: newInspection });
     }
@@ -159,13 +178,17 @@ router.post('/', async (req: Request, res: Response) => {
     const { data, error } = await client
       .from('inspections')
       .insert({
-        checklist_id,
-        supplier_name,
-        product_name,
-        batch_number,
+        checklist_id: templateId || checklist_id,
+        supplier_name: supplier || supplier_name,
+        product_name: product || product_name,
+        batch_number: orderNo || batch_number,
         inspection_date,
         inspector,
         notes,
+        order_no: orderNo,
+        product_no: productNo,
+        aql,
+        sample_size: sampleSize,
         status: 'pending'
       })
       .select()

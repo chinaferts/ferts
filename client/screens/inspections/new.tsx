@@ -14,6 +14,8 @@ interface ChecklistTemplate {
 
 export default function NewInspectionScreen() {
   const router = useSafeRouter();
+  const [orderNo, setOrderNo] = useState('');
+  const [productNo, setProductNo] = useState('');
   const [supplier, setSupplier] = useState('');
   const [product, setProduct] = useState('');
   const [aql, setAql] = useState('2.5');
@@ -65,6 +67,8 @@ export default function NewInspectionScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          orderNo,
+          productNo,
           supplier,
           product,
           aql,
@@ -94,6 +98,34 @@ export default function NewInspectionScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>基本信息</Text>
           
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>订单号</Text>
+            <View style={styles.inputWrapper}>
+              <Feather name="hash" size={20} color="#B2BEC3" />
+              <TextInput
+                style={styles.input}
+                placeholder="请输入订单号"
+                placeholderTextColor="#B2BEC3"
+                value={orderNo}
+                onChangeText={setOrderNo}
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>货号</Text>
+            <View style={styles.inputWrapper}>
+              <Feather name="tag" size={20} color="#B2BEC3" />
+              <TextInput
+                style={styles.input}
+                placeholder="请输入货号"
+                placeholderTextColor="#B2BEC3"
+                value={productNo}
+                onChangeText={setProductNo}
+              />
+            </View>
+          </View>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>供应商名称</Text>
             <View style={styles.inputWrapper}>
