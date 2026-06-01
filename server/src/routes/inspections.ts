@@ -145,6 +145,7 @@ router.post('/', async (req: Request, res: Response) => {
       productNo, 
       supplier, 
       product, 
+      quantity,
       aql, 
       sampleSize, 
       templateId,

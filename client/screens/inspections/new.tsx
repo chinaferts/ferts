@@ -565,21 +565,17 @@ export default function NewInspectionScreen() {
         {/* 创建按钮 */}
         <View style={styles.createButtonContainer}>
           <TouchableOpacity
-            style={[styles.createButton, loading && styles.createButtonDisabled]}
+            style={[
+              styles.createButton,
+              { backgroundColor: loading ? '#9CA3AF' : '#4F46E5' }
+            ]}
             onPress={handleCreate}
             disabled={loading}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
-            <LinearGradient
-              colors={loading ? ['#9CA3AF', '#9CA3AF'] : ['#4F46E5', '#7C3AED']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.createButtonGradient}
-            >
-              <Text style={styles.createButtonText}>
-                {loading ? '创建中...' : '创建验货任务'}
-              </Text>
-            </LinearGradient>
+            <Text style={styles.createButtonText}>
+              {loading ? '创建中...' : '创建验货任务'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -782,15 +778,12 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   createButton: {
+    backgroundColor: '#4F46E5',
     borderRadius: 14,
-    overflow: 'hidden',
-  },
-  createButtonDisabled: {
-    opacity: 0.7,
-  },
-  createButtonGradient: {
     paddingVertical: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   createButtonText: {
     color: '#FFFFFF',
