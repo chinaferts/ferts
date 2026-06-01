@@ -350,62 +350,74 @@ export default function InspectionDetailScreen() {
           </View>
         </View>
 
-        {/* 操作按钮栏 */}
-        {inspection.status !== 'completed' && (
-          <View style={styles.actionBar}>
-            <TouchableOpacity style={styles.actionBarButton} onPress={takePhoto}>
-              <View style={styles.actionBarIconContainer}>
-                <Feather name="camera" size={20} color="#6C63FF" />
-                {totalPhotos > 0 && (
-                  <View style={styles.actionBarBadge}>
-                    <Text style={styles.actionBarBadgeText}>{totalPhotos}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.actionBarButtonText}>拍照</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBarButton} onPress={() => setScannerVisible(true)}>
-              <Feather name="maximize" size={20} color="#6C63FF" />
-              <Text style={styles.actionBarButtonText}>扫码</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+
 
         {/* 验货清单 */}
         {categories.map(category => {
           // 获取该分类下所有清单项的照片
           const categoryItems = inspection.checklist_items.filter(item => item.category === category);
           const categoryPhotos = categoryItems.flatMap(item => item.photos || []);
+          // 判断是否为条码扫描分类
+          const isBarcodeCategory = category.toLowerCase().includes('条码') || category.toLowerCase().includes('barcode');
 
           return (
             <View key={category} style={styles.section}>
               <View style={styles.categoryHeader}>
                 <Text style={styles.sectionTitle}>{category}</Text>
-                {/* 分类照片汇总 */}
-                {categoryPhotos.length > 0 && (
-                  <TouchableOpacity
-                    style={styles.categoryPhotosPreview}
-                    onPress={() => {
-                      if (categoryPhotos.length > 0) {
-                        setSelectedPhoto(categoryPhotos[0]);
-                        setPhotoModalVisible(true);
-                      }
-                    }}
-                  >
-                    <View style={styles.categoryPhotosRow}>
-                      {categoryPhotos.slice(0, 4).map((photo, idx) => (
-                        <Image key={idx} source={{ uri: photo }} style={styles.categoryPhotoThumb} />
-                      ))}
-                      {categoryPhotos.length > 4 && (
-                        <View style={styles.categoryPhotoMore}>
-                          <Text style={styles.categoryPhotoMoreText}>+{categoryPhotos.length - 4}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.categoryPhotosCount}>{categoryPhotos.length}张照片</Text>
-                  </TouchableOpacity>
+                {inspection.status !== 'completed' && (
+                  <View style={styles.categoryActions}>
+                    {/* 拍照按钮 - 所有分类都有 */}
+                    <TouchableOpacity
+                      style={styles.categoryActionButton}
+                      onPress={() => {
+                        // 选择该分类第一个未完成的清单项
+                        const firstItem = categoryItems.find(item => !item.status || item.status === 'unchecked');
+                        if (firstItem) {
+                          setSelectedItem(firstItem);
+                        }
+                        pickImage();
+                      }}
+                    >
+                      <Feather name="camera" size={18} color="#6C63FF" />
+                      <Text style={styles.categoryActionText}>拍照</Text>
+                    </TouchableOpacity>
+                    {/* 扫码按钮 - 仅条码分类 */}
+                    {isBarcodeCategory && (
+                      <TouchableOpacity
+                        style={[styles.categoryActionButton, styles.scanButton]}
+                        onPress={() => setScannerVisible(true)}
+                      >
+                        <Feather name="maximize" size={18} color="#6C63FF" />
+                        <Text style={styles.categoryActionText}>扫码</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 )}
               </View>
+              {/* 分类照片汇总 */}
+              {categoryPhotos.length > 0 && (
+                <TouchableOpacity
+                  style={styles.categoryPhotosPreview}
+                  onPress={() => {
+                    if (categoryPhotos.length > 0) {
+                      setSelectedPhoto(categoryPhotos[0]);
+                      setPhotoModalVisible(true);
+                    }
+                  }}
+                >
+                  <View style={styles.categoryPhotosRow}>
+                    {categoryPhotos.slice(0, 4).map((photo, idx) => (
+                      <Image key={idx} source={{ uri: photo }} style={styles.categoryPhotoThumb} />
+                    ))}
+                    {categoryPhotos.length > 4 && (
+                      <View style={styles.categoryPhotoMore}>
+                        <Text style={styles.categoryPhotoMoreText}>+{categoryPhotos.length - 4}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.categoryPhotosCount}>{categoryPhotos.length}张照片</Text>
+                </TouchableOpacity>
+              )}
               {inspection.checklist_items
                 .filter(item => item.category === category)
               .map(item => (
@@ -841,7 +853,31 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  categoryActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  categoryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(108,99,255,0.1)',
+    borderRadius: 8,
+    gap: 4,
+  },
+  categoryActionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6C63FF',
+  },
+  scanButton: {
+    backgroundColor: 'rgba(0,189,126,0.1)',
   },
   categoryPhotosPreview: {
     backgroundColor: '#F8F9FA',
