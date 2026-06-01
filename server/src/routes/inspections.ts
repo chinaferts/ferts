@@ -185,16 +185,13 @@ router.post('/', async (req: Request, res: Response) => {
         checklist_id: templateId || checklist_id,
         supplier_name: supplier || supplier_name,
         product_name: product || product_name,
-        batch_number: orderNo || batch_number,
-        inspection_date,
-        inspector,
-        notes,
-        order_no: orderNo,
-        product_no: productNo,
+        product_sku: productNo || product_sku,
+        order_number: orderNo || order_number,
         quantity: quantity || null,
-        aql,
-        sample_size: sampleSize,
-        status: 'pending'
+        status: 'pending',
+        inspector_name: inspector,
+        notes,
+        scheduled_date: inspection_date
       })
       .select()
       .single();
