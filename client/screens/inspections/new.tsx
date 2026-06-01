@@ -69,9 +69,32 @@ export default function NewInspectionScreen() {
     }
   }, []);
 
+  // 模板列表状态
+  const [templateList, setTemplateList] = useState<ChecklistTemplate[]>([]);
+
+  // 加载模板列表
+  const loadTemplates = useCallback(async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/checklists`);
+      const result = await response.json();
+      if (result.success && result.data) {
+        const templates = Array.isArray(result.data) ? result.data : [];
+        setTemplateList(templates.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          categories: t.category?.length || 0,
+          items: t.category?.reduce((sum: number, cat: any) => sum + (cat.items?.length || 0), 0) || 0
+        })));
+      }
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+    }
+  }, []);
+
   useEffect(() => {
     loadHistory();
-  }, [loadHistory]);
+    loadTemplates();
+  }, [loadHistory, loadTemplates]);
 
   // 保存历史记录
   const saveToHistory = async (type: 'supplier' | 'product' | 'productNo', value: string) => {
@@ -534,7 +557,7 @@ export default function NewInspectionScreen() {
           <Text style={styles.sectionSubtitle}>选择一个验货清单模板开始验货</Text>
 
           <View style={styles.templateList}>
-            {templates.map((template) => (
+            {templateList.map((template) => (
               <TouchableOpacity
                 key={template.id}
                 style={[
