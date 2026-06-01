@@ -34,6 +34,8 @@ function InspectionCard({ item }: { item: Inspection }) {
     router.push(`/inspections/${item.id}`);
   };
   
+  const showStartButton = item.status === 'pending' || item.status === 'in_progress';
+  
   return (
     <TouchableOpacity style={styles.cardOuter} onPress={handlePress} activeOpacity={0.7}>
       <View style={styles.cardInner}>
@@ -70,17 +72,28 @@ function InspectionCard({ item }: { item: Inspection }) {
         </View>
       
         <View style={styles.cardFooter}>
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <LinearGradient
-                colors={['#6C63FF', '#896BFF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.progressFill, { width: `${item.progress}%` }]}
-              />
+          {showStartButton ? (
+            <TouchableOpacity 
+              style={styles.startButton}
+              onPress={handlePress}
+              activeOpacity={0.7}
+            >
+              <Feather name="play-circle" size={16} color="#FFFFFF" />
+              <Text style={styles.startButtonText}>开始验货</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <LinearGradient
+                  colors={['#6C63FF', '#896BFF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.progressFill, { width: `${item.progress}%` }]}
+                />
+              </View>
+              <Text style={styles.progressText}>{item.progress}%</Text>
             </View>
-            <Text style={styles.progressText}>{item.progress}%</Text>
-          </View>
+          )}
           <Feather name="chevron-right" size={18} color="#B2BEC3" />
         </View>
       </View>
@@ -381,6 +394,23 @@ const styles = StyleSheet.create({
     color: '#6C63FF',
     marginLeft: 10,
     width: 36,
+  },
+  startButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6C63FF',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  startButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 6,
   },
   emptyState: {
     alignItems: 'center',
