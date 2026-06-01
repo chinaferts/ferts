@@ -36,7 +36,7 @@ export default function NewInspectionScreen() {
   const [quantity, setQuantity] = useState('');
   const [aql, setAql] = useState('2.5');
   const [sampleSize, setSampleSize] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(UNIVERSAL_TEMPLATE);
   const [loading, setLoading] = useState(false);
 
   // 历史记录状态
