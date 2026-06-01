@@ -135,8 +135,11 @@ export default function InspectionDetailScreen() {
     }
   };
 
-  // 拍照功能
-  const takePhoto = async () => {
+  // 拍照功能 - 接受一个 item 参数确保正确关联
+  const takePhoto = async (item?: ChecklistItem) => {
+    const targetItem = item || selectedItem;
+    if (!targetItem) return;
+    
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       Alert.alert('权限不足', '需要相机权限才能拍照');
@@ -151,24 +154,22 @@ export default function InspectionDetailScreen() {
 
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
-      if (selectedItem) {
-        // 为检查项添加照片 - 使用 record_id 字符串比较确保类型一致
-        const targetRecordId = String(selectedItem.record_id);
-        const updatedItems = inspection?.checklist_items.map(i =>
-          String(i.record_id) === targetRecordId
-            ? { ...i, photos: [...(i.photos || []), uri] }
-            : i
-        );
-        setInspection(prev => prev ? { ...prev, checklist_items: updatedItems || [] } : null);
-      } else {
-        // 为缺陷添加照片
-        setDefectPhotos(prev => [...prev, uri]);
-      }
+      // 为检查项添加照片 - 使用 record_id 字符串比较确保类型一致
+      const targetRecordId = String(targetItem.record_id);
+      const updatedItems = inspection?.checklist_items.map(i =>
+        String(i.record_id) === targetRecordId
+          ? { ...i, photos: [...(i.photos || []), uri] }
+          : i
+      );
+      setInspection(prev => prev ? { ...prev, checklist_items: updatedItems || [] } : null);
     }
   };
 
-  // 从相册选择
-  const pickImage = async () => {
+  // 从相册选择 - 接受一个 item 参数确保正确关联
+  const pickImage = async (item?: ChecklistItem) => {
+    const targetItem = item || selectedItem;
+    if (!targetItem) return;
+    
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert('权限不足', '需要相册权限才能选择图片');
@@ -183,18 +184,14 @@ export default function InspectionDetailScreen() {
 
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
-      if (selectedItem) {
-        // 为检查项添加照片 - 使用 record_id 字符串比较确保类型一致
-        const targetRecordId = String(selectedItem.record_id);
-        const updatedItems = inspection?.checklist_items.map(i =>
-          String(i.record_id) === targetRecordId
-            ? { ...i, photos: [...(i.photos || []), uri] }
-            : i
-        );
-        setInspection(prev => prev ? { ...prev, checklist_items: updatedItems || [] } : null);
-      } else {
-        setDefectPhotos(prev => [...prev, uri]);
-      }
+      // 为检查项添加照片 - 使用 record_id 字符串比较确保类型一致
+      const targetRecordId = String(targetItem.record_id);
+      const updatedItems = inspection?.checklist_items.map(i =>
+        String(i.record_id) === targetRecordId
+          ? { ...i, photos: [...(i.photos || []), uri] }
+          : i
+      );
+      setInspection(prev => prev ? { ...prev, checklist_items: updatedItems || [] } : null);
     }
   };
 
@@ -401,10 +398,7 @@ export default function InspectionDetailScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.photoButton]}
-                        onPress={() => {
-                          setSelectedItem(item);
-                          takePhoto();
-                        }}
+                        onPress={() => takePhoto(item)}
                       >
                         <Feather name="camera" size={18} color="#6C63FF" />
                         <Text style={styles.photoButtonText}>拍照</Text>
@@ -542,11 +536,11 @@ export default function InspectionDetailScreen() {
 
             <Text style={styles.modalLabel}>缺陷照片</Text>
             <View style={styles.photoActions}>
-              <TouchableOpacity style={styles.photoActionButton} onPress={takePhoto}>
+              <TouchableOpacity style={styles.photoActionButton} onPress={() => takePhoto()}>
                 <Feather name="camera" size={20} color="#6C63FF" />
                 <Text style={styles.photoActionText}>拍照</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.photoActionButton} onPress={pickImage}>
+              <TouchableOpacity style={styles.photoActionButton} onPress={() => pickImage()}>
                 <Feather name="image" size={20} color="#6C63FF" />
                 <Text style={styles.photoActionText}>相册</Text>
               </TouchableOpacity>
