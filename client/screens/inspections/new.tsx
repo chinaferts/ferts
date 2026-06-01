@@ -284,14 +284,15 @@ export default function NewInspectionScreen() {
       });
 
       if (response.ok) {
-        router.navigate('/inspections');
+        // 跳转到验货页面并刷新
+        router.replace('/inspections');
       } else {
         Alert.alert('错误', '创建验货任务失败');
       }
     } catch (error) {
       console.error('Failed to create inspection:', error);
       Alert.alert('提示', '创建验货任务成功');
-      router.navigate('/inspections');
+      router.replace('/inspections');
     } finally {
       setLoading(false);
     }
