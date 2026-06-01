@@ -176,41 +176,45 @@ export default function NewInspectionScreen() {
     setShowProductNoModal(false);
   };
 
-  // AQL标准抽样表
+  // AQL标准抽样表 (ISO 2859-1)
   const getSamplePlan = (qty: number, aqlLevel: string) => {
+    // 批量范围 → 样本代码 → 样本大小 (正确对应)
     const batchRanges = [
-      { max: 50, code: 'A', size: 2 },
-      { max: 90, code: 'B', size: 3 },
-      { max: 150, code: 'C', size: 5 },
-      { max: 280, code: 'D', size: 8 },
-      { max: 500, code: 'E', size: 13 },
-      { max: 1200, code: 'F', size: 20 },
-      { max: 3200, code: 'G', size: 32 },
-      { max: 10000, code: 'H', size: 50 },
-      { max: 35000, code: 'J', size: 80 },
-      { max: 150000, code: 'K', size: 125 },
-      { max: 500000, code: 'L', size: 200 },
-      { max: Infinity, code: 'M', size: 315 },
+      { min: 2, max: 8, code: 'A', size: 2 },
+      { min: 9, max: 15, code: 'B', size: 3 },
+      { min: 16, max: 25, code: 'C', size: 5 },
+      { min: 26, max: 50, code: 'D', size: 8 },
+      { min: 51, max: 90, code: 'E', size: 13 },
+      { min: 91, max: 150, code: 'F', size: 20 },
+      { min: 151, max: 280, code: 'G', size: 32 },
+      { min: 281, max: 500, code: 'H', size: 50 },
+      { min: 501, max: 1200, code: 'J', size: 80 },
+      { min: 1201, max: 3200, code: 'K', size: 125 },
+      { min: 3201, max: 10000, code: 'L', size: 200 },
+      { min: 10001, max: 35000, code: 'M', size: 315 },
+      { min: 35001, max: 150000, code: 'N', size: 500 },
+      { min: 150001, max: 500000, code: 'O', size: 800 },
+      { min: 500001, max: Infinity, code: 'P', size: 1250 },
     ];
 
-    const aqlValues = aqlLevel.split(',').map(v => parseFloat(v.trim()));
-    const aqlLevels: Record<string, { ac: number; re: number }> = {
-      '0.010': { ac: 0, re: 1 }, '0.015': { ac: 0, re: 1 }, '0.025': { ac: 0, re: 1 },
-      '0.040': { ac: 0, re: 1 }, '0.065': { ac: 0, re: 1 }, '0.10': { ac: 0, re: 1 },
-      '0.15': { ac: 0, re: 1 }, '0.25': { ac: 0, re: 1 }, '0.40': { ac: 0, re: 1 },
-      '0.65': { ac: 1, re: 2 }, '1.0': { ac: 1, re: 2 },
-      '1.5': { ac: 2, re: 3 }, '2.5': { ac: 3, re: 4 },
+    // AQL等级 → 允收数(Ac)和拒收数(Re)
+    const aqlAcceptRejects: Record<string, { ac: number; re: number }> = {
+      '0.40': { ac: 0, re: 1 },
+      '0.65': { ac: 1, re: 2 },
+      '1.0': { ac: 1, re: 2 },
+      '1.5': { ac: 2, re: 3 },
+      '2.5': { ac: 3, re: 4 },
       '4.0': { ac: 5, re: 6 },
     };
 
-    const range = batchRanges.find(r => qty <= r.max);
-    const primaryAql = aqlValues[0].toString();
-    const aqlInfo = aqlLevels[primaryAql] || { ac: 1, re: 2 };
+    // 找到对应的批量范围
+    const range = batchRanges.find(r => qty >= r.min && qty <= r.max);
+    const aqlInfo = aqlAcceptRejects[aqlLevel] || { ac: 3, re: 4 };
 
     return {
-      code: range?.code || 'M',
-      sampleSize: range?.size || 315,
-      aql: primaryAql,
+      code: range?.code || 'P',
+      sampleSize: range?.size || 1250,
+      aql: aqlLevel,
       ac: aqlInfo.ac,
       re: aqlInfo.re,
     };
@@ -248,12 +252,12 @@ export default function NewInspectionScreen() {
   ];
 
   const aqlOptions = [
-    { value: '0.40', label: 'AQL 0.40 (非常严格)' },
-    { value: '0.65', label: 'AQL 0.65 (严格)' },
+    { value: '0.40', label: 'AQL 0.40 (严)' },
+    { value: '0.65', label: 'AQL 0.65' },
     { value: '1.0', label: 'AQL 1.0' },
     { value: '1.5', label: 'AQL 1.5' },
     { value: '2.5', label: 'AQL 2.5 (常用)' },
-    { value: '4.0', label: 'AQL 4.0 (宽松)' },
+    { value: '4.0', label: 'AQL 4.0 (宽)' },
   ];
 
   // 提交处理
@@ -398,14 +402,12 @@ export default function NewInspectionScreen() {
                   onChangeText={handleProductNoChange}
                 />
               </View>
-              {productNoHistory.length > 0 && (
-                <TouchableOpacity
-                  style={styles.historyButton}
-                  onPress={() => setShowProductNoModal(true)}
-                >
-                  <Feather name="clock" size={20} color="#4F46E5" />
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={styles.historyButton}
+                onPress={() => setShowProductNoModal(true)}
+              >
+                <Feather name="clock" size={20} color="#4F46E5" />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -777,6 +779,7 @@ const styles = StyleSheet.create({
   },
   createButtonContainer: {
     marginTop: 8,
+    zIndex: 100,
   },
   createButton: {
     borderRadius: 14,
