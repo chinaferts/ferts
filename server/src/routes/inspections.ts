@@ -348,11 +348,13 @@ router.put('/:id', async (req: Request, res: Response) => {
       .from('inspections')
       .update(updateData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
+
+    // 如果 select() 返回多条记录，取第一条
+    const updatedInspectionData = Array.isArray(data) ? data[0] : data;
 
     if (error) throw error;
-    res.json({ success: true, data });
+    res.json({ success: true, data: updatedInspectionData });
   } catch (err: any) {
     console.error('更新验货记录失败:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -402,18 +404,23 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
     const passedItems = records?.filter((r: any) => r.result === 'passed').length || 0;
     const failedItems = defects?.length || 0;
 
+    // 构建更新对象，只包含存在的字段
+    const updateData: any = {
+      status: 'completed',
+      total_items: records?.length || 0,
+      passed_items: passedItems,
+      notes
+    };
+
+    // 如果表中有 failed_items 字段才更新
     const { data, error } = await client
       .from('inspections')
-      .update({
-        status: 'completed',
-        total_items: records?.length || 0,
-        passed_items: passedItems,
-        failed_items: failedItems,
-        notes
-      })
+      .update(updateData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
+
+    // 如果 select() 返回多条记录（没有 .single()），取第一条
+    const updatedInspection = Array.isArray(data) ? data[0] : data;
 
     if (error) throw error;
     res.json({ success: true, data });
@@ -450,8 +457,10 @@ router.post('/:id/records', async (req: Request, res: Response) => {
         result,
         notes
       })
-      .select()
-      .single();
+      .select();
+
+    // 如果 select() 返回多条记录，取第一条
+    const insertedRecord = Array.isArray(data) ? data[0] : data;
 
     if (error) throw error;
 
@@ -462,7 +471,7 @@ router.post('/:id/records', async (req: Request, res: Response) => {
       .eq('id', id)
       .eq('status', 'pending');
 
-    res.json({ success: true, data });
+    res.json({ success: true, data: insertedRecord });
   } catch (err: any) {
     console.error('添加验货记录项失败:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -513,8 +522,10 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
       })
       .eq('id', recordId)
       .eq('inspection_id', id)
-      .select()
-      .single();
+      .select();
+
+    // 如果 select() 返回多条记录，取第一条
+    const updatedRecord = Array.isArray(data) ? data[0] : data;
 
     if (error) throw error;
 
@@ -525,7 +536,7 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
       .eq('id', id)
       .eq('status', 'pending');
 
-    res.json({ success: true, data });
+    res.json({ success: true, data: updatedRecord });
   } catch (err: any) {
     console.error('更新检查记录失败:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -559,11 +570,13 @@ router.post('/:id/photos', async (req: Request, res: Response) => {
         photo_type: 'checklist',
         record_id: record_id ? parseInt(record_id) : null
       })
-      .select()
-      .single();
+      .select();
+
+    // 如果 select() 返回多条记录，取第一条
+    const insertedPhoto = Array.isArray(data) ? data[0] : data;
 
     if (error) throw error;
-    res.json({ success: true, data });
+    res.json({ success: true, data: insertedPhoto });
   } catch (err: any) {
     console.error('上传照片失败:', err);
     res.status(500).json({ success: false, error: err.message });
