@@ -86,8 +86,15 @@ export default function AccountScreen() {
     try {
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users`);
       if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
+        const result = await response.json();
+        const list = result.data || result || [];
+        setUsers(list.map((u: any) => ({
+          id: u.id,
+          username: u.username,
+          name: u.name,
+          role: u.role,
+          phone: u.phone,
+        })));
       }
     } catch (error) {
       console.error('Failed to fetch users:', error);

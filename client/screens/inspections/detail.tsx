@@ -56,80 +56,42 @@ export default function InspectionDetailScreen({ params }: { params: Promise<{ i
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}`);
       if (response.ok) {
-        const data = await response.json();
-        setInspection(data);
+        const result = await response.json();
+        const data = result.data || result;
+        setInspection({
+          id: data.id,
+          supplier: data.supplier_name || data.supplier || '',
+          product: data.product_name || data.product || '',
+          status: data.status || 'pending',
+          date: data.inspection_date || data.date || '',
+          aql: data.aql || '2.5',
+          sampleSize: data.sample_size || data.sampleSize || 0,
+          checkedCount: data.checked_count || data.checkedCount || 0,
+          defectCount: data.defect_count || data.defectCount || 0,
+          checklist: (data.checklist_items || data.checklist || []).map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            category: item.category || '',
+            status: item.status || 'unchecked',
+            notes: item.notes,
+            photos: item.photos || [],
+          })),
+          defects: (data.defects || []).map((d: any) => ({
+            id: d.id,
+            itemName: d.item_name || d.itemName || '',
+            severity: d.severity || 'minor',
+            description: d.description || '',
+            photos: d.photos || [],
+          })),
+        });
       }
     } catch (error) {
       console.error('Failed to fetch inspection:', error);
-      // 使用模拟数据
-      setInspection({
-        id: Number(id),
-        supplier: '深圳华强电子',
-        product: '智能手表 PCB板',
-        status: 'in_progress',
-        date: '2024-01-15',
-        aql: '2.5',
-        sampleSize: 80,
-        checkedCount: 52,
-        defectCount: 2,
-        checklist: [
-          { id: 1, name: '外观检查', category: '基本检查', status: 'pass' },
-          { id: 2, name: '尺寸测量', category: '基本检查', status: 'pass' },
-          { id: 3, name: '功能测试', category: '基本检查', status: 'fail', notes: '蓝牙连接不稳定', photos: [] },
-          { id: 4, name: '包装检查', category: '包装检查', status: 'unchecked' },
-          { id: 5, name: '标签检查', category: '包装检查', status: 'unchecked' },
-          { id: 6, name: '跌落测试', category: '特殊测试', status: 'unchecked' },
-          { id: 7, name: '老化测试', category: '特殊测试', status: 'unchecked' },
-          { id: 8, name: '防水测试', category: '特殊测试', status: 'unchecked' },
-        ],
-        defects: [
-          { id: 1, itemName: '功能测试', severity: 'major', description: '蓝牙连接不稳定，10次连接中有2次失败', photos: [] },
-          { id: 2, itemName: '外观检查', severity: 'minor', description: '外壳有轻微划痕', photos: [] },
-        ],
-      });
     }
   };
 
   useFocusEffect(
     useCallback(() => {
-      const fetchInspection = async () => {
-        try {
-          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-          const response = await fetch(`${baseUrl}/api/v1/inspections/${id}`);
-          if (response.ok) {
-            const data = await response.json();
-            setInspection(data);
-          }
-        } catch (error) {
-          console.error('Failed to fetch inspection:', error);
-          // 使用模拟数据
-          setInspection({
-            id: Number(id),
-            supplier: '深圳华强电子',
-            product: '智能手表 PCB板',
-            status: 'in_progress',
-            date: '2024-01-15',
-            aql: '2.5',
-            sampleSize: 80,
-            checkedCount: 52,
-            defectCount: 2,
-            checklist: [
-              { id: 1, name: '外观检查', category: '基本检查', status: 'pass' },
-              { id: 2, name: '尺寸测量', category: '基本检查', status: 'pass' },
-              { id: 3, name: '功能测试', category: '基本检查', status: 'fail', notes: '蓝牙连接不稳定', photos: [] },
-              { id: 4, name: '包装检查', category: '包装检查', status: 'unchecked' },
-              { id: 5, name: '标签检查', category: '包装检查', status: 'unchecked' },
-              { id: 6, name: '跌落测试', category: '特殊测试', status: 'unchecked' },
-              { id: 7, name: '老化测试', category: '特殊测试', status: 'unchecked' },
-              { id: 8, name: '防水测试', category: '特殊测试', status: 'unchecked' },
-            ],
-            defects: [
-              { id: 1, itemName: '功能测试', severity: 'major', description: '蓝牙连接不稳定，10次连接中有2次失败', photos: [] },
-              { id: 2, itemName: '外观检查', severity: 'minor', description: '外壳有轻微划痕', photos: [] },
-            ],
-          });
-        }
-      };
       fetchInspection();
     }, [id])
   );

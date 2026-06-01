@@ -31,25 +31,24 @@ export default function ChecklistDetailScreen({ params }: { params: Promise<{ id
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/checklists/${id}`);
       if (response.ok) {
-        const data = await response.json();
-        setTemplate(data);
+        const result = await response.json();
+        const data = result.data || result;
+        setTemplate({
+          id: data.id,
+          name: data.name,
+          description: data.description || '',
+          categories: (data.categories || []).map((cat: any) => ({
+            id: cat.id || cat.category_id || 0,
+            name: cat.name || cat.category_name || '',
+            items: cat.items || [],
+          })),
+          usageCount: data.usage_count || data.usageCount || 0,
+          createdAt: data.created_at || data.createdAt || '',
+          updatedAt: data.updated_at || data.updatedAt || '',
+        });
       }
     } catch (error) {
       console.error('Failed to fetch template:', error);
-      // 使用模拟数据
-      setTemplate({
-        id: Number(id),
-        name: '电子产品通用模板',
-        description: '适用于手机、电脑等电子产品的验货检查',
-        categories: [
-          { id: 1, name: '基本检查', items: ['外观检查', '尺寸测量', '功能测试', '标签检查'] },
-          { id: 2, name: '包装检查', items: ['包装完整性', '说明书检查', '配件清单'] },
-          { id: 3, name: '特殊测试', items: ['跌落测试', '老化测试', '防水测试'] },
-        ],
-        usageCount: 48,
-        createdAt: '2024-01-01',
-        updatedAt: '2024-01-15',
-      });
     }
   };
 

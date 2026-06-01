@@ -34,44 +34,26 @@ export default function DefectsScreen() {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/defects?status=${activeTab}`);
       if (response.ok) {
-        const data = await response.json();
-        setDefects(data);
+        const result = await response.json();
+        const list = result.data || result || [];
+        setDefects(list.map((d: any) => ({
+          id: d.id,
+          supplier: d.supplier_name || d.supplier || '',
+          product: d.product_name || d.product || '',
+          inspectionDate: d.inspection_date || d.inspectionDate || '',
+          defectName: d.defect_name || d.defectName || '',
+          severity: d.severity || 'minor',
+          description: d.description || '',
+          status: d.status || 'open',
+        })));
       }
     } catch (error) {
       console.error('Failed to fetch defects:', error);
-      // 使用模拟数据
-      setDefects([
-        { id: 1, supplier: '深圳华强电子', product: '智能手表 PCB板', inspectionDate: '2024-01-15', defectName: '蓝牙连接不稳定', severity: 'major', description: '10次连接测试中有2次失败', status: 'open' },
-        { id: 2, supplier: '深圳华强电子', product: '智能手表 PCB板', inspectionDate: '2024-01-15', defectName: '外壳轻微划痕', severity: 'minor', description: '外壳左下角有1cm划痕', status: 'resolved' },
-        { id: 3, supplier: '东莞智造工厂', product: '蓝牙耳机外壳', inspectionDate: '2024-01-14', defectName: '充电触点氧化', severity: 'critical', description: '多处充电触点出现氧化现象', status: 'open' },
-        { id: 4, supplier: '广州精品制造', product: '无线充电器', inspectionDate: '2024-01-13', defectName: '指示灯颜色偏差', severity: 'minor', description: '指示灯偏绿，非标准白色', status: 'resolved' },
-        { id: 5, supplier: '杭州数码科技', product: 'Type-C数据线', inspectionDate: '2024-01-12', defectName: '线材外皮破损', severity: 'major', description: '2条数据线外皮有破损', status: 'open' },
-      ]);
     }
   };
 
   useFocusEffect(
     useCallback(() => {
-      const fetchDefects = async () => {
-        try {
-          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-          const response = await fetch(`${baseUrl}/api/v1/defects?status=${activeTab}`);
-          if (response.ok) {
-            const data = await response.json();
-            setDefects(data);
-          }
-        } catch (error) {
-          console.error('Failed to fetch defects:', error);
-          // 使用模拟数据
-          setDefects([
-            { id: 1, supplier: '深圳华强电子', product: '智能手表 PCB板', inspectionDate: '2024-01-15', defectName: '蓝牙连接不稳定', severity: 'major', description: '10次连接测试中有2次失败', status: 'open' },
-            { id: 2, supplier: '深圳华强电子', product: '智能手表 PCB板', inspectionDate: '2024-01-15', defectName: '外壳轻微划痕', severity: 'minor', description: '外壳左下角有1cm划痕', status: 'resolved' },
-            { id: 3, supplier: '东莞智造工厂', product: '蓝牙耳机外壳', inspectionDate: '2024-01-14', defectName: '充电触点氧化', severity: 'critical', description: '多处充电触点出现氧化现象', status: 'open' },
-            { id: 4, supplier: '广州精品制造', product: '无线充电器', inspectionDate: '2024-01-13', defectName: '指示灯颜色偏差', severity: 'minor', description: '指示灯偏绿，非标准白色', status: 'resolved' },
-            { id: 5, supplier: '杭州数码科技', product: 'Type-C数据线', inspectionDate: '2024-01-12', defectName: '线材外皮破损', severity: 'major', description: '2条数据线外皮有破损', status: 'open' },
-          ]);
-        }
-      };
       fetchDefects();
     }, [activeTab])
   );

@@ -25,46 +25,25 @@ export default function ChecklistsScreen() {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/checklists`);
       if (response.ok) {
-        const data = await response.json();
-        setTemplates(data);
+        const result = await response.json();
+        const list = result.data || result || [];
+        setTemplates(list.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description || '',
+          categories: t.category_count || 0,
+          items: t.item_count || 0,
+          usageCount: t.usage_count || 0,
+          updatedAt: t.created_at ? new Date(t.created_at).toISOString().split('T')[0] : '',
+        })));
       }
     } catch (error) {
       console.error('Failed to fetch templates:', error);
-      // 使用模拟数据
-      setTemplates([
-        { id: 1, name: '电子产品通用模板', description: '适用于手机、电脑等电子产品的验货检查', categories: 3, items: 15, usageCount: 48, updatedAt: '2024-01-15' },
-        { id: 2, name: '服装纺织模板', description: '适用于各类服装、纺织品的质量检查', categories: 4, items: 20, usageCount: 35, updatedAt: '2024-01-14' },
-        { id: 3, name: '玩具安全模板', description: '符合国际玩具安全标准的检查项目', categories: 5, items: 25, usageCount: 22, updatedAt: '2024-01-12' },
-        { id: 4, name: '食品包装模板', description: '食品接触材料和包装的安全检查', categories: 3, items: 18, usageCount: 15, updatedAt: '2024-01-10' },
-        { id: 5, name: '家具验货模板', description: '各类家具的结构安全和外观检查', categories: 4, items: 22, usageCount: 28, updatedAt: '2024-01-08' },
-        { id: 6, name: '化妆品模板', description: '化妆品包装、成分和安全性检查', categories: 3, items: 16, usageCount: 12, updatedAt: '2024-01-05' },
-      ]);
     }
   };
 
   useFocusEffect(
     useCallback(() => {
-      const fetchTemplates = async () => {
-        try {
-          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-          const response = await fetch(`${baseUrl}/api/v1/checklists`);
-          if (response.ok) {
-            const data = await response.json();
-            setTemplates(data);
-          }
-        } catch (error) {
-          console.error('Failed to fetch templates:', error);
-          // 使用模拟数据
-          setTemplates([
-            { id: 1, name: '电子产品通用模板', description: '适用于手机、电脑等电子产品的验货检查', categories: 3, items: 15, usageCount: 48, updatedAt: '2024-01-15' },
-            { id: 2, name: '服装纺织模板', description: '适用于各类服装、纺织品的质量检查', categories: 4, items: 20, usageCount: 35, updatedAt: '2024-01-14' },
-            { id: 3, name: '玩具安全模板', description: '符合国际玩具安全标准的检查项目', categories: 5, items: 25, usageCount: 22, updatedAt: '2024-01-12' },
-            { id: 4, name: '食品包装模板', description: '食品接触材料和包装的安全检查', categories: 3, items: 18, usageCount: 15, updatedAt: '2024-01-10' },
-            { id: 5, name: '家具验货模板', description: '各类家具的结构安全和外观检查', categories: 4, items: 22, usageCount: 28, updatedAt: '2024-01-08' },
-            { id: 6, name: '化妆品模板', description: '化妆品包装、成分和安全性检查', categories: 3, items: 16, usageCount: 12, updatedAt: '2024-01-05' },
-          ]);
-        }
-      };
       fetchTemplates();
     }, [])
   );
