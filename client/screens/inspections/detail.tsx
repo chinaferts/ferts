@@ -377,16 +377,17 @@ export default function InspectionDetailScreen() {
                     )}
                   </View>
 
-                  {/* 照片预览 - 显示在拍照按钮上方 */}
+                  {/* 照片预览 - 显示在操作按钮上方 */}
                   {item.photos && item.photos.length > 0 && (
-                    <View style={styles.photoSection}>
+                    <View style={styles.photoPreviewSection}>
+                      <Text style={styles.photoPreviewLabel}>已拍照片 ({item.photos.length})</Text>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoPreviewScroll}>
                         {item.photos.map((photo, idx) => (
                           <TouchableOpacity key={idx} onPress={() => {
                             setSelectedPhoto(photo);
                             setPhotoModalVisible(true);
                           }} style={styles.photoContainer}>
-                            <Image source={{ uri: photo }} style={styles.thumbnail} />
+                            <Image source={{ uri: photo }} style={styles.photoThumb} />
                             <View style={styles.photoBadge}>
                               <Text style={styles.photoBadgeText}>{idx + 1}</Text>
                             </View>
@@ -970,6 +971,30 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
+  },
+  photoPreviewSection: {
+    backgroundColor: '#F5F5FF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  photoPreviewLabel: {
+    fontSize: 13,
+    color: '#6C63FF',
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  photoThumb: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#6C63FF',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 3,
   },
   defectCard: {
     backgroundColor: '#FFFFFF',
