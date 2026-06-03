@@ -2016,7 +2016,7 @@ const styles = StyleSheet.create({
   },
   defectStatsInput: {
     width: 48,
-    height: 36,
+    height: 40,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
