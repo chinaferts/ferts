@@ -49,6 +49,9 @@ export default function NewInspectionScreen() {
   const [filteredSuppliers, setFilteredSuppliers] = useState<string[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<string[]>([]);
   const [filteredProductNos, setFilteredProductNos] = useState<string[]>([]);
+  
+  // 输入框焦点状态 - 控制建议列表显示
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // 加载历史记录
   const loadHistory = useCallback(async () => {
@@ -440,6 +443,8 @@ export default function NewInspectionScreen() {
                   placeholderTextColor="#B2BEC3"
                   value={productNo}
                   onChangeText={handleProductNoChange}
+                  onFocus={() => { setFocusedField('productNo'); setFilteredProductNos(productNoHistory); }}
+                  onBlur={() => setTimeout(() => setFocusedField(null), 200)}
                 />
               </View>
               <TouchableOpacity
@@ -449,6 +454,21 @@ export default function NewInspectionScreen() {
                 <Feather name="clock" size={20} color="#4F46E5" />
               </TouchableOpacity>
             </View>
+            {/* 货号历史建议列表 */}
+            {focusedField === 'productNo' && filteredProductNos.length > 0 && (
+              <View style={styles.suggestionList}>
+                {filteredProductNos.slice(0, 5).map((item, index) => (
+                  <TouchableOpacity
+                    key={`pn-${index}`}
+                    style={styles.suggestionItem}
+                    onPress={() => { selectProductNo(item); setFocusedField(null); }}
+                  >
+                    <Feather name="tag" size={14} color="#4F46E5" />
+                    <Text style={styles.suggestionText}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* 供应商名称 */}
@@ -463,6 +483,8 @@ export default function NewInspectionScreen() {
                   placeholderTextColor="#B2BEC3"
                   value={supplier}
                   onChangeText={handleSupplierChange}
+                  onFocus={() => { setFocusedField('supplier'); setFilteredSuppliers(supplierHistory); }}
+                  onBlur={() => setTimeout(() => setFocusedField(null), 200)}
                 />
               </View>
               {supplierHistory.length > 0 && (
@@ -474,6 +496,21 @@ export default function NewInspectionScreen() {
                 </TouchableOpacity>
               )}
             </View>
+            {/* 供应商历史建议列表 */}
+            {focusedField === 'supplier' && filteredSuppliers.length > 0 && (
+              <View style={styles.suggestionList}>
+                {filteredSuppliers.slice(0, 5).map((item, index) => (
+                  <TouchableOpacity
+                    key={`sup-${index}`}
+                    style={styles.suggestionItem}
+                    onPress={() => { selectSupplier(item); setFocusedField(null); }}
+                  >
+                    <Feather name="home" size={14} color="#4F46E5" />
+                    <Text style={styles.suggestionText}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* 产品名称 */}
@@ -488,6 +525,8 @@ export default function NewInspectionScreen() {
                   placeholderTextColor="#B2BEC3"
                   value={product}
                   onChangeText={handleProductChange}
+                  onFocus={() => { setFocusedField('product'); setFilteredProducts(productHistory); }}
+                  onBlur={() => setTimeout(() => setFocusedField(null), 200)}
                 />
               </View>
               {productHistory.length > 0 && (
@@ -499,6 +538,21 @@ export default function NewInspectionScreen() {
                 </TouchableOpacity>
               )}
             </View>
+            {/* 产品历史建议列表 */}
+            {focusedField === 'product' && filteredProducts.length > 0 && (
+              <View style={styles.suggestionList}>
+                {filteredProducts.slice(0, 5).map((item, index) => (
+                  <TouchableOpacity
+                    key={`prod-${index}`}
+                    style={styles.suggestionItem}
+                    onPress={() => { selectProduct(item); setFocusedField(null); }}
+                  >
+                    <Feather name="box" size={14} color="#4F46E5" />
+                    <Text style={styles.suggestionText}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* 产品数量 */}
@@ -881,5 +935,33 @@ const styles = StyleSheet.create({
     padding: 20,
     color: '#9CA3AF',
     fontSize: 14,
+  },
+  // 自动建议列表样式
+  suggestionList: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginTop: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  suggestionText: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#374151',
   },
 });
