@@ -577,7 +577,9 @@ export default function InspectionDetailScreen() {
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: '#FF6B6B' }]}>{inspection.defectCount}</Text>
+                <Text style={[styles.statValue, { color: '#FF6B6B' }]}>
+                  {defectStats.critical + defectStats.serious + defectStats.minor}
+                </Text>
                 <Text style={styles.statLabel}>缺陷数</Text>
               </View>
               <View style={styles.statDivider} />
