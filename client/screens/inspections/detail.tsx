@@ -355,8 +355,8 @@ export default function InspectionDetailScreen() {
         <View style={styles.headerCard}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.supplierName}>{inspection.supplier_name}</Text>
               <Text style={styles.productName}>{inspection.product_name}</Text>
+              <Text style={styles.supplierName}>{inspection.supplier_name}</Text>
             </View>
             <View style={[styles.statusBadge, {
               backgroundColor: inspection.status === 'completed' ? 'rgba(0,184,148,0.15)' : 'rgba(14,165,233,0.15)'
