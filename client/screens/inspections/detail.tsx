@@ -74,8 +74,6 @@ export default function InspectionDetailScreen() {
   // 当前拍照的问题索引
   const [cameraIssueIndex, setCameraIssueIndex] = useState<number | null>(null);
   const [issueCameraVisible, setIssueCameraVisible] = useState(false);
-  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const issueCameraRef = useRef<CameraView>(null);
   
   // 问题描述框处理函数
   const handleAddIssue = () => {
@@ -94,19 +92,10 @@ export default function InspectionDetailScreen() {
     setIssues(newIssues);
   };
   
-  // 问题描述拍照函数
+  // 问题描述拍照函数 - 使用 CustomCamera 组件
   const handleOpenCamera = (index: number) => {
-    if (cameraPermission?.granted) {
-      setCameraIssueIndex(index);
-      setIssueCameraVisible(true);
-    } else {
-      requestCameraPermission().then((result) => {
-        if (result.granted) {
-          setCameraIssueIndex(index);
-          setIssueCameraVisible(true);
-        }
-      });
-    }
+    setCameraIssueIndex(index);
+    setIssueCameraVisible(true);
   };
   
   const handleCloseCamera = () => {
@@ -114,19 +103,15 @@ export default function InspectionDetailScreen() {
     setCameraIssueIndex(null);
   };
   
-  const handleTakePhoto = async () => {
-    if (issueCameraRef.current && cameraIssueIndex !== null) {
-      try {
-        const photo = await issueCameraRef.current.takePictureAsync({ quality: 0.5 });
-        if (photo) {
-          const newIssues = [...issues];
-          newIssues[cameraIssueIndex].photos.push(photo.uri);
-          setIssues(newIssues);
-        }
-      } catch (error) {
-        console.error('拍照失败:', error);
-      }
+  // CustomCamera 拍照完成回调
+  const handleIssueCameraComplete = (photos: Array<{ uri: string; timestamp: number }>) => {
+    if (cameraIssueIndex !== null && photos.length > 0) {
+      const newIssues = [...issues];
+      const newPhotoUris = photos.map(p => p.uri);
+      newIssues[cameraIssueIndex].photos = [...newIssues[cameraIssueIndex].photos, ...newPhotoUris];
+      setIssues(newIssues);
     }
+    handleCloseCamera();
   };
   
   const handleRemoveIssuePhoto = (issueIndex: number, photoIndex: number) => {
@@ -940,39 +925,13 @@ export default function InspectionDetailScreen() {
         </View>
       </Modal>
 
-      {/* 问题描述相机 Modal */}
-      <Modal visible={issueCameraVisible} animationType="slide">
-        <View style={styles.issueCameraModal}>
-          {/* 顶部栏 */}
-          <View style={styles.issueCameraHeader}>
-            <TouchableOpacity onPress={handleCloseCamera}>
-              <Feather name="x" size={28} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.issueCameraTitle}>拍照</Text>
-            <TouchableOpacity onPress={handleTakePhoto}>
-              <Feather name="check" size={28} color="#6C63FF" />
-            </TouchableOpacity>
-          </View>
-
-          {/* 相机预览 */}
-          {cameraPermission?.granted ? (
-            <View style={styles.issueCameraContainer}>
-              <CameraView
-                ref={issueCameraRef}
-                style={styles.issueCamera}
-                facing="back"
-              />
-            </View>
-          ) : (
-            <View style={styles.issueCameraPermission}>
-              <Text style={styles.issueCameraPermissionText}>需要相机权限</Text>
-              <TouchableOpacity onPress={requestCameraPermission}>
-                <Text style={styles.issueCameraPermissionBtn}>授予权限</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </Modal>
+      {/* 问题描述相机 - 使用统一的 CustomCamera 组件 */}
+      <CustomCamera
+        visible={issueCameraVisible}
+        onClose={handleCloseCamera}
+        onComplete={handleIssueCameraComplete}
+        itemName="问题拍照"
+      />
     </Screen>
   );
 }
@@ -1913,43 +1872,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6C63FF',
     fontWeight: '500',
-  },
-  issueCameraModal: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  issueCameraHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    paddingTop: 60,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-  },
-  issueCameraTitle: {
-    fontSize: 18,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  issueCameraContainer: {
-    flex: 1,
-  },
-  issueCamera: {
-    flex: 1,
-  },
-  issueCameraPermission: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  issueCameraPermissionText: {
-    fontSize: 16,
-    color: '#fff',
-    marginBottom: 16,
-  },
-  issueCameraPermissionBtn: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
   },
 });
