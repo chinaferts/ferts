@@ -471,48 +471,6 @@ export default function NewInspectionScreen() {
             )}
           </View>
 
-          {/* 供应商名称 */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>供应商名称</Text>
-            <View style={styles.inputWithButton}>
-              <View style={styles.inputWrapper}>
-                <Feather name="home" size={20} color="#B2BEC3" />
-                <TextInput
-                  style={styles.input}
-                  placeholder="请输入供应商名称"
-                  placeholderTextColor="#B2BEC3"
-                  value={supplier}
-                  onChangeText={handleSupplierChange}
-                  onFocus={() => { setFocusedField('supplier'); setFilteredSuppliers(supplierHistory); }}
-                  onBlur={() => setTimeout(() => setFocusedField(null), 200)}
-                />
-              </View>
-              {supplierHistory.length > 0 && (
-                <TouchableOpacity
-                  style={styles.historyButton}
-                  onPress={() => setShowSupplierModal(true)}
-                >
-                  <Feather name="clock" size={20} color="#4F46E5" />
-                </TouchableOpacity>
-              )}
-            </View>
-            {/* 供应商历史建议列表 */}
-            {focusedField === 'supplier' && filteredSuppliers.length > 0 && (
-              <View style={styles.suggestionList}>
-                {filteredSuppliers.slice(0, 5).map((item, index) => (
-                  <TouchableOpacity
-                    key={`sup-${index}`}
-                    style={styles.suggestionItem}
-                    onPress={() => { selectSupplier(item); setFocusedField(null); }}
-                  >
-                    <Feather name="home" size={14} color="#4F46E5" />
-                    <Text style={styles.suggestionText}>{item}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-
           {/* 产品名称 */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>产品名称</Text>
@@ -548,6 +506,48 @@ export default function NewInspectionScreen() {
                     onPress={() => { selectProduct(item); setFocusedField(null); }}
                   >
                     <Feather name="box" size={14} color="#4F46E5" />
+                    <Text style={styles.suggestionText}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* 供应商名称 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>供应商名称</Text>
+            <View style={styles.inputWithButton}>
+              <View style={styles.inputWrapper}>
+                <Feather name="home" size={20} color="#B2BEC3" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="请输入供应商名称"
+                  placeholderTextColor="#B2BEC3"
+                  value={supplier}
+                  onChangeText={handleSupplierChange}
+                  onFocus={() => { setFocusedField('supplier'); setFilteredSuppliers(supplierHistory); }}
+                  onBlur={() => setTimeout(() => setFocusedField(null), 200)}
+                />
+              </View>
+              {supplierHistory.length > 0 && (
+                <TouchableOpacity
+                  style={styles.historyButton}
+                  onPress={() => setShowSupplierModal(true)}
+                >
+                  <Feather name="clock" size={20} color="#4F46E5" />
+                </TouchableOpacity>
+              )}
+            </View>
+            {/* 供应商历史建议列表 */}
+            {focusedField === 'supplier' && filteredSuppliers.length > 0 && (
+              <View style={styles.suggestionList}>
+                {filteredSuppliers.slice(0, 5).map((item, index) => (
+                  <TouchableOpacity
+                    key={`sup-${index}`}
+                    style={styles.suggestionItem}
+                    onPress={() => { selectSupplier(item); setFocusedField(null); }}
+                  >
+                    <Feather name="home" size={14} color="#4F46E5" />
                     <Text style={styles.suggestionText}>{item}</Text>
                   </TouchableOpacity>
                 ))}
