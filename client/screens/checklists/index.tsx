@@ -2,9 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Screen } from '@/components/Screen';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { Link } from 'expo-router';
 
 interface ChecklistTemplate {
   id: string | number;
@@ -18,6 +17,7 @@ interface ChecklistTemplate {
 }
 
 export default function ChecklistsScreen() {
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -132,7 +132,11 @@ export default function ChecklistsScreen() {
 
   const renderTemplateCard = ({ item }: { item: ChecklistTemplate }) => (
     <View style={styles.cardOuter}>
-      <Link href={`/checklists/${item.id}`} style={styles.cardLink}>
+      {/* 卡片主体 - 改为可点击内容 */}
+      <TouchableOpacity 
+        style={styles.cardLink}
+        onPress={() => router.push(`/checklists/${item.id}`)}
+      >
         <View style={styles.cardInner}>
           <View style={styles.cardHeader}>
             <View style={styles.iconContainer}>
@@ -165,9 +169,26 @@ export default function ChecklistsScreen() {
               <Feather name="clock" size={12} color="#B2BEC3" />
               <Text style={styles.updateText}>更新于 {item.updatedAt}</Text>
             </View>
+            {/* 编辑和使用按钮并排 */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => router.push(`/checklists/${item.id}?mode=edit`)}
+              >
+                <Feather name="edit-2" size={14} color="#6C63FF" />
+                <Text style={styles.actionButtonText}>编辑</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => router.push(`/inspections/new?templateId=${item.id}`)}
+              >
+                <Feather name="check-circle" size={14} color="#00B894" />
+                <Text style={[styles.actionButtonText, { color: '#00B894' }]}>使用</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </Link>
+      </TouchableOpacity>
       {/* 通用模板不显示删除按钮 */}
       {isAdmin && item.id !== 'universal' && (
         <TouchableOpacity
@@ -430,7 +451,8 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 8,
   },
   updateInfo: {
@@ -441,6 +463,21 @@ const styles = StyleSheet.create({
   updateText: {
     fontSize: 11,
     color: '#B2BEC3',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionButtonText: {
+    fontSize: 13,
+    color: '#6C63FF',
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
