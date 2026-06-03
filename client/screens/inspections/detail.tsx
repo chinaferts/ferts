@@ -1260,16 +1260,16 @@ export default function InspectionDetailScreen() {
                 </View>
                 <Text style={styles.defectDescription}>{defect.description}</Text>
                 {defect.photo_urls && defect.photo_urls.length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.defectPhotos}>
+                  <View style={styles.defectPhotosWrap}>
                     {defect.photo_urls.map((photo, idx) => (
                       <TouchableOpacity key={idx} onPress={() => {
                         setSelectedPhoto(photo);
                         setPhotoModalVisible(true);
                       }}>
-                        <Image source={{ uri: photo }} style={styles.thumbnail} />
+                        <Image source={{ uri: photo }} style={styles.defectPhotoThumb} />
                       </TouchableOpacity>
                     ))}
-                  </ScrollView>
+                  </View>
                 )}
               </View>
             ))}
@@ -2127,6 +2127,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   defectPhotos: {
+    marginTop: 12,
+  },
+  defectPhotosWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     marginTop: 12,
   },
   scannedCodeItem: {
