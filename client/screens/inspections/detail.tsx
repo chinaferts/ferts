@@ -68,6 +68,8 @@ export default function InspectionDetailScreen() {
   const [defectPhotos, setDefectPhotos] = useState<string[]>([]);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [selectedPhotoItem, setSelectedPhotoItem] = useState<ChecklistItem | null>(null);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number>(-1);
   const [scannerVisible, setScannerVisible] = useState(false);
   const [scannedCodes, setScannedCodes] = useState<string[]>([]);
   // 拍照临时状态 - 用于新流程：先拍照到预览区，完成后再保存
@@ -744,6 +746,8 @@ export default function InspectionDetailScreen() {
                             {item.photos.map((photo, idx) => (
                               <TouchableOpacity key={idx} onPress={() => {
                                 setSelectedPhoto(photo);
+                                setSelectedPhotoItem(item);
+                                setSelectedPhotoIndex(idx);
                                 setPhotoModalVisible(true);
                               }} style={styles.photoContainer}>
                                 <Image source={{ uri: photo }} style={styles.photoThumb} />
@@ -1276,13 +1280,51 @@ export default function InspectionDetailScreen() {
       {/* 图片预览 Modal */}
       <Modal visible={photoModalVisible} transparent animationType="fade"
         onRequestClose={() => setPhotoModalVisible(false)}>
-        <TouchableOpacity style={styles.photoModalOverlay} activeOpacity={1}
-          onPress={() => setPhotoModalVisible(false)}>
+        <View style={styles.photoModalOverlay}>
           {selectedPhoto && <Image source={{ uri: selectedPhoto }} style={styles.fullPhoto} resizeMode="contain" />}
+          {/* 关闭按钮 */}
           <TouchableOpacity style={styles.closePhotoButton} onPress={() => setPhotoModalVisible(false)}>
             <Feather name="x" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-        </TouchableOpacity>
+          {/* 操作按钮区域 */}
+          <View style={styles.photoActionButtons}>
+            {/* 编辑按钮 */}
+            <TouchableOpacity style={styles.photoActionBtn} onPress={() => {
+              if (selectedPhoto && selectedPhotoItem) {
+                setPhotoModalVisible(false);
+                setEditingPhoto({ uri: selectedPhoto, recordId: selectedPhotoItem.record_id, index: selectedPhotoIndex });
+                setTempPhotos([selectedPhoto]);
+                setTempPhotoTarget(selectedPhotoItem);
+                setCameraVisible(true);
+              }
+            }}>
+              <Feather name="edit-2" size={22} color="#FFFFFF" />
+              <Text style={styles.photoActionBtnText}>编辑</Text>
+            </TouchableOpacity>
+            {/* 删除按钮 */}
+            <TouchableOpacity style={[styles.photoActionBtn, styles.deletePhotoBtn]} onPress={() => {
+              if (selectedPhotoItem && selectedPhotoIndex >= 0) {
+                const updatedChecklist = inspection.checklist_items.map(item => {
+                  if (item.record_id === selectedPhotoItem.record_id) {
+                    return {
+                      ...item,
+                      photos: (item.photos || []).filter((_, i) => i !== selectedPhotoIndex)
+                    };
+                  }
+                  return item;
+                });
+                setInspection({ ...inspection, checklist_items: updatedChecklist });
+                setPhotoModalVisible(false);
+                setSelectedPhoto(null);
+                setSelectedPhotoItem(null);
+                setSelectedPhotoIndex(-1);
+              }
+            }}>
+              <Feather name="trash-2" size={22} color="#FFFFFF" />
+              <Text style={styles.photoActionBtnText}>删除</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       {/* 扫码说明 Modal */}
@@ -2144,12 +2186,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  photoModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   fullPhoto: {
     width: '100%',
     height: '80%',
@@ -2164,6 +2200,35 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  photoModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoActionButtons: {
+    position: 'absolute',
+    bottom: 60,
+    flexDirection: 'row',
+    gap: 20,
+  },
+  photoActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(108,99,255,0.8)',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 30,
+    gap: 8,
+  },
+  deletePhotoBtn: {
+    backgroundColor: 'rgba(255,107,107,0.9)',
+  },
+  photoActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   scannerInfo: {
     flexDirection: 'row',
