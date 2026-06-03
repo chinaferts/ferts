@@ -181,15 +181,6 @@ export default function CustomCamera({
           </TouchableOpacity>
         </View>
 
-        {/* 拍照按钮 - 居中 */}
-        <View style={styles.shutterContainer}>
-          <TouchableOpacity style={styles.shutterButton} onPress={takePicture}>
-            <View style={styles.shutterButtonInner}>
-              <View style={styles.shutterButtonCore} />
-            </View>
-          </TouchableOpacity>
-        </View>
-
         {/* 预览栏 - 拍照按钮下方 */}
         {photos.length > 0 && (
           <View style={styles.previewStrip}>
@@ -215,11 +206,18 @@ export default function CustomCamera({
           </View>
         )}
 
-        {/* 底部区域 */}
+        {/* 底部区域：取消、拍照、完成 同一行 */}
         <View style={styles.bottomBar}>
           {/* 左侧：取消按钮 */}
           <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
             <Text style={styles.cancelText}>取消</Text>
+          </TouchableOpacity>
+
+          {/* 中间：拍照按钮 */}
+          <TouchableOpacity style={styles.shutterButton} onPress={takePicture}>
+            <View style={styles.shutterButtonInner}>
+              <View style={styles.shutterButtonCore} />
+            </View>
           </TouchableOpacity>
 
           {/* 右侧：完成按钮 */}
@@ -329,27 +327,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-    paddingTop: 20,
+    paddingTop: 15,
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
   cancelButton: {
     width: 60,
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   cancelText: {
     color: '#fff',
     fontSize: 17,
     fontWeight: '400',
   },
-  // 拍照按钮容器 - 居中
-  shutterContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    marginTop: -37.5,
-  },
+  // 拍照按钮 - 在取消和完成之间居中
   shutterButton: {
     width: 75,
     height: 75,
@@ -376,7 +366,7 @@ const styles = StyleSheet.create({
   },
   doneButton: {
     width: 60,
-    alignItems: 'flex-end',
+    alignItems: 'center',
   },
   doneButtonDisabled: {
     opacity: 0.5,
