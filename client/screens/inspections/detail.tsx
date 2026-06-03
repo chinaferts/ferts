@@ -817,7 +817,7 @@ export default function InspectionDetailScreen() {
         {categories.includes('条码') && (
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
-              <Text style={styles.sectionTitle}>条码扫描</Text>
+              <Text style={styles.sectionTitle}> </Text>
               <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
                 <Feather name="plus" size={18} color="#6C63FF" />
                 <Text style={styles.addIssueText}>添加条码扫描</Text>
