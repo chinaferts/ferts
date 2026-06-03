@@ -500,13 +500,6 @@ export default function InspectionDetailScreen() {
             <View key={category} style={styles.section}>
               <View style={styles.categoryHeader}>
                 <Text style={styles.sectionTitle}>{category}</Text>
-                <TouchableOpacity 
-                  style={styles.categoryIssueButton} 
-                  onPress={() => handleAddIssue()}
-                >
-                  <Feather name="alert-circle" size={16} color="#FF6B6B" />
-                  <Text style={styles.categoryIssueText}>问题描述</Text>
-                </TouchableOpacity>
               </View>
               {inspection.checklist_items
                 .filter(item => item.category === category)
@@ -1114,20 +1107,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-  },
-  categoryIssueButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: 'rgba(255,107,107,0.1)',
-    borderRadius: 6,
-    gap: 4,
-  },
-  categoryIssueText: {
-    fontSize: 12,
-    color: '#FF6B6B',
-    fontWeight: '500',
   },
   categoryActions: {
     flexDirection: 'row',
