@@ -52,7 +52,8 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 
-    if (!isSupabaseConfigured()) {
+    // 通用模板使用 mock 数据
+    if (id === 'universal' || !isSupabaseConfigured()) {
       const checklist = mockGetChecklist(id);
       if (!checklist) {
         return res.status(404).json({ success: false, error: '清单不存在' });
@@ -148,9 +149,19 @@ router.put('/:id', async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const { name, description, category, categories } = req.body;
 
-    if (!isSupabaseConfigured()) {
-      // 将前端发送的categories格式转换为后端需要的格式
-      const category = (categories || []).map((cat: any, idx: number) => ({
+    // 通用模板使用 mock 数据
+    if (id === 'universal' || !isSupabaseConfigured()) {
+      // 通用模板使用新的 categories 格式
+      if (id === 'universal') {
+        const updated = mockUpdateChecklist(id, { name, description, categories });
+        if (!updated) {
+          return res.status(404).json({ success: false, error: '清单不存在' });
+        }
+        return res.json({ success: true, data: updated });
+      }
+      
+      // 普通 mock 模板：转换 categories 格式
+      const categoryData = (categories || []).map((cat: any, idx: number) => ({
         category_id: cat.id || idx + 1,
         category_name: cat.name,
         items: (cat.items || []).map((item: string, i: number) => ({
@@ -159,7 +170,7 @@ router.put('/:id', async (req: Request, res: Response) => {
           is_critical: false,
         })),
       }));
-      const updated = mockUpdateChecklist(id, { name, description, category });
+      const updated = mockUpdateChecklist(id, { name, description, category: categoryData });
       if (!updated) {
         return res.status(404).json({ success: false, error: '清单不存在' });
       }

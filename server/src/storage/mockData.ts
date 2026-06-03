@@ -29,6 +29,38 @@ let checklists = [
   }
 ];
 
+// 通用验货模板数据（可编辑）
+let universalTemplateData = {
+  id: 'universal',
+  name: '通用验货模板',
+  description: '适用于所有产品的通用验货检查清单',
+  category: '通用',
+  is_active: true,
+  is_universal: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  categories: [
+    { id: 1, name: '仓库', items: [
+      { id: 'u1', name: '仓库照片', description: '拍摄大货仓库照片及码堆情况' }
+    ]},
+    { id: 2, name: '外箱', items: [
+      { id: 'u2', name: '外箱检查', description: '检查外箱箱唛及尺寸重量' }
+    ]},
+    { id: 3, name: '内箱', items: [
+      { id: 'u3', name: '内箱检查', description: '检查内箱唛头及规格重量' }
+    ]},
+    { id: 4, name: '产品', items: [
+      { id: 'u4', name: '产品细节', description: '拍摄产品细节、尺寸和重量照' }
+    ]},
+    { id: 5, name: '彩盒', items: [
+      { id: 'u5', name: '彩盒检查', description: '检查彩盒信息及规格重量' }
+    ]},
+    { id: 6, name: '条码', items: [
+      { id: 'u6', name: '条码扫描', description: '扫描所有含有条码的地方' }
+    ]}
+  ]
+};
+
 let checklistItems = [
   { id: '1', checklist_id: '1', name: '外观检查', description: '检查产品外观是否完好无损', order: 1, required: true, category: '外观' },
   { id: '2', checklist_id: '1', name: '尺寸测量', description: '测量产品尺寸是否符合规格', order: 2, required: true, category: '尺寸' },
@@ -84,21 +116,16 @@ let nextRecordId = 1;
 let nextDefectId = 1;
 
 export function mockGetChecklists() {
-  // 添加通用验货模板（始终显示在最前面）
-  const universalTemplate = {
-    id: 'universal',
-    name: '通用验货模板',
-    description: '适用于所有产品的通用验货检查清单',
-    category: '通用',
-    is_active: true,
-    is_universal: true,  // 标识为通用模板，不可删除
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-  return [universalTemplate, ...checklists];
+  // 使用可编辑的通用验货模板数据
+  return [universalTemplateData, ...checklists];
 }
 
 export function mockGetChecklist(id: string) {
+  // 特殊处理通用模板
+  if (id === 'universal') {
+    return { ...universalTemplateData };
+  }
+  
   const checklist = checklists.find(c => c.id === id);
   if (checklist) {
     return { ...checklist, checklist_items: mockGetChecklistItems(id) };
@@ -119,6 +146,16 @@ export function mockCreateChecklist(data: any) {
 }
 
 export function mockUpdateChecklist(id: string, data: any) {
+  // 特殊处理通用模板更新
+  if (id === 'universal') {
+    if (data.name) universalTemplateData.name = data.name;
+    if (data.description) universalTemplateData.description = data.description;
+    if (data.category) universalTemplateData.category = data.category;
+    if (data.categories) universalTemplateData.categories = data.categories;
+    universalTemplateData.updated_at = new Date().toISOString();
+    return { ...universalTemplateData };
+  }
+  
   const index = checklists.findIndex(c => c.id === id);
   if (index !== -1) {
     checklists[index] = { ...checklists[index], ...data, updated_at: new Date().toISOString() };
