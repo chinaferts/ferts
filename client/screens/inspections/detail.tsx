@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image, Platform } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -69,8 +70,14 @@ export default function InspectionDetailScreen() {
   const [barcodePermission, requestBarcodePermission] = useCameraPermissions();
   const barcodeCameraRef = useRef<CameraView>(null);
   
-  // 问题描述框状态 (每个问题包含文本和照片)
-  const [issues, setIssues] = useState<Array<{ text: string; photos: string[] }>>([{ text: '', photos: [] }]);
+  // 问题描述框状态 (每个问题包含文本、照片和严重程度)
+  const [issues, setIssues] = useState<Array<{ text: string; photos: string[]; severity: string }>>([{ text: '', photos: [], severity: '' }]);
+  // 严重程度选项
+  const severityOptions = [
+    { label: '致命缺陷', value: 'critical', color: '#DC3545' },
+    { label: '严重缺陷', value: 'serious', color: '#FD7E14' },
+    { label: '轻微缺陷', value: 'minor', color: '#FFC107' },
+  ];
   // 缺陷统计状态
   const [defectStats, setDefectStats] = useState({
     critical: 0,    // 致命缺陷
@@ -83,7 +90,13 @@ export default function InspectionDetailScreen() {
   
   // 问题描述框处理函数
   const handleAddIssue = () => {
-    setIssues([...issues, { text: '', photos: [] }]);
+    setIssues([...issues, { text: '', photos: [], severity: '' }]);
+  };
+  
+  const handleSeverityChange = (index: number, severity: string) => {
+    const newIssues = [...issues];
+    newIssues[index].severity = severity;
+    setIssues(newIssues);
   };
   
   const handleRemoveIssue = (index: number) => {
@@ -736,6 +749,18 @@ export default function InspectionDetailScreen() {
                 <View style={styles.issueHeader}>
                   <View style={styles.issueNumber}>
                     <Text style={styles.issueNumberText}>{index + 1}</Text>
+                  </View>
+                  <View style={styles.severitySelector}>
+                    <Picker
+                      selectedValue={issue.severity}
+                      onValueChange={(value) => handleSeverityChange(index, value)}
+                      style={styles.severityPicker}
+                    >
+                      <Picker.Item label="选择缺陷等级" value="" />
+                      {severityOptions.map((option) => (
+                        <Picker.Item key={option.value} label={option.label} value={option.value} />
+                      ))}
+                    </Picker>
                   </View>
                   {issues.length > 1 && (
                     <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
@@ -1900,6 +1925,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  severitySelector: {
+    flex: 1,
+    marginLeft: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    overflow: 'hidden',
+  },
+  severityPicker: {
+    height: 36,
+    marginHorizontal: -8,
   },
   issueInput: {
     flex: 1,
