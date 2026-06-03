@@ -142,12 +142,15 @@ export default function ChecklistsScreen() {
               <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
             </View>
             {isAdmin && (
-              <TouchableOpacity
+              <View
                 style={styles.deleteButton}
-                onPress={() => confirmDelete(item)}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                  confirmDelete(item);
+                }}
               >
                 <Feather name="trash-2" size={18} color="#E74C3C" />
-              </TouchableOpacity>
+              </View>
             )}
             <Feather name="chevron-right" size={20} color="#B2BEC3" />
           </View>
