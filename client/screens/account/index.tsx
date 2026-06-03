@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,44 @@ import { useFocusEffect } from 'expo-router';
 import { useAuth, User, UserRole } from '@/contexts/AuthContext';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+
+// 用户统计信息组件
+function UserStats({ users }: { users: User[] }) {
+  const adminCount = useMemo(() => users.filter(u => u.role === 'admin').length, [users]);
+  const inspectorCount = useMemo(() => users.filter(u => u.role === 'inspector').length, [users]);
+
+  return (
+    <View style={styles.statsContainer}>
+      <View style={styles.statItem}>
+        <Text style={styles.statNumber}>{users.length}</Text>
+        <Text style={styles.statLabel}>总用户</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={[styles.statNumber, { color: '#4F46E5' }]}>{adminCount}</Text>
+        <Text style={styles.statLabel}>管理员</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={[styles.statNumber, { color: '#059669' }]}>{inspectorCount}</Text>
+        <Text style={styles.statLabel}>验货员</Text>
+      </View>
+    </View>
+  );
+}
+
+// 空状态组件
+function EmptyState() {
+  return (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyIcon}>
+        <Text style={styles.emptyIconText}>👤</Text>
+      </View>
+      <Text style={styles.emptyTitle}>暂无用户</Text>
+      <Text style={styles.emptySubtitle}>点击上方"添加用户"创建新账号</Text>
+    </View>
+  );
+}
 
 interface UserItemProps {
   user: User;
@@ -50,33 +88,23 @@ function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit
     );
   };
 
-  const handleDelete = () => {
-    if (isCurrentUser) {
-      Alert.alert('提示', '不能删除自己的账号');
-      return;
-    }
-    Alert.alert(
-      '确认删除',
-      `确定要删除用户 "${user.name}" 吗？此操作不可撤销。`,
-      [
-        { text: '取消', style: 'cancel' },
-        { text: '删除', style: 'destructive', onPress: () => onDelete(user.id, user.name) },
-      ]
-    );
-  };
-
   return (
     <View style={styles.userItem}>
       <View style={styles.userInfo}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user.name[0]}</Text>
+        <View style={[styles.avatar, user.role === 'admin' && styles.avatarAdmin]}>
+          <Text style={[styles.avatarText, user.role === 'admin' && styles.avatarTextAdmin]}>
+            {user.name[0]}
+          </Text>
         </View>
         <View style={styles.userDetails}>
           <Text style={styles.userName}>
             {user.name}
             {isCurrentUser && <Text style={styles.currentBadge}> (本人)</Text>}
           </Text>
-          <Text style={styles.userMeta}>@{user.username}</Text>
+          <View style={styles.userMetaRow}>
+            <Text style={styles.userMeta}>@{user.username}</Text>
+            {user.phone && <Text style={styles.userPhone}>{user.phone}</Text>}
+          </View>
         </View>
       </View>
       <View style={styles.userActions}>
@@ -89,7 +117,7 @@ function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit
           {!isCurrentUser && <Text style={styles.arrow}>›</Text>}
         </TouchableOpacity>
         {isAdmin && !isCurrentUser && (
-          <>
+          <View style={styles.actionButtons}>
             <TouchableOpacity
               style={styles.editButton}
               onPress={() => onEdit(user)}
@@ -98,11 +126,11 @@ function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={handleDelete}
+              onPress={() => onDelete(user.id, user.name)}
             >
               <Text style={styles.deleteText}>删除</Text>
             </TouchableOpacity>
-          </>
+          </View>
         )}
       </View>
     </View>
@@ -117,6 +145,8 @@ export default function AccountScreen() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ name: '', phone: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'inspector'>('all');
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -145,6 +175,19 @@ export default function AccountScreen() {
     }, [fetchUsers])
   );
 
+  // 过滤后的用户列表
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      // 搜索过滤
+      const matchKeyword = !searchKeyword || 
+        user.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        user.username.toLowerCase().includes(searchKeyword.toLowerCase());
+      // 角色过滤
+      const matchRole = filterRole === 'all' || user.role === filterRole;
+      return matchKeyword && matchRole;
+    });
+  }, [users, searchKeyword, filterRole]);
+
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/${userId}/role`, {
@@ -167,14 +210,29 @@ export default function AccountScreen() {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
+  const handleDeleteUser = (userId: string, userName: string) => {
+    if (userId === currentUser?.id) {
+      Alert.alert('提示', '不能删除自己的账号');
+      return;
+    }
+    Alert.alert(
+      '确认删除',
+      `确定要删除用户 "${userName}" 吗？此操作不可撤销。`,
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '删除', style: 'destructive', onPress: () => doDeleteUser(userId) },
+      ]
+    );
+  };
+
+  const doDeleteUser = async (userId: string) => {
     try {
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/${userId}`, {
         method: 'DELETE',
       });
       if (response.ok) {
         setUsers(users.filter(u => u.id !== userId));
-        Alert.alert('成功', `用户 "${userName}" 已删除`);
+        Alert.alert('成功', '用户已删除');
       } else {
         Alert.alert('错误', '删除失败');
       }
@@ -244,6 +302,10 @@ export default function AccountScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
+          <View style={styles.lockIcon}>
+            <Text style={styles.lockIconText}>🔒</Text>
+          </View>
+          <Text style={styles.noPermissionTitle}>无权限访问</Text>
           <Text style={styles.noPermissionText}>仅管理员可访问此页面</Text>
         </View>
       </SafeAreaView>
@@ -258,13 +320,14 @@ export default function AccountScreen() {
           <View style={styles.headerAvatar}>
             <Text style={styles.headerAvatarText}>{currentUser?.name?.[0] || 'U'}</Text>
           </View>
-          <View>
+          <View style={styles.headerTextContainer}>
             <Text style={styles.headerName}>{currentUser?.name}</Text>
             <Text style={styles.headerRole}>
               {currentUser?.role === 'admin' ? '管理员' : '验货员'}
             </Text>
           </View>
         </View>
+        <UserStats users={users} />
       </View>
 
       {/* User List */}
@@ -276,11 +339,64 @@ export default function AccountScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* 搜索和筛选 */}
+        <View style={styles.filterContainer}>
+          <View style={styles.searchContainer}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="搜索用户..."
+              placeholderTextColor="#9CA3AF"
+              value={searchKeyword}
+              onChangeText={setSearchKeyword}
+            />
+            {searchKeyword.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchKeyword('')}>
+                <Text style={styles.clearIcon}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <View style={styles.filterTabs}>
+            {[
+              { key: 'all', label: '全部' },
+              { key: 'admin', label: '管理员' },
+              { key: 'inspector', label: '验货员' },
+            ].map(tab => (
+              <TouchableOpacity
+                key={tab.key}
+                style={[
+                  styles.filterTab,
+                  filterRole === tab.key && styles.filterTabActive,
+                ]}
+                onPress={() => setFilterRole(tab.key as 'all' | 'admin' | 'inspector')}
+              >
+                <Text
+                  style={[
+                    styles.filterTabText,
+                    filterRole === tab.key && styles.filterTabTextActive,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         {isLoading ? (
           <ActivityIndicator style={styles.loader} color="#4F46E5" />
+        ) : filteredUsers.length === 0 ? (
+          searchKeyword || filterRole !== 'all' ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>未找到匹配用户</Text>
+              <Text style={styles.emptySubtitle}>尝试调整搜索条件</Text>
+            </View>
+          ) : (
+            <EmptyState />
+          )
         ) : (
           <FlatList
-            data={users}
+            data={filteredUsers}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <UserItem
@@ -294,6 +410,7 @@ export default function AccountScreen() {
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
           />
         )}
       </View>
@@ -366,6 +483,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  lockIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  lockIconText: {
+    fontSize: 36,
+  },
+  noPermissionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#374151',
+    marginBottom: 8,
+  },
   noPermissionText: {
     fontSize: 16,
     color: '#6B7280',
@@ -374,34 +509,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   headerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 20,
   },
   headerAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#4F46E5',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   headerAvatarText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
+  headerTextContainer: {
+    flex: 1,
+  },
   headerName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#1F2937',
   },
@@ -409,6 +548,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     marginTop: 4,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 12,
   },
   section: {
     flex: 1,
@@ -431,10 +595,66 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   addButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  filterContainer: {
+    marginBottom: 12,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1F2937',
+    padding: 0,
+  },
+  clearIcon: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    padding: 4,
+  },
+  filterTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 4,
+  },
+  filterTab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  filterTabActive: {
+    backgroundColor: '#4F46E5',
+  },
+  filterTabText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  filterTabTextActive: {
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   listContent: {
@@ -442,11 +662,40 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
   },
+  emptyContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyIconText: {
+    fontSize: 36,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
   userItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
+    backgroundColor: '#FFFFFF',
   },
   userInfo: {
     flexDirection: 'row',
@@ -454,18 +703,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
+  },
+  avatarAdmin: {
+    backgroundColor: '#EEF2FF',
   },
   avatarText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#6B7280',
+  },
+  avatarTextAdmin: {
+    color: '#4F46E5',
   },
   userDetails: {
     flex: 1,
@@ -480,10 +735,19 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontWeight: 'normal',
   },
+  userMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   userMeta: {
     fontSize: 14,
     color: '#6B7280',
-    marginTop: 2,
+  },
+  userPhone: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginLeft: 8,
   },
   roleBadge: {
     flexDirection: 'row',
@@ -590,6 +854,10 @@ const styles = StyleSheet.create({
   userActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  actionButtons: {
+    flexDirection: 'row',
     gap: 8,
   },
   deleteButton: {
@@ -598,20 +866,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#FEE2E2',
   },
-  deleteButtonText: {
-    color: '#DC2626',
-    fontSize: 14,
-    fontWeight: '500',
-  },
   editButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#E0E7FF',
-  },
-  editButtonText: {
-    color: '#4F46E5',
-    fontSize: 14,
-    fontWeight: '500',
+    backgroundColor: '#DBEAFE',
   },
 });
