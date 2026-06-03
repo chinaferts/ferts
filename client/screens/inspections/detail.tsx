@@ -69,6 +69,26 @@ export default function InspectionDetailScreen() {
   const [barcodePermission, requestBarcodePermission] = useCameraPermissions();
   const barcodeCameraRef = useRef<CameraView>(null);
   
+  // 问题描述框状态
+  const [issues, setIssues] = useState<string[]>(['']);
+  
+  // 问题描述框处理函数
+  const handleAddIssue = () => {
+    setIssues([...issues, '']);
+  };
+  
+  const handleRemoveIssue = (index: number) => {
+    if (issues.length > 1) {
+      setIssues(issues.filter((_, i) => i !== index));
+    }
+  };
+  
+  const handleIssueChange = (index: number, text: string) => {
+    const newIssues = [...issues];
+    newIssues[index] = text;
+    setIssues(newIssues);
+  };
+  
   // 使用 ref 跟踪 inspection 以避免闭包问题
   const inspectionRef = useRef(inspection);
   useEffect(() => {
@@ -443,7 +463,36 @@ export default function InspectionDetailScreen() {
           </View>
         </View>
 
-
+        {/* 问题分类区域 */}
+        <View style={styles.section}>
+          <View style={styles.categoryHeader}>
+            <Text style={styles.sectionTitle}>问题描述</Text>
+            <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
+              <Feather name="plus" size={18} color="#6C63FF" />
+              <Text style={styles.addIssueText}>添加问题</Text>
+            </TouchableOpacity>
+          </View>
+          {issues.map((issue, index) => (
+            <View key={index} style={styles.issueItem}>
+              <View style={styles.issueNumber}>
+                <Text style={styles.issueNumberText}>{index + 1}</Text>
+              </View>
+              <TextInput
+                style={styles.issueInput}
+                placeholder="请输入问题描述..."
+                placeholderTextColor="#B2BEC3"
+                multiline
+                value={issue}
+                onChangeText={(text) => handleIssueChange(index, text)}
+              />
+              {issues.length > 1 && (
+                <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
+                  <Feather name="x" size={18} color="#FF6B6B" />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+        </View>
 
         {/* 验货清单 */}
         {categories.map(category => {
@@ -1655,5 +1704,63 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255,255,255,0.6)',
     marginTop: 8,
+  },
+  // 问题描述框样式
+  addIssueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(108,99,255,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  addIssueText: {
+    fontSize: 13,
+    color: '#6C63FF',
+    fontWeight: '500',
+  },
+  issueItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: '#D1D9E6',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+  },
+  issueNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#6C63FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  issueNumberText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  issueInput: {
+    flex: 1,
+    minHeight: 80,
+    fontSize: 15,
+    color: '#2D3436',
+    textAlignVertical: 'top',
+    padding: 0,
+  },
+  removeIssueButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,107,107,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
 });
