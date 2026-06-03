@@ -334,6 +334,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 100,
   },
+  itemName: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
   permissionButton: {
     backgroundColor: '#4F46E5',
     paddingHorizontal: 24,

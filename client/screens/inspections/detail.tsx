@@ -505,24 +505,24 @@ export default function InspectionDetailScreen() {
           </View>
           {issues.map((issue, index) => (
             <View key={index} style={styles.issueItem}>
-              <View style={styles.issueNumber}>
-                <Text style={styles.issueNumberText}>{index + 1}</Text>
-              </View>
-              <View style={styles.issueContent}>
-                <TextInput
-                  style={styles.issueInput}
-                  placeholder="请输入问题描述..."
-                  placeholderTextColor="#B2BEC3"
-                  multiline
-                  value={issue.text}
-                  onChangeText={(text) => handleIssueChange(index, text)}
-                />
+              <View style={styles.issueHeader}>
+                <View style={styles.issueNumber}>
+                  <Text style={styles.issueNumberText}>{index + 1}</Text>
+                </View>
                 {issues.length > 1 && (
                   <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
-                    <Feather name="x" size={18} color="#FF6B6B" />
+                    <Feather name="x" size={16} color="#FF6B6B" />
                   </TouchableOpacity>
                 )}
               </View>
+              <TextInput
+                style={styles.issueInput}
+                placeholder="请输入问题描述..."
+                placeholderTextColor="#B2BEC3"
+                multiline
+                value={issue.text}
+                onChangeText={(text) => handleIssueChange(index, text)}
+              />
               {/* 问题照片预览 */}
               {issue.photos.length > 0 && (
                 <View style={styles.issuePhotosContainer}>
@@ -1783,8 +1783,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   issueItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
@@ -1794,6 +1792,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 6,
   },
+  issueHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   issueNumber: {
     width: 28,
     height: 28,
@@ -1801,7 +1805,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#6C63FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   issueNumberText: {
     fontSize: 14,
