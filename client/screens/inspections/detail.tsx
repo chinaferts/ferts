@@ -76,6 +76,9 @@ export default function InspectionDetailScreen() {
   // 相机相关状态
   const [cameraVisible, setCameraVisible] = useState(false);
   const [cameraPhotoTarget, setCameraPhotoTarget] = useState<ChecklistItem | null>(null);
+  // 编辑照片相关状态
+  const [editingPhoto, setEditingPhoto] = useState<{ uri: string; recordId: number; index: number } | null>(null);
+  const [editPhotoModalVisible, setEditPhotoModalVisible] = useState(false);
   // 条码扫码相关状态
   const [barcodeScannerVisible, setBarcodeScannerVisible] = useState(false);
   const [barcodeScanTarget, setBarcodeScanTarget] = useState<ChecklistItem | null>(null);
@@ -909,6 +912,29 @@ export default function InspectionDetailScreen() {
                       {item.photos.map((photo, idx) => (
                         <View key={idx} style={styles.issuePhotoItem}>
                           <Image source={{ uri: photo }} style={styles.issuePhoto} />
+                          {/* 删除按钮 */}
+                          <TouchableOpacity style={styles.removeIssuePhotoButton}
+                            onPress={() => {
+                              const updatedItems = extraBarcodeItems.map(barcodeItem => {
+                                if (barcodeItem.record_id === item.record_id) {
+                                  return { ...barcodeItem, photos: (barcodeItem.photos || []).filter((_, i) => i !== idx) };
+                                }
+                                return barcodeItem;
+                              });
+                              setExtraBarcodeItems(updatedItems);
+                            }}>
+                            <Feather name="x" size={12} color="#FFFFFF" />
+                          </TouchableOpacity>
+                          {/* 编辑按钮 */}
+                          <TouchableOpacity style={styles.editIssuePhotoButton}
+                            onPress={() => {
+                              setEditingPhoto({ uri: photo, recordId: item.record_id, index: idx });
+                              setTempPhotos([photo]);
+                              setTempPhotoTarget(item);
+                              setCameraVisible(true);
+                            }}>
+                            <Feather name="edit-2" size={12} color="#FFFFFF" />
+                          </TouchableOpacity>
                         </View>
                       ))}
                     </View>
@@ -2433,6 +2459,17 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     backgroundColor: 'rgba(255,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editIssuePhotoButton: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
