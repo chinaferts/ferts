@@ -244,6 +244,15 @@ export default function RecordsScreen() {
   return (
     <Screen>
       <View style={styles.container}>
+        {/* 自定义Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Feather name="chevron-left" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>验货记录</Text>
+          <View style={styles.headerRight} />
+        </View>
+
         {/* 搜索框 */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
@@ -319,6 +328,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F2F5',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 8,
+    paddingTop: 48,
+    paddingBottom: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  headerRight: {
+    width: 40,
   },
   searchContainer: {
     paddingHorizontal: 16,

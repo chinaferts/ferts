@@ -176,6 +176,10 @@ export default function InspectionsListScreen() {
 
   return (
     <Screen>
+      {/* 自定义 Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>验货任务</Text>
+      </View>
       <View style={styles.container}>
         {/* 搜索栏 */}
         <View style={styles.searchContainer}>
@@ -253,6 +257,17 @@ export default function InspectionsListScreen() {
 }
 
 const styles = StyleSheet.create({
+  header: {
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F0F0F3',

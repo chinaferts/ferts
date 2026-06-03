@@ -203,6 +203,13 @@ export default function ChecklistsScreen() {
 
   return (
     <Screen>
+      {/* 自定义 Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.headerBack} onPress={() => router.back()}>
+          <Feather name="chevron-left" size={24} color="#1A1A1A" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>清单模板</Text>
+      </View>
       <View style={styles.container}>
         {/* 统计概览 */}
         <View style={styles.statsContainer}>
@@ -342,6 +349,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F0F3',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  headerBack: {
+    padding: 8,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    marginRight: 40,
   },
   statsContainer: {
     flexDirection: 'row',
