@@ -1783,6 +1783,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   issueItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,

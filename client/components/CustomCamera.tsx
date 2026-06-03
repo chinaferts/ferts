@@ -185,90 +185,97 @@ export default function CustomCamera({
     setRotation(0);
   };
 
+  if (!visible) {
+    return null;
+  }
+
   return (
-    <View style={styles.container}>
-      <View style={styles.cameraWrapper}>
-        <CameraView
-          ref={cameraRef}
-          style={styles.camera}
-          facing={facing}
-        />
-      </View>
+    <Modal visible={visible} animationType="slide" statusBarTranslucent>
+      <View style={styles.container}>
+        <View style={styles.cameraWrapper}>
+          <CameraView
+            ref={cameraRef}
+            style={styles.camera}
+            facing={facing}
+          />
+        </View>
 
-      {/* 顶部区域 */}
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
-          <Ionicons name="close" size={28} color="#fff" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.flashButton} onPress={cycleFlashMode}>
-          <Ionicons name={getFlashIcon() as any} size={22} color="#fff" />
-          {flashMode !== 'off' && (
-            <View style={styles.flashLabel}>
-              <Text style={styles.flashLabelText}>{getFlashLabel()}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.iconButton} onPress={toggleCameraFacing}>
-          <Ionicons name="camera-reverse" size={28} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* 底部区域 */}
-      <View style={styles.bottomArea}>
-        {/* 按钮组 */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-            <Text style={styles.cancelText}>取消</Text>
+        {/* 顶部区域 */}
+        <View style={styles.topBar}>
+          <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
+            <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.shutterButton} onPress={takePicture}>
-            <View style={styles.shutterButtonInner}>
-              <View style={styles.shutterButtonCore} />
-            </View>
+          <TouchableOpacity style={styles.flashButton} onPress={cycleFlashMode}>
+            <Ionicons name={getFlashIcon() as any} size={22} color="#fff" />
+            {flashMode !== 'off' && (
+              <View style={styles.flashLabel}>
+                <Text style={styles.flashLabelText}>{getFlashLabel()}</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.doneButton, photos.length === 0 && styles.doneButtonDisabled]}
-            onPress={handleComplete}
-            disabled={photos.length === 0}
-          >
-            <Text style={[styles.doneText, photos.length === 0 && styles.doneTextDisabled]}>
-              完成
-            </Text>
+          <TouchableOpacity style={styles.iconButton} onPress={toggleCameraFacing}>
+            <Ionicons name="camera-reverse" size={28} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* 预览栏 */}
-        {photos.length > 0 && (
-          <View style={styles.previewStrip}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.previewScrollContent}
+        {/* 底部区域 */}
+        <View style={styles.bottomArea}>
+          <Text style={styles.itemName}>{itemName}</Text>
+
+          {/* 按钮组 */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
+              <Text style={styles.cancelText}>取消</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.shutterButton} onPress={takePicture}>
+              <View style={styles.shutterButtonInner}>
+                <View style={styles.shutterButtonCore} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.doneButton, photos.length === 0 && styles.doneButtonDisabled]}
+              onPress={handleComplete}
+              disabled={photos.length === 0}
             >
-              {photos.map((photo) => (
-                <TouchableOpacity
-                  key={photo.timestamp}
-                  style={styles.previewItem}
-                  onPress={() => handlePreviewPhoto(photo)}
-                >
-                  <Image source={{ uri: photo.uri }} style={styles.previewImage} />
-                  <TouchableOpacity
-                    style={styles.previewRemove}
-                    onPress={() => removePhoto(photo.timestamp)}
-                  >
-                    <View style={styles.previewRemoveCircle}>
-                      <Ionicons name="close" size={12} color="#fff" />
-                    </View>
-                  </TouchableOpacity>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+              <Text style={[styles.doneText, photos.length === 0 && styles.doneTextDisabled]}>
+                完成
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
-      </View>
+
+          {/* 预览栏 */}
+          {photos.length > 0 && (
+            <View style={styles.previewStrip}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.previewScrollContent}
+              >
+                {photos.map((photo) => (
+                  <TouchableOpacity
+                    key={photo.timestamp}
+                    style={styles.previewItem}
+                    onPress={() => handlePreviewPhoto(photo)}
+                  >
+                    <Image source={{ uri: photo.uri }} style={styles.previewImage} />
+                    <TouchableOpacity
+                      style={styles.previewRemove}
+                      onPress={() => removePhoto(photo.timestamp)}
+                    >
+                      <View style={styles.previewRemoveCircle}>
+                        <Ionicons name="close" size={12} color="#fff" />
+                      </View>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
 
       {/* 照片预览 Modal */}
       <Modal visible={previewVisible} transparent animationType="fade">
@@ -305,6 +312,7 @@ export default function CustomCamera({
         </View>
       </Modal>
     </View>
+  </Modal>
   );
 }
 
