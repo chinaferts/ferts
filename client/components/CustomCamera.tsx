@@ -181,33 +181,9 @@ export default function CustomCamera({
           </TouchableOpacity>
         </View>
 
-        {/* 预览栏 - 拍照按钮下方 */}
-        {photos.length > 0 && (
-          <View style={styles.previewStrip}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.previewScrollContent}
-            >
-              {photos.map((photo, index) => (
-                <View key={photo.timestamp} style={styles.previewItem}>
-                  <Image source={{ uri: photo.uri }} style={styles.previewImage} />
-                  <TouchableOpacity
-                    style={styles.previewRemove}
-                    onPress={() => removePhoto(photo.timestamp)}
-                  >
-                    <View style={styles.previewRemoveCircle}>
-                      <Ionicons name="close" size={12} color="#fff" />
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* 底部区域：取消、拍照、完成 同一行 */}
-        <View style={styles.bottomBar}>
+        {/* 中间区域：取消、拍照、完成 同一行 */}
+        <View style={styles.bottomArea}>
+          <View style={styles.buttonRow}>
           {/* 左侧：取消按钮 */}
           <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
             <Text style={styles.cancelText}>取消</Text>
@@ -230,6 +206,32 @@ export default function CustomCamera({
               完成
             </Text>
           </TouchableOpacity>
+          </View>
+
+          {/* 最下方：横向滚动的照片预览栏 */}
+          {photos.length > 0 && (
+            <View style={styles.previewStrip}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.previewScrollContent}
+              >
+                {photos.map((photo, index) => (
+                  <View key={photo.timestamp} style={styles.previewItem}>
+                    <Image source={{ uri: photo.uri }} style={styles.previewImage} />
+                    <TouchableOpacity
+                      style={styles.previewRemove}
+                      onPress={() => removePhoto(photo.timestamp)}
+                    >
+                      <View style={styles.previewRemoveCircle}>
+                        <Ionicons name="close" size={12} color="#fff" />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </CameraView>
     </View>
@@ -381,6 +383,16 @@ const styles = StyleSheet.create({
   },
 
   // 预览栏 - 最下方
+  bottomArea: {
+    width: '100%',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
   previewStrip: {
     position: 'absolute',
     bottom: 10,
