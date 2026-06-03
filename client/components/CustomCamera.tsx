@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -179,7 +180,37 @@ export default function CustomCamera({
     setRotation(0);
   };
 
-  const handleSaveRotation = () => {
+  const handleSaveRotation = async () => {
+    if (!previewPhoto) {
+      setPreviewVisible(false);
+      setPreviewPhoto(null);
+      setRotation(0);
+      return;
+    }
+
+    try {
+      // 如果有旋转，应用旋转
+      if (rotation !== 0) {
+        const manipResult = await ImageManipulator.manipulateAsync(
+          previewPhoto.uri,
+          [{ rotate: rotation }],
+          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        // 更新照片列表中的URI
+        setPhotos((prev) =>
+          prev.map((p) =>
+            p.timestamp === previewPhoto.timestamp
+              ? { ...p, uri: manipResult.uri }
+              : p
+          )
+        );
+      }
+    } catch (error) {
+      console.error('保存旋转失败:', error);
+      Alert.alert('错误', '保存照片失败');
+    }
+
     setPreviewVisible(false);
     setPreviewPhoto(null);
     setRotation(0);

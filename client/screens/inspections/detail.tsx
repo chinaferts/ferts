@@ -686,14 +686,12 @@ export default function InspectionDetailScreen() {
                   <View style={styles.checklistHeader}>
                     <View style={styles.checklistInfo}>
                       {item.name && item.name !== '条码扫描' && (
-                      {item.name && item.name !== '条码扫描' && (
-                      <Text style={styles.checklistName}>{item.name}</Text>
-                    )}
-                    )}
-                      {item.description && (
-                        <Text style={styles.checklistDesc}>{item.description}</Text>
+                        <Text style={styles.checklistName}>{item.name}</Text>
                       )}
                     </View>
+                    {item.description && (
+                      <Text style={styles.checklistDesc}>{item.description}</Text>
+                    )}
                     {item.status !== 'unchecked' && (
                       <View style={[styles.statusIcon, {
                         backgroundColor: item.status === 'pass' ? 'rgba(0,184,148,0.15)' : 'rgba(255,107,107,0.15)'
