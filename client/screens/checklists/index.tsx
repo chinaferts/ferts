@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -21,6 +22,23 @@ export default function ChecklistsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deletingTemplate, setDeletingTemplate] = useState<ChecklistTemplate | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // 检查用户角色
+  useEffect(() => {
+    const checkRole = async () => {
+      try {
+        const role = await AsyncStorage.getItem('user_role');
+        setIsAdmin(role === 'admin');
+      } catch (error) {
+        console.error('Failed to check role:', error);
+      }
+    };
+    checkRole();
+  }, []);
 
   const fetchTemplates = async () => {
     try {
@@ -79,9 +97,38 @@ export default function ChecklistsScreen() {
     }
   };
 
+  const handleDeleteTemplate = async () => {
+    if (!deletingTemplate || deleting) return;
+    
+    setDeleting(true);
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const response = await fetch(`${baseUrl}/api/v1/checklists/${deletingTemplate.id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setDeleteModalVisible(false);
+        setDeletingTemplate(null);
+        fetchTemplates();
+      } else {
+        Alert.alert('删除失败', '无法删除该模板');
+      }
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+      Alert.alert('删除失败', '网络错误，请重试');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const confirmDelete = (template: ChecklistTemplate) => {
+    setDeletingTemplate(template);
+    setDeleteModalVisible(true);
+  };
+
   const renderTemplateCard = ({ item }: { item: ChecklistTemplate }) => (
-    <Link href={`/checklists/${item.id}`} asChild>
-      <TouchableOpacity style={styles.cardOuter}>
+    <View style={styles.cardOuter}>
+      <Link href={`/checklists/${item.id}`} style={styles.cardLink}>
         <View style={styles.cardInner}>
           <View style={styles.cardHeader}>
             <View style={styles.iconContainer}>
@@ -91,6 +138,14 @@ export default function ChecklistsScreen() {
               <Text style={styles.cardTitle}>{item.name}</Text>
               <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
             </View>
+            {isAdmin && (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => confirmDelete(item)}
+              >
+                <Feather name="trash-2" size={18} color="#E74C3C" />
+              </TouchableOpacity>
+            )}
             <Feather name="chevron-right" size={20} color="#B2BEC3" />
           </View>
         
@@ -116,8 +171,8 @@ export default function ChecklistsScreen() {
             </View>
           </View>
         </View>
-      </TouchableOpacity>
-    </Link>
+      </Link>
+    </View>
   );
 
   return (
@@ -217,6 +272,41 @@ export default function ChecklistsScreen() {
             </View>
           </KeyboardAvoidingView>
         </Modal>
+
+        {/* 删除确认Modal */}
+        <Modal
+          visible={deleteModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setDeleteModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>删除模板</Text>
+              <Text style={styles.deleteMessage}>
+                确定要删除模板《{deletingTemplate?.name}》吗？{'\n'}此操作不可恢复。
+              </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.modalBtn, styles.cancelBtn]}
+                  onPress={() => {
+                    setDeletingTemplate(null);
+                    setDeleteModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.cancelBtnText}>取消</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalBtn, styles.deleteConfirmBtn]}
+                  onPress={handleDeleteTemplate}
+                  disabled={deleting}
+                >
+                  <Text style={styles.deleteBtnText}>{deleting ? '删除中...' : '删除'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </Screen>
   );
@@ -271,6 +361,13 @@ const styles = StyleSheet.create({
   },
   cardOuter: {
     marginBottom: 12,
+  },
+  cardLink: {
+    // Link wrapper styles
+  },
+  deleteButton: {
+    padding: 8,
+    marginRight: 8,
   },
   cardInner: {
     backgroundColor: '#FFFFFF',
@@ -425,5 +522,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  deleteConfirmBtn: {
+    backgroundColor: '#E74C3C',
+  },
+  deleteBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  deleteMessage: {
+    fontSize: 15,
+    color: '#636E72',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 8,
   },
 });
