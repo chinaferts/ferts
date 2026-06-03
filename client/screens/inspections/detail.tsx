@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createFormDataFile } from '@/utils';
 import CustomCamera from '@/components/CustomCamera';
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 
 interface ChecklistItem {
   id: number;
@@ -16,6 +17,7 @@ interface ChecklistItem {
   status: 'pass' | 'fail' | 'unchecked';
   notes?: string;
   photos?: string[];
+  barcodeCodes?: string[];  // 条码扫描记录
 }
 
 interface Defect {
@@ -61,6 +63,11 @@ export default function InspectionDetailScreen() {
   // 相机相关状态
   const [cameraVisible, setCameraVisible] = useState(false);
   const [cameraPhotoTarget, setCameraPhotoTarget] = useState<ChecklistItem | null>(null);
+  // 条码扫码相关状态
+  const [barcodeScannerVisible, setBarcodeScannerVisible] = useState(false);
+  const [barcodeScanTarget, setBarcodeScanTarget] = useState<ChecklistItem | null>(null);
+  const [barcodePermission, requestBarcodePermission] = useCameraPermissions();
+  const barcodeCameraRef = useRef<CameraView>(null);
   
   // 使用 ref 跟踪 inspection 以避免闭包问题
   const inspectionRef = useRef(inspection);
@@ -276,6 +283,44 @@ export default function InspectionDetailScreen() {
       console.error('Failed to submit:', error);
       Alert.alert('错误', '提交失败');
     }
+  };
+
+  // 打开条码扫码
+  const openBarcodeScanner = (item: ChecklistItem) => {
+    setBarcodeScanTarget(item);
+    setBarcodeScannerVisible(true);
+  };
+
+  // 处理条码扫描结果
+  const handleBarcodeScanned = (result: BarcodeScanningResult) => {
+    if (result.data && barcodeScanTarget) {
+      // 将扫描到的条码添加到对应检查项
+      const targetRecordId = String(barcodeScanTarget.record_id);
+      setInspection(prev => {
+        if (!prev) return null;
+        const updatedItems = prev.checklist_items.map(i =>
+          String(i.record_id) === targetRecordId
+            ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), result.data] }
+            : i
+        );
+        // 同时更新检查状态为已检查
+        const updatedItemsWithStatus = updatedItems.map(i =>
+          String(i.record_id) === targetRecordId && i.status === 'unchecked'
+            ? { ...i, status: 'pass' as const }
+            : i
+        );
+        const checkedCount = updatedItemsWithStatus.filter(i => i.status !== 'unchecked').length;
+        const defectCount = updatedItemsWithStatus.filter(i => i.status === 'fail').length;
+        return { ...prev, checklist_items: updatedItemsWithStatus, checkedCount, defectCount };
+      });
+      Alert.alert('扫码成功', `条码: ${result.data}`);
+    }
+  };
+
+  // 关闭条码扫码
+  const closeBarcodeScanner = () => {
+    setBarcodeScannerVisible(false);
+    setBarcodeScanTarget(null);
   };
 
   if (loading || !inspection) {
@@ -498,6 +543,16 @@ export default function InspectionDetailScreen() {
                             <Feather name="x" size={18} color="#FF6B6B" />
                             <Text style={styles.failButtonText}>不合格</Text>
                           </TouchableOpacity>
+                          {/* 条码分类显示扫码按钮 */}
+                          {item.category === '条码' && (
+                            <TouchableOpacity
+                              style={[styles.actionButton, styles.scanButton]}
+                              onPress={() => openBarcodeScanner(item)}
+                            >
+                              <Feather name="maximize-2" size={18} color="#6C63FF" />
+                              <Text style={styles.scanButtonText}>扫码</Text>
+                            </TouchableOpacity>
+                          )}
                           <TouchableOpacity
                             style={[styles.actionButton, styles.photoButton]}
                             onPress={() => takePhoto(item)}
@@ -505,6 +560,21 @@ export default function InspectionDetailScreen() {
                             <Feather name="camera" size={18} color="#6C63FF" />
                             <Text style={styles.photoButtonText}>拍照</Text>
                           </TouchableOpacity>
+                        </View>
+                      )}
+
+                      {/* 显示已扫描的条码 */}
+                      {item.barcodeCodes && item.barcodeCodes.length > 0 && (
+                        <View style={styles.barcodePreviewSection}>
+                          <Text style={styles.barcodePreviewLabel}>已扫描条码 ({item.barcodeCodes.length})</Text>
+                          <View style={styles.barcodeCodesRow}>
+                            {item.barcodeCodes.map((code, idx) => (
+                              <View key={idx} style={styles.barcodeCodeItem}>
+                                <Feather name="code" size={14} color="#6C63FF" />
+                                <Text style={styles.barcodeCodeText} numberOfLines={1}>{code}</Text>
+                              </View>
+                            ))}
+                          </View>
                         </View>
                       )}
                     </>
@@ -698,6 +768,59 @@ export default function InspectionDetailScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* 条码扫码 Modal */}
+      <Modal visible={barcodeScannerVisible} animationType="slide"
+        onRequestClose={closeBarcodeScanner}>
+        <View style={styles.barcodeScannerContainer}>
+          {/* 顶部栏 */}
+          <View style={styles.barcodeScannerHeader}>
+            <TouchableOpacity onPress={closeBarcodeScanner}>
+              <Feather name="x" size={28} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.barcodeScannerTitle}>
+              扫描条码 - {barcodeScanTarget?.name || ''}
+            </Text>
+            <View style={{ width: 28 }} />
+          </View>
+
+          {/* 相机预览 */}
+          {barcodePermission?.granted ? (
+            <View style={styles.cameraContainer}>
+              <CameraView
+                ref={barcodeCameraRef}
+                style={styles.barcodeCamera}
+                facing="back"
+                barcodeScannerSettings={{
+                  barcodeTypes: ["qr", "ean13", "ean8", "code39", "code93", "code128", "upc_a", "upc_e", "pdf417", "aztec", "datamatrix", "itf14"],
+                }}
+                onBarcodeScanned={handleBarcodeScanned}
+              >
+                {/* 扫描框 */}
+                <View style={styles.scanFrame}>
+                  <View style={[styles.scanCorner, styles.scanCornerTL]} />
+                  <View style={[styles.scanCorner, styles.scanCornerTR]} />
+                  <View style={[styles.scanCorner, styles.scanCornerBL]} />
+                  <View style={[styles.scanCorner, styles.scanCornerBR]} />
+                </View>
+              </CameraView>
+            </View>
+          ) : (
+            <View style={styles.barcodePermissionContainer}>
+              <Text style={styles.barcodePermissionText}>需要相机权限来扫描条码</Text>
+              <TouchableOpacity style={styles.barcodePermissionButton} onPress={requestBarcodePermission}>
+                <Text style={styles.barcodePermissionButtonText}>授予权限</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* 底部提示 */}
+          <View style={styles.barcodeScannerFooter}>
+            <Text style={styles.barcodeScannerHint}>将条码对准扫描框内</Text>
+            <Text style={styles.barcodeScannerHintSub}>支持二维码、 EAN、 UPC、 Code 等格式</Text>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -889,7 +1012,12 @@ const styles = StyleSheet.create({
     color: '#6C63FF',
   },
   scanButton: {
-    backgroundColor: 'rgba(0,189,126,0.1)',
+    backgroundColor: 'rgba(108,99,255,0.1)',
+  },
+  scanButtonText: {
+    color: '#6C63FF',
+    fontSize: 12,
+    fontWeight: '500',
   },
   categoryPhotosPreview: {
     backgroundColor: '#F8F9FA',
@@ -1391,5 +1519,141 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 15,
     color: '#2D3436',
+  },
+  // 条码扫码样式 (复用 scanButton)
+  barcodePreviewSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E8E8E8',
+  },
+  barcodePreviewLabel: {
+    fontSize: 12,
+    color: '#636E72',
+    marginBottom: 8,
+  },
+  barcodeCodesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  barcodeCodeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(108,99,255,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 6,
+    maxWidth: '45%',
+  },
+  barcodeCodeText: {
+    fontSize: 12,
+    color: '#6C63FF',
+    fontWeight: '500',
+    flexShrink: 1,
+  },
+  // 条码扫码 Modal 样式
+  barcodeScannerContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  barcodeScannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  barcodeScannerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  cameraContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  barcodeCamera: {
+    width: '100%',
+    height: '100%',
+  },
+  scanFrame: {
+    width: 250,
+    height: 250,
+    position: 'relative',
+    marginTop: 100,
+  },
+  scanCorner: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderColor: '#6C63FF',
+  },
+  scanCornerTL: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+  },
+  scanCornerTR: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+  },
+  scanCornerBL: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+  },
+  scanCornerBR: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+  },
+  barcodePermissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  barcodePermissionText: {
+    fontSize: 16,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  barcodePermissionButton: {
+    backgroundColor: '#6C63FF',
+    paddingHorizontal: 30,
+    paddingVertical: 14,
+    borderRadius: 25,
+  },
+  barcodePermissionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  barcodeScannerFooter: {
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+  },
+  barcodeScannerHint: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  barcodeScannerHintSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 8,
   },
 });
