@@ -277,10 +277,10 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* 最近验货 */}
+        {/* 待验货列表 */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>最近验货</Text>
+            <Text style={styles.sectionTitle}>待验货列表</Text>
             <Link href="/inspections" asChild>
               <TouchableOpacity style={styles.seeAllButton}>
                 <Text style={styles.seeAllText}>查看全部</Text>
@@ -288,14 +288,14 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </Link>
           </View>
-          {recentInspections.length > 0 ? (
-            recentInspections.map((item) => (
+          {recentInspections.filter(item => item.status === 'pending' || item.status === 'in_progress').length > 0 ? (
+            recentInspections.filter(item => item.status === 'pending' || item.status === 'in_progress').map((item) => (
               <RecentInspectionCard key={item.id} item={item} onPress={handleInspectionPress} />
             ))
           ) : (
             <View style={styles.emptyState}>
               <Feather name="inbox" size={48} color="#B2BEC3" />
-              <Text style={styles.emptyText}>暂无验货任务</Text>
+              <Text style={styles.emptyText}>暂无待验货任务</Text>
             </View>
           )}
         </View>
