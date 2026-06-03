@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image, Platform, TouchableWithoutFeedback } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -87,6 +87,9 @@ export default function InspectionDetailScreen() {
   // 当前拍照的问题索引
   const [cameraIssueIndex, setCameraIssueIndex] = useState<number | null>(null);
   const [issueCameraVisible, setIssueCameraVisible] = useState(false);
+  // 严重程度选择弹窗状态
+  const [severityModalVisible, setSeverityModalVisible] = useState(false);
+  const [selectedIssueIndex, setSelectedIssueIndex] = useState<number | null>(null);
   
   // 问题描述框处理函数
   const handleAddIssue = () => {
@@ -97,6 +100,18 @@ export default function InspectionDetailScreen() {
     const newIssues = [...issues];
     newIssues[index].severity = severity;
     setIssues(newIssues);
+    setSeverityModalVisible(false);
+    setSelectedIssueIndex(null);
+  };
+  
+  const openSeveritySelector = (index: number) => {
+    setSelectedIssueIndex(index);
+    setSeverityModalVisible(true);
+  };
+  
+  const closeSeveritySelector = () => {
+    setSeverityModalVisible(false);
+    setSelectedIssueIndex(null);
   };
   
   const handleRemoveIssue = (index: number) => {
@@ -750,18 +765,17 @@ export default function InspectionDetailScreen() {
                   <View style={styles.issueNumber}>
                     <Text style={styles.issueNumberText}>{index + 1}</Text>
                   </View>
-                  <View style={styles.severitySelector}>
-                    <Picker
-                      selectedValue={issue.severity}
-                      onValueChange={(value) => handleSeverityChange(index, value)}
-                      style={styles.severityPicker}
-                    >
-                      <Picker.Item label="选择缺陷等级" value="" />
-                      {severityOptions.map((option) => (
-                        <Picker.Item key={option.value} label={option.label} value={option.value} />
-                      ))}
-                    </Picker>
-                  </View>
+                  <TouchableOpacity style={styles.severitySelector} onPress={() => openSeveritySelector(index)}>
+                    <Text style={[
+                      styles.severitySelectorText,
+                      !issue.severity && styles.severitySelectorPlaceholder
+                    ]}>
+                      {issue.severity 
+                        ? severityOptions.find(o => o.value === issue.severity)?.label 
+                        : '选择缺陷等级'}
+                    </Text>
+                    <Feather name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
                   {issues.length > 1 && (
                     <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
                       <Feather name="x" size={16} color="#FF6B6B" />
@@ -1047,6 +1061,41 @@ export default function InspectionDetailScreen() {
         onComplete={handleIssueCameraComplete}
         itemName="问题拍照"
       />
+      
+      {/* 严重程度选择弹窗 */}
+      <Modal
+        visible={severityModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeSeveritySelector}
+      >
+        <TouchableWithoutFeedback onPress={closeSeveritySelector}>
+          <View style={styles.severityModalOverlay}>
+            <View style={styles.severityModalContent}>
+              <Text style={styles.severityModalTitle}>选择缺陷等级</Text>
+              {severityOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.severityModalItem,
+                    selectedIssueIndex !== null && issues[selectedIssueIndex]?.severity === option.value && styles.severityModalItemSelected
+                  ]}
+                  onPress={() => selectedIssueIndex !== null && handleSeverityChange(selectedIssueIndex, option.value)}
+                >
+                  <View style={[styles.severityDot, { backgroundColor: option.color }]} />
+                  <Text style={styles.severityModalItemText}>{option.label}</Text>
+                  {selectedIssueIndex !== null && issues[selectedIssueIndex]?.severity === option.value && (
+                    <Feather name="check" size={18} color={option.color} />
+                  )}
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.severityModalCancel} onPress={closeSeveritySelector}>
+                <Text style={styles.severityModalCancelText}>取消</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </Screen>
   );
 }
@@ -1929,15 +1978,22 @@ const styles = StyleSheet.create({
   severitySelector: {
     flex: 1,
     marginLeft: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#F8F9FA',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E9ECEF',
-    overflow: 'hidden',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  severityPicker: {
-    height: 36,
-    marginHorizontal: -8,
+  severitySelectorText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  severitySelectorPlaceholder: {
+    color: '#999',
   },
   issueInput: {
     flex: 1,
@@ -2062,5 +2118,57 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+  },
+  // 严重程度选择弹窗样式
+  severityModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  severityModalContent: {
+    width: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+  },
+  severityModalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  severityModalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  severityModalItemSelected: {
+    backgroundColor: '#F0F0FF',
+  },
+  severityDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  severityModalItemText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
+  },
+  severityModalCancel: {
+    marginTop: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E9ECEF',
+  },
+  severityModalCancelText: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
   },
 });
