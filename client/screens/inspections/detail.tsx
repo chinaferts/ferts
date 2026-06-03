@@ -97,13 +97,18 @@ export default function InspectionDetailScreen() {
   
   // 问题描述框状态 (每个问题包含文本、照片和严重程度)
   const [issues, setIssues] = useState<Array<{ text: string; photos: string[]; severity: string }>>([{ text: '', photos: [], severity: '' }]);
-  // 条码扫描项状态 (存储新增的条码扫描项)
-  const [extraBarcodeItems, setExtraBarcodeItems] = useState<ChecklistItem[]>([]);
-  // 合并后的条码扫描列表（原始项 + 新增项）
-  const barcodeItems = [
-    ...(inspection?.checklist_items.filter(item => item.category === '条码') || []),
-    ...extraBarcodeItems
-  ];
+  // 条码扫描项状态 (存储所有条码扫描项，包括原始项和新增项)
+  const [barcodeItems, setBarcodeItems] = useState<ChecklistItem[]>([]);
+  
+  // 初始化条码扫描项（从原始检查项加载）
+  useEffect(() => {
+    if (inspection?.checklist_items) {
+      const originalBarcodeItems = inspection.checklist_items
+        .filter(item => item.category === '条码')
+        .map(item => ({ ...item, barcodeType: 'box' as const }));
+      setBarcodeItems(originalBarcodeItems);
+    }
+  }, [inspection?.checklist_items]);
   // 严重程度选项
   const severityOptions = [
     { label: '致命缺陷', value: 'critical', color: '#DC3545', bgColor: 'rgba(220,53,69,0.1)' },
@@ -150,12 +155,12 @@ export default function InspectionDetailScreen() {
       barcodeCodes: [],
       barcodeType: 'box', // 默认外箱条码
     };
-    setExtraBarcodeItems([...extraBarcodeItems, newItem]);
+    setBarcodeItems([...barcodeItems, newItem]);
   };
 
   // 更新条码扫描项的类型
   const updateBarcodeItemType = (recordId: number, type: string) => {
-    setExtraBarcodeItems(items => items.map(i => 
+    setBarcodeItems(items => items.map(i => 
       i.record_id === recordId ? { ...i, barcodeType: type as 'box' | 'inner' | 'color' } : i
     ));
   };
@@ -173,7 +178,7 @@ export default function InspectionDetailScreen() {
 
   const handleBarcodeTypeChange = (type: string) => {
     if (selectedBarcodeIndex !== null) {
-      const item = extraBarcodeItems[selectedBarcodeIndex];
+      const item = barcodeItems[selectedBarcodeIndex];
       if (item) {
         updateBarcodeItemType(item.record_id, type);
       }
@@ -265,7 +270,7 @@ export default function InspectionDetailScreen() {
     setInspection(updatedInspection);
     
     // 更新额外条码项的照片
-    const updatedExtraBarcode = extraBarcodeItems.map(item => {
+    const updatedExtraBarcode = barcodeItems.map(item => {
       const photoIndex = (item.photos || []).findIndex((p: string) => p === originalUri);
       if (photoIndex !== -1) {
         const newPhotos = [...(item.photos || [])];
@@ -274,7 +279,7 @@ export default function InspectionDetailScreen() {
       }
       return item;
     });
-    setExtraBarcodeItems(updatedExtraBarcode);
+    setBarcodeItems(updatedExtraBarcode);
     
     // 如果是问题描述的照片，直接更新
     if (editingPhoto?.issueIndex !== undefined && editingPhoto?.photoIndex !== undefined) {
@@ -981,7 +986,7 @@ export default function InspectionDetailScreen() {
                       <TouchableOpacity 
                         style={styles.removeIssueButton} 
                         onPress={() => {
-                          setExtraBarcodeItems(extraBarcodeItems.filter(i => i.record_id !== item.record_id));
+                          setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
                         }}
                       >
                         <Feather name="x" size={16} color="#FF6B6B" />
@@ -1022,13 +1027,13 @@ export default function InspectionDetailScreen() {
                           {/* 删除按钮 - 显示编号 */}
                           <TouchableOpacity style={styles.removeIssuePhotoButton}
                             onPress={() => {
-                              const updatedItems = extraBarcodeItems.map(barcodeItem => {
+                              const updatedItems = barcodeItems.map(barcodeItem => {
                                 if (barcodeItem.record_id === item.record_id) {
                                   return { ...barcodeItem, photos: (barcodeItem.photos || []).filter((_, i) => i !== idx) };
                                 }
                                 return barcodeItem;
                               });
-                              setExtraBarcodeItems(updatedItems);
+                              setBarcodeItems(updatedItems);
                             }}>
                             <Text style={styles.removeIssuePhotoText}>{idx + 1}</Text>
                           </TouchableOpacity>
@@ -1570,7 +1575,7 @@ export default function InspectionDetailScreen() {
             <View style={styles.severityModalContent}>
               <Text style={styles.severityModalTitle}>选择条码类型</Text>
               {barcodeTypeOptions.map((option) => {
-                  const currentItem = selectedBarcodeIndex !== null ? extraBarcodeItems[selectedBarcodeIndex] : null;
+                  const currentItem = selectedBarcodeIndex !== null ? barcodeItems[selectedBarcodeIndex] : null;
                   const isSelected = currentItem?.barcodeType === option.value;
                   return (
                     <TouchableOpacity
