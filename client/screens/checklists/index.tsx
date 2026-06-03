@@ -141,17 +141,6 @@ export default function ChecklistsScreen() {
               <Text style={styles.cardTitle}>{item.name}</Text>
               <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
             </View>
-            {isAdmin && (
-              <View
-                style={styles.deleteButton}
-                onTouchEnd={(e) => {
-                  e.stopPropagation();
-                  confirmDelete(item);
-                }}
-              >
-                <Feather name="trash-2" size={18} color="#E74C3C" />
-              </View>
-            )}
             <Feather name="chevron-right" size={20} color="#B2BEC3" />
           </View>
         
@@ -178,6 +167,14 @@ export default function ChecklistsScreen() {
           </View>
         </View>
       </Link>
+      {isAdmin && (
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => confirmDelete(item)}
+        >
+          <Feather name="trash-2" size={18} color="#E74C3C" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -367,13 +364,17 @@ const styles = StyleSheet.create({
   },
   cardOuter: {
     marginBottom: 12,
+    position: 'relative',
   },
   cardLink: {
     // Link wrapper styles
   },
   deleteButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
     padding: 8,
-    marginRight: 8,
   },
   cardInner: {
     backgroundColor: '#FFFFFF',
