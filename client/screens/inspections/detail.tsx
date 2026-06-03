@@ -109,6 +109,15 @@ export default function InspectionDetailScreen() {
   // 严重程度选择弹窗状态
   const [severityModalVisible, setSeverityModalVisible] = useState(false);
   const [selectedIssueIndex, setSelectedIssueIndex] = useState<number | null>(null);
+  // 条码类型选择弹窗状态
+  const [barcodeTypeModalVisible, setBarcodeTypeModalVisible] = useState(false);
+  const [selectedBarcodeIndex, setSelectedBarcodeIndex] = useState<number | null>(null);
+  // 条码类型选项
+  const barcodeTypeOptions = [
+    { label: '外箱条码', value: 'box', color: '#6C63FF', bgColor: 'rgba(108,99,255,0.1)' },
+    { label: '内箱/内袋条码', value: 'inner', color: '#00B894', bgColor: 'rgba(0,184,148,0.1)' },
+    { label: '彩盒/彩卡条码', value: 'color', color: '#FDCB6E', bgColor: 'rgba(253,203,110,0.15)' },
+  ];
   
   // 问题描述框处理函数
   const handleAddIssue = () => {
@@ -136,6 +145,24 @@ export default function InspectionDetailScreen() {
     setExtraBarcodeItems(extraBarcodeItems.map(i => 
       i.record_id === item.record_id ? { ...i, barcodeType: type as 'box' | 'inner' | 'color' } : i
     ));
+  };
+
+  // 条码类型选择器函数
+  const openBarcodeTypeSelector = (index: number) => {
+    setSelectedBarcodeIndex(index);
+    setBarcodeTypeModalVisible(true);
+  };
+
+  const closeBarcodeTypeSelector = () => {
+    setBarcodeTypeModalVisible(false);
+    setSelectedBarcodeIndex(null);
+  };
+
+  const handleBarcodeTypeChange = (type: string) => {
+    if (selectedBarcodeIndex !== null) {
+      updateBarcodeItemType(barcodeItems[selectedBarcodeIndex], type);
+      closeBarcodeTypeSelector();
+    }
   };
   
   const handleSeverityChange = (index: number, severity: string) => {
@@ -804,18 +831,31 @@ export default function InspectionDetailScreen() {
                     <View style={styles.issueNumber}>
                       <Text style={styles.issueNumberText}>{index + 1}</Text>
                     </View>
-                    {/* 条码类型下拉选择 */}
-                    <View style={styles.barcodeTypeSelect}>
-                      <Picker
-                        selectedValue={item.barcodeType || 'box'}
-                        onValueChange={(value) => updateBarcodeItemType(item, value)}
-                        style={styles.barcodeTypePicker}
-                      >
-                        <Picker.Item label="外箱条码" value="box" />
-                        <Picker.Item label="内箱/内袋条码" value="inner" />
-                        <Picker.Item label="彩盒/彩卡条码" value="color" />
-                      </Picker>
-                    </View>
+                    {/* 条码类型下拉选择 - 使用自定义弹窗 */}
+                    <TouchableOpacity 
+                      style={[
+                        styles.barcodeTypeSelector,
+                        item.barcodeType && {
+                          backgroundColor: barcodeTypeOptions.find(o => o.value === item.barcodeType)?.bgColor,
+                          borderColor: barcodeTypeOptions.find(o => o.value === item.barcodeType)?.color,
+                        }
+                      ]} 
+                      onPress={() => openBarcodeTypeSelector(index)}
+                    >
+                      <Text style={[
+                        styles.barcodeTypeSelectorText,
+                        item.barcodeType && {
+                          color: barcodeTypeOptions.find(o => o.value === item.barcodeType)?.color,
+                          fontWeight: '700',
+                        },
+                        !item.barcodeType && styles.barcodeTypeSelectorPlaceholder
+                      ]}>
+                        {item.barcodeType 
+                          ? barcodeTypeOptions.find(o => o.value === item.barcodeType)?.label 
+                          : '选择类型'}
+                      </Text>
+                      <Feather name="chevron-down" size={16} color={item.barcodeType ? barcodeTypeOptions.find(o => o.value === item.barcodeType)?.color : '#666'} />
+                    </TouchableOpacity>
                     <Text style={styles.checklistName}>{item.name}</Text>
                     {item.status !== 'unchecked' && (
                       <View style={[styles.statusIcon, {
@@ -1344,6 +1384,41 @@ export default function InspectionDetailScreen() {
                 </TouchableOpacity>
               ))}
               <TouchableOpacity style={styles.severityModalCancel} onPress={closeSeveritySelector}>
+                <Text style={styles.severityModalCancelText}>取消</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* 条码类型选择弹窗 */}
+      <Modal
+        visible={barcodeTypeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeBarcodeTypeSelector}
+      >
+        <TouchableWithoutFeedback onPress={closeBarcodeTypeSelector}>
+          <View style={styles.severityModalOverlay}>
+            <View style={styles.severityModalContent}>
+              <Text style={styles.severityModalTitle}>选择条码类型</Text>
+              {barcodeTypeOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.severityModalItem,
+                    selectedBarcodeIndex !== null && barcodeItems[selectedBarcodeIndex]?.barcodeType === option.value && styles.severityModalItemSelected
+                  ]}
+                  onPress={() => handleBarcodeTypeChange(option.value)}
+                >
+                  <View style={[styles.severityDot, { backgroundColor: option.color }]} />
+                  <Text style={styles.severityModalItemText}>{option.label}</Text>
+                  {selectedBarcodeIndex !== null && barcodeItems[selectedBarcodeIndex]?.barcodeType === option.value && (
+                    <Feather name="check" size={18} color={option.color} />
+                  )}
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.severityModalCancel} onPress={closeBarcodeTypeSelector}>
                 <Text style={styles.severityModalCancelText}>取消</Text>
               </TouchableOpacity>
             </View>
@@ -2110,18 +2185,27 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flexShrink: 1,
   },
-  barcodeTypeSelect: {
-    backgroundColor: 'rgba(108,99,255,0.1)',
-    borderRadius: 8,
-    marginLeft: 8,
+  barcodeTypeSelector: {
+    flex: 1,
+    marginLeft: 12,
     marginRight: 8,
-    height: 32,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     minWidth: 100,
   },
-  barcodeTypePicker: {
-    height: 32,
-    fontSize: 12,
+  barcodeTypeSelectorText: {
+    fontSize: 13,
+    color: '#333',
+  },
+  barcodeTypeSelectorPlaceholder: {
+    color: '#999',
   },
   // 条码扫码 Modal 样式
   barcodeScannerContainer: {
