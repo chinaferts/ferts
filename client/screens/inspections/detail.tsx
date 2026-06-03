@@ -297,9 +297,10 @@ export default function InspectionDetailScreen() {
 
   return (
     <Screen>
-      {/* 自定义相机页面 */}
+      {/* 自定义相机页面 - 全屏显示 */}
       {cameraVisible && tempPhotoTarget && (
-        <CustomCamera
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
+          <CustomCamera
           visible={cameraVisible}
           onClose={() => setCameraVisible(false)}
           onComplete={async (photos) => {
@@ -349,6 +350,7 @@ export default function InspectionDetailScreen() {
             setTempPhotos([]);
           }}
         />
+        </View>
       )}
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {/* 头部信息 */}
