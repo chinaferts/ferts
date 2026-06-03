@@ -69,12 +69,17 @@ export default function InspectionDetailScreen() {
   const [barcodePermission, requestBarcodePermission] = useCameraPermissions();
   const barcodeCameraRef = useRef<CameraView>(null);
   
-  // 问题描述框状态
-  const [issues, setIssues] = useState<string[]>(['']);
+  // 问题描述框状态 (每个问题包含文本和照片)
+  const [issues, setIssues] = useState<Array<{ text: string; photos: string[] }>>([{ text: '', photos: [] }]);
+  // 当前拍照的问题索引
+  const [cameraIssueIndex, setCameraIssueIndex] = useState<number | null>(null);
+  const [issueCameraVisible, setIssueCameraVisible] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const issueCameraRef = useRef<CameraView>(null);
   
   // 问题描述框处理函数
   const handleAddIssue = () => {
-    setIssues([...issues, '']);
+    setIssues([...issues, { text: '', photos: [] }]);
   };
   
   const handleRemoveIssue = (index: number) => {
@@ -85,7 +90,48 @@ export default function InspectionDetailScreen() {
   
   const handleIssueChange = (index: number, text: string) => {
     const newIssues = [...issues];
-    newIssues[index] = text;
+    newIssues[index].text = text;
+    setIssues(newIssues);
+  };
+  
+  // 问题描述拍照函数
+  const handleOpenCamera = (index: number) => {
+    if (cameraPermission?.granted) {
+      setCameraIssueIndex(index);
+      setIssueCameraVisible(true);
+    } else {
+      requestCameraPermission().then((result) => {
+        if (result.granted) {
+          setCameraIssueIndex(index);
+          setIssueCameraVisible(true);
+        }
+      });
+    }
+  };
+  
+  const handleCloseCamera = () => {
+    setIssueCameraVisible(false);
+    setCameraIssueIndex(null);
+  };
+  
+  const handleTakePhoto = async () => {
+    if (issueCameraRef.current && cameraIssueIndex !== null) {
+      try {
+        const photo = await issueCameraRef.current.takePictureAsync({ quality: 0.5 });
+        if (photo) {
+          const newIssues = [...issues];
+          newIssues[cameraIssueIndex].photos.push(photo.uri);
+          setIssues(newIssues);
+        }
+      } catch (error) {
+        console.error('拍照失败:', error);
+      }
+    }
+  };
+  
+  const handleRemoveIssuePhoto = (issueIndex: number, photoIndex: number) => {
+    const newIssues = [...issues];
+    newIssues[issueIndex].photos.splice(photoIndex, 1);
     setIssues(newIssues);
   };
   
@@ -477,19 +523,42 @@ export default function InspectionDetailScreen() {
               <View style={styles.issueNumber}>
                 <Text style={styles.issueNumberText}>{index + 1}</Text>
               </View>
-              <TextInput
-                style={styles.issueInput}
-                placeholder="请输入问题描述..."
-                placeholderTextColor="#B2BEC3"
-                multiline
-                value={issue}
-                onChangeText={(text) => handleIssueChange(index, text)}
-              />
-              {issues.length > 1 && (
-                <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
-                  <Feather name="x" size={18} color="#FF6B6B" />
-                </TouchableOpacity>
+              <View style={styles.issueContent}>
+                <TextInput
+                  style={styles.issueInput}
+                  placeholder="请输入问题描述..."
+                  placeholderTextColor="#B2BEC3"
+                  multiline
+                  value={issue.text}
+                  onChangeText={(text) => handleIssueChange(index, text)}
+                />
+                {issues.length > 1 && (
+                  <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
+                    <Feather name="x" size={18} color="#FF6B6B" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {/* 问题照片预览 */}
+              {issue.photos.length > 0 && (
+                <View style={styles.issuePhotosContainer}>
+                  {issue.photos.map((photo, photoIndex) => (
+                    <View key={photoIndex} style={styles.issuePhotoItem}>
+                      <Image source={{ uri: photo }} style={styles.issuePhoto} />
+                      <TouchableOpacity 
+                        style={styles.removeIssuePhotoButton}
+                        onPress={() => handleRemoveIssuePhoto(index, photoIndex)}
+                      >
+                        <Feather name="x" size={14} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
               )}
+              {/* 拍照按钮 */}
+              <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
+                <Feather name="camera" size={18} color="#6C63FF" />
+                <Text style={styles.issueCameraText}>拍照</Text>
+              </TouchableOpacity>
             </View>
           ))}
         </View>
@@ -868,6 +937,40 @@ export default function InspectionDetailScreen() {
             <Text style={styles.barcodeScannerHint}>将条码对准扫描框内</Text>
             <Text style={styles.barcodeScannerHintSub}>支持二维码、 EAN、 UPC、 Code 等格式</Text>
           </View>
+        </View>
+      </Modal>
+
+      {/* 问题描述相机 Modal */}
+      <Modal visible={issueCameraVisible} animationType="slide">
+        <View style={styles.issueCameraModal}>
+          {/* 顶部栏 */}
+          <View style={styles.issueCameraHeader}>
+            <TouchableOpacity onPress={handleCloseCamera}>
+              <Feather name="x" size={28} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.issueCameraTitle}>拍照</Text>
+            <TouchableOpacity onPress={handleTakePhoto}>
+              <Feather name="check" size={28} color="#6C63FF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* 相机预览 */}
+          {cameraPermission?.granted ? (
+            <View style={styles.issueCameraContainer}>
+              <CameraView
+                ref={issueCameraRef}
+                style={styles.issueCamera}
+                facing="back"
+              />
+            </View>
+          ) : (
+            <View style={styles.issueCameraPermission}>
+              <Text style={styles.issueCameraPermissionText}>需要相机权限</Text>
+              <TouchableOpacity onPress={requestCameraPermission}>
+                <Text style={styles.issueCameraPermissionBtn}>授予权限</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </Modal>
     </Screen>
@@ -1762,5 +1865,93 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+  },
+  issueContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  issuePhotosContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 12,
+    marginLeft: 44,
+  },
+  issuePhotoItem: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 8,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  issuePhoto: {
+    width: '100%',
+    height: '100%',
+  },
+  removeIssuePhotoButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  issueCameraButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    marginLeft: 44,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(108,99,255,0.1)',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  issueCameraText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: '#6C63FF',
+    fontWeight: '500',
+  },
+  issueCameraModal: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  issueCameraHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingTop: 60,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
+  issueCameraTitle: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  issueCameraContainer: {
+    flex: 1,
+  },
+  issueCamera: {
+    flex: 1,
+  },
+  issueCameraPermission: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  issueCameraPermissionText: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 16,
+  },
+  issueCameraPermissionBtn: {
+    fontSize: 16,
+    color: '#6C63FF',
+    fontWeight: '600',
   },
 });
