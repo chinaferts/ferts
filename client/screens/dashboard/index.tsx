@@ -231,43 +231,39 @@ export default function DashboardScreen() {
         </View>
 
         {/* 统计卡片 */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statsRow}>
-            <StatCard
-              title="总任务"
-              value={stats.total}
-              subtitle="本月验货"
-              icon="clipboard"
-              color="#6C63FF"
-              trend="up"
-            />
-            <StatCard
-              title="进行中"
-              value={stats.inProgress}
-              subtitle="今日完成"
-              icon="activity"
-              color="#0EA5E9"
-              trend="neutral"
-            />
-          </View>
-          <View style={styles.statsRow}>
-            <StatCard
-              title="已完成"
-              value={stats.completed}
-              subtitle="通过率 98%"
-              icon="check-circle"
-              color="#00B894"
-              trend="up"
-            />
-            <StatCard
-              title="待处理"
-              value={stats.pending}
-              subtitle="需尽快处理"
-              icon="clock"
-              color="#FDCB6E"
-              trend="down"
-            />
-          </View>
+        <View style={styles.statsRow}>
+          <StatCard
+            title="总任务"
+            value={stats.total}
+            subtitle="本月验货"
+            icon="clipboard"
+            color="#6C63FF"
+            trend="up"
+          />
+          <StatCard
+            title="进行中"
+            value={stats.inProgress}
+            subtitle="今日完成"
+            icon="activity"
+            color="#0EA5E9"
+            trend="neutral"
+          />
+          <StatCard
+            title="已完成"
+            value={stats.completed}
+            subtitle="通过率 98%"
+            icon="check-circle"
+            color="#00B894"
+            trend="up"
+          />
+          <StatCard
+            title="待处理"
+            value={stats.pending}
+            subtitle="需尽快处理"
+            icon="clock"
+            color="#FDCB6E"
+            trend="down"
+          />
         </View>
 
         {/* 快捷操作 */}
@@ -342,49 +338,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  statsGrid: {
-    marginBottom: 8,
-  },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
   },
   statCardOuter: {
-    width: '47%',
+    width: '23%',
     shadowColor: '#D1D9E6',
-    shadowOffset: { width: 6, height: 6 },
+    shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 0.7,
-    shadowRadius: 8,
-    borderRadius: 24,
+    shadowRadius: 6,
+    borderRadius: 16,
   },
   statCardInner: {
     backgroundColor: '#F0F0F3',
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: 16,
+    padding: 12,
     shadowColor: '#FFFFFF',
-    shadowOffset: { width: -6, height: -6 },
+    shadowOffset: { width: -4, height: -4 },
     shadowOpacity: 0.9,
-    shadowRadius: 8,
+    shadowRadius: 6,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statValue: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '800',
     color: '#6C63FF',
   },
   statTitle: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
     color: '#2D3436',
-    marginTop: 4,
+    marginTop: 2,
   },
   trendContainer: {
     flexDirection: 'row',
@@ -392,7 +385,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   statSubtitle: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#636E72',
     marginLeft: 4,
   },
