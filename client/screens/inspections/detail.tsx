@@ -74,9 +74,9 @@ export default function InspectionDetailScreen() {
   const [issues, setIssues] = useState<Array<{ text: string; photos: string[]; severity: string }>>([{ text: '', photos: [], severity: '' }]);
   // 严重程度选项
   const severityOptions = [
-    { label: '致命缺陷', value: 'critical', color: '#DC3545' },
-    { label: '严重缺陷', value: 'serious', color: '#FD7E14' },
-    { label: '轻微缺陷', value: 'minor', color: '#FFC107' },
+    { label: '致命缺陷', value: 'critical', color: '#DC3545', bgColor: 'rgba(220,53,69,0.1)' },
+    { label: '严重缺陷', value: 'serious', color: '#FD7E14', bgColor: 'rgba(253,126,20,0.1)' },
+    { label: '轻微缺陷', value: 'minor', color: '#FFC107', bgColor: 'rgba(255,193,7,0.15)' },
   ];
   // 缺陷统计状态
   const [defectStats, setDefectStats] = useState({
@@ -765,16 +765,29 @@ export default function InspectionDetailScreen() {
                   <View style={styles.issueNumber}>
                     <Text style={styles.issueNumberText}>{index + 1}</Text>
                   </View>
-                  <TouchableOpacity style={styles.severitySelector} onPress={() => openSeveritySelector(index)}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.severitySelector,
+                      issue.severity && {
+                        backgroundColor: severityOptions.find(o => o.value === issue.severity)?.bgColor,
+                        borderColor: severityOptions.find(o => o.value === issue.severity)?.color,
+                      }
+                    ]} 
+                    onPress={() => openSeveritySelector(index)}
+                  >
                     <Text style={[
                       styles.severitySelectorText,
+                      issue.severity && {
+                        color: severityOptions.find(o => o.value === issue.severity)?.color,
+                        fontWeight: '700',
+                      },
                       !issue.severity && styles.severitySelectorPlaceholder
                     ]}>
                       {issue.severity 
                         ? severityOptions.find(o => o.value === issue.severity)?.label 
                         : '选择缺陷等级'}
                     </Text>
-                    <Feather name="chevron-down" size={16} color="#666" />
+                    <Feather name="chevron-down" size={16} color={issue.severity ? severityOptions.find(o => o.value === issue.severity)?.color : '#666'} />
                   </TouchableOpacity>
                   {issues.length > 1 && (
                     <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
@@ -1999,6 +2012,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 80,
     fontSize: 15,
+    fontWeight: '600',
     color: '#2D3436',
     textAlignVertical: 'top',
     padding: 0,
