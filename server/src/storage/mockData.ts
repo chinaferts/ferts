@@ -371,15 +371,16 @@ interface User {
   username: string;
   name: string;
   role: 'admin' | 'inspector';
+  password?: string;
   email?: string;
   phone?: string;
   created_at: string;
 }
 
 let users: User[] = [
-  { id: '1', username: 'admin', name: '管理员', role: 'admin', email: 'admin@example.com', created_at: new Date().toISOString() },
-  { id: '2', username: 'inspector', name: '验货员A', role: 'inspector', email: 'inspector1@example.com', created_at: new Date().toISOString() },
-  { id: '3', username: 'inspector2', name: '验货员B', role: 'inspector', email: 'inspector2@example.com', created_at: new Date().toISOString() },
+  { id: '1', username: 'admin', name: '管理员', role: 'admin', password: 'admin123', email: 'admin@example.com', created_at: new Date().toISOString() },
+  { id: '2', username: 'inspector', name: '验货员A', role: 'inspector', password: 'inspector123', email: 'inspector1@example.com', created_at: new Date().toISOString() },
+  { id: '3', username: 'inspector2', name: '验货员B', role: 'inspector', password: 'inspector456', email: 'inspector2@example.com', created_at: new Date().toISOString() },
 ];
 
 let currentUserId = '1'; // 默认管理员登录
@@ -392,7 +393,7 @@ export function getMockCurrentUser(): User | null {
   return users.find(u => u.id === currentUserId) || null;
 }
 
-export function updateMockUser(id: string, updates: Partial<Pick<User, 'name' | 'phone' | 'email'>>): User | null {
+export function updateMockUser(id: string, updates: Partial<Pick<User, 'name' | 'phone' | 'email' | 'password'>>): User | null {
   const index = users.findIndex(u => u.id === id);
   if (index === -1) return null;
   
@@ -400,7 +401,7 @@ export function updateMockUser(id: string, updates: Partial<Pick<User, 'name' | 
   return users[index];
 }
 
-export function createMockUser(data: { name: string; phone?: string; email?: string; role?: 'admin' | 'inspector' }): User {
+export function createMockUser(data: { name: string; phone?: string; email?: string; role?: 'admin' | 'inspector'; password?: string }): User {
   const id = (users.length + 1).toString();
   const username = `user${id}`;
   const newUser: User = {
@@ -408,6 +409,7 @@ export function createMockUser(data: { name: string; phone?: string; email?: str
     username,
     name: data.name,
     role: data.role || 'inspector',
+    password: data.password || '123456',
     email: data.email,
     phone: data.phone,
     created_at: new Date().toISOString()

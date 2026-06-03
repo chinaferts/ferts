@@ -96,7 +96,8 @@ export default function LoginScreen() {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>默认账号: admin / 123456</Text>
+            <Text style={styles.footerText}>管理员: admin / admin123</Text>
+            <Text style={styles.footerText}>验货员: inspector / inspector123</Text>
           </View>
         </View>
       </KeyboardAvoidingView>

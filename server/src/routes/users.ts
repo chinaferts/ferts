@@ -6,6 +6,22 @@ const router = Router();
 // 获取所有用户
 router.get('/', (req, res) => {
   const users = getMockUsers();
+  // 不返回密码给前端
+  const safeUsers = users.map(u => {
+    const { password, ...rest } = u;
+    return rest;
+  });
+  res.json(safeUsers);
+});
+
+// 管理员获取所有用户（包括密码）
+router.get('/all-with-password', (req, res) => {
+  // 简单验证是否为管理员（实际应用中应通过session验证）
+  const authHeader = req.headers['x-user-role'];
+  if (authHeader !== 'admin') {
+    return res.status(403).json({ error: '需要管理员权限' });
+  }
+  const users = getMockUsers();
   res.json(users);
 });
 
@@ -17,34 +33,14 @@ router.post('/login', (req, res) => {
     return res.status(400).json({ error: '用户名和密码不能为空' });
   }
   
-  // 简单的Mock验证
-  if (username === 'admin' && password === '123456') {
-    const user = {
-      id: '1',
-      username: 'admin',
-      name: '管理员',
-      role: 'admin' as const,
-      email: 'admin@example.com',
-    };
-    return res.json(user);
-  }
-  
-  if (username === 'inspector' && password === '123456') {
-    const user = {
-      id: '2',
-      username: 'inspector',
-      name: '验货员',
-      role: 'inspector' as const,
-      email: 'inspector@example.com',
-    };
-    return res.json(user);
-  }
-  
   // 检查是否在Mock用户列表中
   const users = getMockUsers();
   const user = users.find(u => u.username === username);
-  if (user) {
-    return res.json(user);
+  
+  if (user && user.password === password) {
+    // 登录成功，不返回密码
+    const { password: _, ...safeUser } = user;
+    return res.json(safeUser);
   }
   
   res.status(401).json({ error: '用户名或密码错误' });
@@ -72,27 +68,31 @@ router.get('/:id', (req, res) => {
 // 更新用户信息
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  const { name, phone, email } = req.body;
+  const { name, phone, email, password } = req.body;
   
-  const updatedUser = updateMockUser(id, { name, phone, email });
+  const updatedUser = updateMockUser(id, { name, phone, email, password });
   
   if (!updatedUser) {
     return res.status(404).json({ error: '用户不存在' });
   }
   
-  res.json(updatedUser);
+  // 不返回密码
+  const { password: _, ...safeUser } = updatedUser;
+  res.json(safeUser);
 });
 
 // 创建新用户
 router.post('/', (req, res) => {
-  const { name, phone, email, role = 'inspector' } = req.body;
+  const { name, phone, email, role = 'inspector', password } = req.body;
   
   if (!name) {
     return res.status(400).json({ error: '姓名不能为空' });
   }
   
-  const newUser = createMockUser({ name, phone, email, role });
-  res.status(201).json(newUser);
+  const newUser = createMockUser({ name, phone, email, role, password });
+  // 不返回密码
+  const { password: _, ...safeUser } = newUser;
+  res.status(201).json(safeUser);
 });
 
 // 更新用户角色

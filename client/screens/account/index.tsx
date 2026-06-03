@@ -105,6 +105,9 @@ function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit
             <Text style={styles.userMeta}>@{user.username}</Text>
             {user.phone && <Text style={styles.userPhone}>{user.phone}</Text>}
           </View>
+          {isAdmin && user.password && (
+            <Text style={styles.passwordText}>密码: {user.password}</Text>
+          )}
         </View>
       </View>
       <View style={styles.userActions}>
@@ -143,14 +146,22 @@ export default function AccountScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', password: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'inspector'>('all');
 
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users`);
+      // 管理员获取包含密码的用户列表
+      const endpoint = isAdmin 
+        ? `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/all-with-password`
+        : `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users`;
+      const headers: HeadersInit = {};
+      if (isAdmin) {
+        headers['x-user-role'] = 'admin';
+      }
+      const response = await fetch(endpoint, { headers });
       if (response.ok) {
         const result = await response.json();
         const list = result.data || result || [];
@@ -159,6 +170,7 @@ export default function AccountScreen() {
           username: u.username,
           name: u.name,
           role: u.role,
+          password: u.password,
           phone: u.phone,
         })));
       }
@@ -167,7 +179,7 @@ export default function AccountScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useFocusEffect(
     useCallback(() => {
@@ -243,13 +255,13 @@ export default function AccountScreen() {
 
   const handleAddUser = () => {
     setEditingUser(null);
-    setEditForm({ name: '', phone: '' });
+    setEditForm({ name: '', phone: '', password: '' });
     setEditModalVisible(true);
   };
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
-    setEditForm({ name: user.name, phone: user.phone || '' });
+    setEditForm({ name: user.name, phone: user.phone || '', password: user.password || '' });
     setEditModalVisible(true);
   };
 
@@ -258,15 +270,29 @@ export default function AccountScreen() {
       Alert.alert('错误', '请输入姓名');
       return;
     }
+    // 新建用户时必须设置密码
+    if (!editingUser && !editForm.password.trim()) {
+      Alert.alert('错误', '请设置密码');
+      return;
+    }
 
     setIsSaving(true);
     try {
+      // 构建请求数据，只包含非空字段
+      const requestData: any = { name: editForm.name };
+      if (editForm.phone.trim()) {
+        requestData.phone = editForm.phone;
+      }
+      if (editForm.password.trim()) {
+        requestData.password = editForm.password;
+      }
+      
       if (editingUser) {
         // 更新用户
         const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/${editingUser.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editForm),
+          body: JSON.stringify(requestData),
         });
         if (response.ok) {
           const updatedUser = await response.json();
@@ -282,7 +308,7 @@ export default function AccountScreen() {
         const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editForm),
+          body: JSON.stringify(requestData),
         });
         if (response.ok) {
           const newUser = await response.json();
@@ -436,6 +462,18 @@ export default function AccountScreen() {
                   onChangeText={(text) => setEditForm({ ...editForm, name: text })}
                 />
               </View>
+              {isAdmin && (
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>密码 {editingUser ? '（留空则不修改）' : ''}</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder={editingUser ? '输入新密码（选填）' : '请设置密码'}
+                    value={editForm.password}
+                    onChangeText={(text) => setEditForm({ ...editForm, password: text })}
+                    secureTextEntry
+                  />
+                </View>
+              )}
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>电话</Text>
                 <TextInput
@@ -748,6 +786,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9CA3AF',
     marginLeft: 8,
+  },
+  passwordText: {
+    fontSize: 13,
+    color: '#F59E0B',
+    marginTop: 4,
+    fontWeight: '500',
   },
   roleBadge: {
     flexDirection: 'row',
