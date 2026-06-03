@@ -31,8 +31,11 @@ export default function ChecklistsScreen() {
   useEffect(() => {
     const checkRole = async () => {
       try {
-        const role = await AsyncStorage.getItem('user_role');
-        setIsAdmin(role === 'admin');
+        const stored = await AsyncStorage.getItem('@auth_user');
+        if (stored) {
+          const userData = JSON.parse(stored);
+          setIsAdmin(userData.role === 'admin');
+        }
       } catch (error) {
         console.error('Failed to check role:', error);
       }
