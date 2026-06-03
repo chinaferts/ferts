@@ -27,11 +27,11 @@ interface ChecklistDetail {
 }
 
 export default function ChecklistDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, mode } = useLocalSearchParams<{ id: string; mode?: string }>();
   const router = useSafeRouter();
   const expoRouter = useRouter();
   const [template, setTemplate] = useState<ChecklistDetail | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(mode === 'edit');
   const [editData, setEditData] = useState<ChecklistDetail | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -47,7 +47,7 @@ export default function ChecklistDetailScreen() {
       if (response.ok) {
         const result = await response.json();
         const data = result.data || result;
-        setTemplate({
+        const templateData = {
           id: data.id,
           name: data.name,
           description: data.description || '',
@@ -63,7 +63,13 @@ export default function ChecklistDetailScreen() {
           usageCount: data.usage_count || data.usageCount || 0,
           createdAt: data.created_at || data.createdAt || '',
           updatedAt: data.updated_at || data.updatedAt || '',
-        });
+        };
+        setTemplate(templateData);
+        // 如果是编辑模式，自动进入编辑状态
+        if (mode === 'edit') {
+          setIsEditing(true);
+          setEditData(templateData);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch template:', error);
@@ -73,7 +79,7 @@ export default function ChecklistDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchTemplate();
-    }, [id])
+    }, [id, mode])
   );
 
   const startEditing = () => {
