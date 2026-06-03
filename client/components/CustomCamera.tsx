@@ -181,33 +181,16 @@ export default function CustomCamera({
           </TouchableOpacity>
         </View>
 
-        {/* 底部区域 */}
-        <View style={styles.bottomBar}>
-          {/* 左侧：取消按钮 */}
-          <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-            <Text style={styles.cancelText}>取消</Text>
-          </TouchableOpacity>
-
-          {/* 中间：快门按钮 */}
+        {/* 拍照按钮 - 居中 */}
+        <View style={styles.shutterContainer}>
           <TouchableOpacity style={styles.shutterButton} onPress={takePicture}>
             <View style={styles.shutterButtonInner}>
               <View style={styles.shutterButtonCore} />
             </View>
           </TouchableOpacity>
-
-          {/* 右侧：完成按钮 */}
-          <TouchableOpacity
-            style={[styles.doneButton, photos.length === 0 && styles.doneButtonDisabled]}
-            onPress={handleComplete}
-            disabled={photos.length === 0}
-          >
-            <Text style={[styles.doneText, photos.length === 0 && styles.doneTextDisabled]}>
-              完成
-            </Text>
-          </TouchableOpacity>
         </View>
 
-        {/* 预览栏 - 底部 */}
+        {/* 预览栏 - 拍照按钮下方 */}
         {photos.length > 0 && (
           <View style={styles.previewStrip}>
             <ScrollView
@@ -231,6 +214,25 @@ export default function CustomCamera({
             </ScrollView>
           </View>
         )}
+
+        {/* 底部区域 */}
+        <View style={styles.bottomBar}>
+          {/* 左侧：取消按钮 */}
+          <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
+            <Text style={styles.cancelText}>取消</Text>
+          </TouchableOpacity>
+
+          {/* 右侧：完成按钮 */}
+          <TouchableOpacity
+            style={[styles.doneButton, photos.length === 0 && styles.doneButtonDisabled]}
+            onPress={handleComplete}
+            disabled={photos.length === 0}
+          >
+            <Text style={[styles.doneText, photos.length === 0 && styles.doneTextDisabled]}>
+              完成
+            </Text>
+          </TouchableOpacity>
+        </View>
       </CameraView>
     </View>
   );
@@ -339,6 +341,15 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '400',
   },
+  // 拍照按钮容器 - 居中
+  shutterContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    marginTop: -37.5,
+  },
   shutterButton: {
     width: 75,
     height: 75,
@@ -379,10 +390,10 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
 
-  // 预览栏
+  // 预览栏 - 拍照按钮下方
   previewStrip: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 130 : 110,
+    bottom: Platform.OS === 'ios' ? 90 : 70,
     left: 0,
     right: 0,
   },
