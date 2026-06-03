@@ -71,6 +71,12 @@ export default function InspectionDetailScreen() {
   
   // 问题描述框状态 (每个问题包含文本和照片)
   const [issues, setIssues] = useState<Array<{ text: string; photos: string[] }>>([{ text: '', photos: [] }]);
+  // 缺陷统计状态
+  const [defectStats, setDefectStats] = useState({
+    critical: 0,    // 致命缺陷
+    serious: 0,     // 严重缺陷
+    minor: 0,       // 轻微缺陷
+  });
   // 当前拍照的问题索引
   const [cameraIssueIndex, setCameraIssueIndex] = useState<number | null>(null);
   const [issueCameraVisible, setIssueCameraVisible] = useState(false);
@@ -645,6 +651,86 @@ export default function InspectionDetailScreen() {
                 <Text style={styles.addIssueText}>添加问题</Text>
               </TouchableOpacity>
             </View>
+            
+            {/* 缺陷统计表格 */}
+            <View style={styles.defectStatsContainer}>
+              <Text style={styles.defectStatsTitle}>缺陷统计</Text>
+              <View style={styles.defectStatsTable}>
+                <View style={styles.defectStatsRow}>
+                  <Text style={styles.defectStatsLabel}>致命缺陷</Text>
+                  <View style={styles.defectStatsInputWrapper}>
+                    <TouchableOpacity 
+                      style={styles.defectStatsBtn}
+                      onPress={() => setDefectStats({...defectStats, critical: Math.max(0, defectStats.critical - 1)})}
+                    >
+                      <Feather name="minus" size={16} color="#6C63FF" />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={styles.defectStatsInput}
+                      value={String(defectStats.critical)}
+                      onChangeText={(text) => setDefectStats({...defectStats, critical: parseInt(text) || 0})}
+                      keyboardType="number-pad"
+                      textAlign="center"
+                    />
+                    <TouchableOpacity 
+                      style={styles.defectStatsBtn}
+                      onPress={() => setDefectStats({...defectStats, critical: defectStats.critical + 1})}
+                    >
+                      <Feather name="plus" size={16} color="#6C63FF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.defectStatsRow}>
+                  <Text style={styles.defectStatsLabel}>严重缺陷</Text>
+                  <View style={styles.defectStatsInputWrapper}>
+                    <TouchableOpacity 
+                      style={styles.defectStatsBtn}
+                      onPress={() => setDefectStats({...defectStats, serious: Math.max(0, defectStats.serious - 1)})}
+                    >
+                      <Feather name="minus" size={16} color="#6C63FF" />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={styles.defectStatsInput}
+                      value={String(defectStats.serious)}
+                      onChangeText={(text) => setDefectStats({...defectStats, serious: parseInt(text) || 0})}
+                      keyboardType="number-pad"
+                      textAlign="center"
+                    />
+                    <TouchableOpacity 
+                      style={styles.defectStatsBtn}
+                      onPress={() => setDefectStats({...defectStats, serious: defectStats.serious + 1})}
+                    >
+                      <Feather name="plus" size={16} color="#6C63FF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.defectStatsRow}>
+                  <Text style={styles.defectStatsLabel}>轻微缺陷</Text>
+                  <View style={styles.defectStatsInputWrapper}>
+                    <TouchableOpacity 
+                      style={styles.defectStatsBtn}
+                      onPress={() => setDefectStats({...defectStats, minor: Math.max(0, defectStats.minor - 1)})}
+                    >
+                      <Feather name="minus" size={16} color="#6C63FF" />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={styles.defectStatsInput}
+                      value={String(defectStats.minor)}
+                      onChangeText={(text) => setDefectStats({...defectStats, minor: parseInt(text) || 0})}
+                      keyboardType="number-pad"
+                      textAlign="center"
+                    />
+                    <TouchableOpacity 
+                      style={styles.defectStatsBtn}
+                      onPress={() => setDefectStats({...defectStats, minor: defectStats.minor + 1})}
+                    >
+                      <Feather name="plus" size={16} color="#6C63FF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+            
             {issues.map((issue, index) => (
               <View key={index} style={styles.issueItem}>
                 <View style={styles.issueHeader}>
@@ -1884,5 +1970,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6C63FF',
     fontWeight: '500',
+  },
+  // 缺陷统计表格样式
+  defectStatsContainer: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  defectStatsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  defectStatsTable: {
+    gap: 8,
+  },
+  defectStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  defectStatsLabel: {
+    fontSize: 14,
+    color: '#333',
+  },
+  defectStatsInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  defectStatsBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#6C63FF',
+  },
+  defectStatsInput: {
+    width: 48,
+    height: 36,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
 });
