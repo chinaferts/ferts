@@ -205,6 +205,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     const result = {
       ...inspection,
+      // 字段映射：数据库字段名 -> 前端期望的字段名
+      inspector: inspection.inspector_name || inspection.inspector,
+      inspection_date: inspection.scheduled_date || inspection.inspection_date,
       checklist_items,
       categories,
       defects: defects || [],
