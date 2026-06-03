@@ -612,7 +612,7 @@ export default function InspectionDetailScreen() {
         </View>
 
         {/* 验货清单 */}
-        {categories.map((category, catIndex) => {
+        {categories.filter(c => c !== '条码').map((category, catIndex) => {
           return (
             <View key={category} style={styles.section}>
               <View style={styles.categoryHeader}>
@@ -751,6 +751,103 @@ export default function InspectionDetailScreen() {
             </View>
           );
         })}
+
+        {/* 条码扫描分类 - 问题描述格式 */}
+        {categories.includes('条码') && (
+          <View style={styles.section}>
+            <View style={styles.categoryHeader}>
+              <Text style={styles.sectionTitle}>条码扫描</Text>
+            </View>
+            
+            {inspection.checklist_items
+              .filter(item => item.category === '条码')
+              .map((item, index) => (
+                <View key={item.record_id} style={styles.issueItem}>
+                  <View style={styles.issueHeader}>
+                    <View style={styles.issueNumber}>
+                      <Text style={styles.issueNumberText}>{index + 1}</Text>
+                    </View>
+                    <Text style={styles.checklistName}>{item.name}</Text>
+                    {item.status !== 'unchecked' && (
+                      <View style={[styles.statusIcon, {
+                        backgroundColor: item.status === 'pass' ? 'rgba(0,184,148,0.15)' : 'rgba(255,107,107,0.15)'
+                      }]}>
+                        <Feather name={item.status === 'pass' ? 'check' : 'x'} size={16}
+                          color={item.status === 'pass' ? '#00B894' : '#FF6B6B'} />
+                      </View>
+                    )}
+                  </View>
+                  
+                  {item.description && (
+                    <Text style={styles.checklistDesc}>{item.description}</Text>
+                  )}
+                  
+                  {/* 已扫描的条码 */}
+                  {item.barcodeCodes && item.barcodeCodes.length > 0 && (
+                    <View style={styles.barcodePreviewSection}>
+                      <View style={styles.barcodeCodesRow}>
+                        {item.barcodeCodes.map((code, idx) => (
+                          <View key={idx} style={styles.barcodeCodeItem}>
+                            <Feather name="code" size={14} color="#6C63FF" />
+                            <Text style={styles.barcodeCodeText} numberOfLines={1}>{code}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                  
+                  {/* 已保存的照片预览 */}
+                  {item.photos && item.photos.length > 0 && (
+                    <View style={styles.issuePhotosContainer}>
+                      {item.photos.map((photo, idx) => (
+                        <View key={idx} style={styles.issuePhotoItem}>
+                          <Image source={{ uri: photo }} style={styles.issuePhoto} />
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {/* 拍照和扫码按钮 */}
+                  <View style={styles.issueCameraRow}>
+                    <TouchableOpacity style={styles.issueCameraButton} onPress={() => takePhoto(item)}>
+                      <Feather name="camera" size={18} color="#6C63FF" />
+                      <Text style={styles.issueCameraText}>拍照</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.issueCameraButton, { marginLeft: 12 }]} 
+                      onPress={() => openBarcodeScanner(item)}
+                    >
+                      <Feather name="maximize-2" size={18} color="#6C63FF" />
+                      <Text style={styles.issueCameraText}>扫码</Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {/* 合格与不合格按钮 */}
+                  {item.status === 'unchecked' && inspection.status !== 'completed' && (
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.passButton]}
+                        onPress={() => updateChecklistItem(item, 'pass')}
+                      >
+                        <Feather name="check" size={18} color="#00B894" />
+                        <Text style={styles.passButtonText}>合格</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.failButton]}
+                        onPress={() => {
+                          setSelectedItem(item);
+                          setDefectModalVisible(true);
+                        }}
+                      >
+                        <Feather name="x" size={18} color="#FF6B6B" />
+                        <Text style={styles.failButtonText}>不合格</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))}
+          </View>
+        )}
 
         {/* 问题描述列表 */}
         {issues.length > 0 && (
@@ -2180,6 +2277,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(108,99,255,0.1)',
     borderRadius: 8,
     alignSelf: 'flex-start',
+  },
+  issueCameraRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    marginLeft: 44,
   },
   issueSection: {
     marginTop: 16,
