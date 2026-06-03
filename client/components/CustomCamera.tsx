@@ -382,9 +382,10 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
 
-  // 预览栏 - 最下方
+  // 底部区域：按钮组和预览栏
   bottomArea: {
     width: '100%',
+    paddingBottom: 20,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -394,10 +395,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   previewStrip: {
-    position: 'absolute',
-    bottom: 10,
-    left: 0,
-    right: 0,
+    paddingVertical: 10,
   },
   previewScrollContent: {
     paddingHorizontal: 16,
