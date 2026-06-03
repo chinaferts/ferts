@@ -38,13 +38,13 @@ interface InspectionDetail {
   checklist_id: number;
   checkedCount: number;
   defectCount: number;
-  template_name?: string;
   batch_number?: string;
+  style_number?: string;
+  color?: string;
+  size?: string;
+  quantity?: string | number;
   inspection_date?: string;
   inspector?: string;
-  total_items?: number;
-  passed_items?: number;
-  failed_items?: number;
   notes?: string;
   created_at?: string;
   checklist_items: ChecklistItem[];
@@ -508,6 +508,60 @@ export default function InspectionDetailScreen() {
             </View>
           </View>
 
+          {/* 基本信息 */}
+          <View style={styles.basicInfoGrid}>
+            <View style={styles.basicInfoItem}>
+              <Text style={styles.basicInfoLabel}>供应商</Text>
+              <Text style={styles.basicInfoValue}>{inspection.supplier_name}</Text>
+            </View>
+            <View style={styles.basicInfoItem}>
+              <Text style={styles.basicInfoLabel}>产品名称</Text>
+              <Text style={styles.basicInfoValue}>{inspection.product_name}</Text>
+            </View>
+            {inspection.batch_number && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>订单号</Text>
+                <Text style={styles.basicInfoValue}>{inspection.batch_number}</Text>
+              </View>
+            )}
+            {inspection.style_number && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>款号</Text>
+                <Text style={styles.basicInfoValue}>{inspection.style_number}</Text>
+              </View>
+            )}
+            {inspection.color && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>颜色</Text>
+                <Text style={styles.basicInfoValue}>{inspection.color}</Text>
+              </View>
+            )}
+            {inspection.size && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>尺码</Text>
+                <Text style={styles.basicInfoValue}>{inspection.size}</Text>
+              </View>
+            )}
+            {inspection.quantity && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>数量</Text>
+                <Text style={styles.basicInfoValue}>{inspection.quantity}</Text>
+              </View>
+            )}
+            {inspection.inspection_date && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>验货日期</Text>
+                <Text style={styles.basicInfoValue}>{inspection.inspection_date}</Text>
+              </View>
+            )}
+            {inspection.inspector && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>验货员</Text>
+                <Text style={styles.basicInfoValue}>{inspection.inspector}</Text>
+              </View>
+            )}
+          </View>
+
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
               <Text style={styles.progressLabel}>检查进度</Text>
@@ -534,47 +588,6 @@ export default function InspectionDetailScreen() {
                 <Text style={styles.statLabel}>待检查</Text>
               </View>
             </View>
-          </View>
-        </View>
-
-        {/* 验货基本信息 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>基本信息</Text>
-          <View style={styles.infoTable}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>验货模板</Text>
-              <Text style={styles.infoValue}>{inspection.template_name || '通用验货模板'}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>验货日期</Text>
-              <Text style={styles.infoValue}>{inspection.inspection_date || (inspection.created_at ? new Date(inspection.created_at).toLocaleDateString() : '-')}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>批次号</Text>
-              <Text style={styles.infoValue}>{inspection.batch_number || '-'}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>验货员</Text>
-              <Text style={styles.infoValue}>{inspection.inspector || '-'}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>检查总数</Text>
-              <Text style={styles.infoValue}>{inspection.total_items || inspection.checklist_items.length}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>通过数</Text>
-              <Text style={[styles.infoValue, { color: '#00B894' }]}>{inspection.passed_items || 0}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>不合格数</Text>
-              <Text style={[styles.infoValue, { color: '#FF6B6B' }]}>{inspection.failed_items || 0}</Text>
-            </View>
-            {inspection.notes && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>备注</Text>
-                <Text style={styles.infoValue}>{inspection.notes}</Text>
-              </View>
-            )}
           </View>
         </View>
 
@@ -1244,28 +1257,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#6C63FF',
     borderRadius: 5,
   },
-  infoTable: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F5',
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -1273,6 +1264,25 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#E8E8EB',
+  },
+  basicInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  basicInfoItem: {
+    width: '50%',
+    paddingVertical: 6,
+  },
+  basicInfoLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 2,
+  },
+  basicInfoValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
   },
   statItem: {
     alignItems: 'center',
