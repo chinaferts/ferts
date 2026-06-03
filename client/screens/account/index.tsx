@@ -19,10 +19,13 @@ const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL ||
 interface UserItemProps {
   user: User;
   isCurrentUser: boolean;
+  isAdmin: boolean;
   onRoleChange: (userId: string, newRole: UserRole) => void;
+  onDelete: (userId: string, userName: string) => void;
+  onEdit: (user: User) => void;
 }
 
-function UserItem({ user, isCurrentUser, onRoleChange }: UserItemProps) {
+function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit }: UserItemProps) {
   const getRoleBadge = (role: UserRole) => {
     if (role === 'admin') {
       return { text: '管理员', bg: '#EEF2FF', color: '#4F46E5' };
@@ -47,6 +50,21 @@ function UserItem({ user, isCurrentUser, onRoleChange }: UserItemProps) {
     );
   };
 
+  const handleDelete = () => {
+    if (isCurrentUser) {
+      Alert.alert('提示', '不能删除自己的账号');
+      return;
+    }
+    Alert.alert(
+      '确认删除',
+      `确定要删除用户 "${user.name}" 吗？此操作不可撤销。`,
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '删除', style: 'destructive', onPress: () => onDelete(user.id, user.name) },
+      ]
+    );
+  };
+
   return (
     <View style={styles.userItem}>
       <View style={styles.userInfo}>
@@ -61,14 +79,32 @@ function UserItem({ user, isCurrentUser, onRoleChange }: UserItemProps) {
           <Text style={styles.userMeta}>@{user.username}</Text>
         </View>
       </View>
-      <TouchableOpacity
-        style={[styles.roleBadge, { backgroundColor: badge.bg }]}
-        onPress={handleRoleToggle}
-        disabled={isCurrentUser}
-      >
-        <Text style={[styles.roleText, { color: badge.color }]}>{badge.text}</Text>
-        {!isCurrentUser && <Text style={styles.arrow}>›</Text>}
-      </TouchableOpacity>
+      <View style={styles.userActions}>
+        <TouchableOpacity
+          style={[styles.roleBadge, { backgroundColor: badge.bg }]}
+          onPress={handleRoleToggle}
+          disabled={isCurrentUser}
+        >
+          <Text style={[styles.roleText, { color: badge.color }]}>{badge.text}</Text>
+          {!isCurrentUser && <Text style={styles.arrow}>›</Text>}
+        </TouchableOpacity>
+        {isAdmin && !isCurrentUser && (
+          <>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => onEdit(user)}
+            >
+              <Text style={styles.editText}>编辑</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+            >
+              <Text style={styles.deleteText}>删除</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
     </View>
   );
 }
@@ -125,6 +161,22 @@ export default function AccountScreen() {
         Alert.alert('成功', '角色已更新');
       } else {
         Alert.alert('错误', '更新失败');
+      }
+    } catch (error) {
+      Alert.alert('错误', '网络错误');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    try {
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/${userId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setUsers(users.filter(u => u.id !== userId));
+        Alert.alert('成功', `用户 "${userName}" 已删除`);
+      } else {
+        Alert.alert('错误', '删除失败');
       }
     } catch (error) {
       Alert.alert('错误', '网络错误');
@@ -234,7 +286,10 @@ export default function AccountScreen() {
               <UserItem
                 user={item}
                 isCurrentUser={item.id === currentUser?.id}
+                isAdmin={currentUser?.role === 'admin'}
                 onRoleChange={handleRoleChange}
+                onDelete={handleDeleteUser}
+                onEdit={handleEditUser}
               />
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -441,6 +496,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  editText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#3B82F6',
+  },
+  deleteText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
   arrow: {
     fontSize: 16,
     color: '#9CA3AF',
@@ -521,5 +586,32 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  userActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deleteButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#FEE2E2',
+  },
+  deleteButtonText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  editButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#E0E7FF',
+  },
+  editButtonText: {
+    color: '#4F46E5',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
