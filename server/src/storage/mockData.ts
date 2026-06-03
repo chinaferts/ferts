@@ -222,7 +222,20 @@ export function mockGetInspection(id: string) {
     }
     
     const defectList = mockGetDefects(id);
-    return { ...inspection, inspection_records: records, defects: defectList };
+    
+    // 获取当前登录用户
+    const currentUser = getMockCurrentUser();
+    
+    // 返回数据时补充验货员和验货日期（如果没有的话）
+    return { 
+      ...inspection, 
+      // 如果没有验货员，使用当前登录用户的名称
+      inspector: inspection.inspector || currentUser?.name || '未知',
+      // 如果没有验货日期，使用当前日期
+      inspection_date: inspection.inspection_date || new Date().toISOString().split('T')[0],
+      inspection_records: records, 
+      defects: defectList 
+    };
   }
   return null;
 }
