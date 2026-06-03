@@ -141,9 +141,9 @@ export default function InspectionDetailScreen() {
   };
 
   // 更新条码扫描项的类型
-  const updateBarcodeItemType = (item: ChecklistItem, type: string) => {
-    setExtraBarcodeItems(extraBarcodeItems.map(i => 
-      i.record_id === item.record_id ? { ...i, barcodeType: type as 'box' | 'inner' | 'color' } : i
+  const updateBarcodeItemType = (recordId: number, type: string) => {
+    setExtraBarcodeItems(items => items.map(i => 
+      i.record_id === recordId ? { ...i, barcodeType: type as 'box' | 'inner' | 'color' } : i
     ));
   };
 
@@ -160,7 +160,10 @@ export default function InspectionDetailScreen() {
 
   const handleBarcodeTypeChange = (type: string) => {
     if (selectedBarcodeIndex !== null) {
-      updateBarcodeItemType(barcodeItems[selectedBarcodeIndex], type);
+      const item = extraBarcodeItems[selectedBarcodeIndex];
+      if (item) {
+        updateBarcodeItemType(item.record_id, type);
+      }
       closeBarcodeTypeSelector();
     }
   };
@@ -1402,22 +1405,26 @@ export default function InspectionDetailScreen() {
           <View style={styles.severityModalOverlay}>
             <View style={styles.severityModalContent}>
               <Text style={styles.severityModalTitle}>选择条码类型</Text>
-              {barcodeTypeOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.severityModalItem,
-                    selectedBarcodeIndex !== null && barcodeItems[selectedBarcodeIndex]?.barcodeType === option.value && styles.severityModalItemSelected
-                  ]}
-                  onPress={() => handleBarcodeTypeChange(option.value)}
-                >
-                  <View style={[styles.severityDot, { backgroundColor: option.color }]} />
-                  <Text style={styles.severityModalItemText}>{option.label}</Text>
-                  {selectedBarcodeIndex !== null && barcodeItems[selectedBarcodeIndex]?.barcodeType === option.value && (
-                    <Feather name="check" size={18} color={option.color} />
-                  )}
-                </TouchableOpacity>
-              ))}
+              {barcodeTypeOptions.map((option) => {
+                  const currentItem = selectedBarcodeIndex !== null ? extraBarcodeItems[selectedBarcodeIndex] : null;
+                  const isSelected = currentItem?.barcodeType === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.severityModalItem,
+                        isSelected && styles.severityModalItemSelected
+                      ]}
+                      onPress={() => handleBarcodeTypeChange(option.value)}
+                    >
+                      <View style={[styles.severityDot, { backgroundColor: option.color }]} />
+                      <Text style={styles.severityModalItemText}>{option.label}</Text>
+                      {isSelected && (
+                        <Feather name="check" size={18} color={option.color} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               <TouchableOpacity style={styles.severityModalCancel} onPress={closeBarcodeTypeSelector}>
                 <Text style={styles.severityModalCancelText}>取消</Text>
               </TouchableOpacity>
