@@ -83,6 +83,13 @@ export default function InspectionDetailScreen() {
   
   // 问题描述框状态 (每个问题包含文本、照片和严重程度)
   const [issues, setIssues] = useState<Array<{ text: string; photos: string[]; severity: string }>>([{ text: '', photos: [], severity: '' }]);
+  // 条码扫描项状态 (存储新增的条码扫描项)
+  const [extraBarcodeItems, setExtraBarcodeItems] = useState<ChecklistItem[]>([]);
+  // 合并后的条码扫描列表（原始项 + 新增项）
+  const barcodeItems = [
+    ...(inspection?.checklist_items.filter(item => item.category === '条码') || []),
+    ...extraBarcodeItems
+  ];
   // 严重程度选项
   const severityOptions = [
     { label: '致命缺陷', value: 'critical', color: '#DC3545', bgColor: 'rgba(220,53,69,0.1)' },
@@ -105,6 +112,21 @@ export default function InspectionDetailScreen() {
   // 问题描述框处理函数
   const handleAddIssue = () => {
     setIssues([...issues, { text: '', photos: [], severity: '' }]);
+  };
+  
+  // 添加条码扫描项
+  const handleAddBarcode = () => {
+    const newItem: ChecklistItem = {
+      id: Date.now(),
+      record_id: Date.now(),
+      name: '条码扫描',
+      description: '扫描条码',
+      category: '条码',
+      status: 'unchecked',
+      photos: [],
+      barcodeCodes: [],
+    };
+    setExtraBarcodeItems([...extraBarcodeItems, newItem]);
   };
   
   const handleSeverityChange = (index: number, severity: string) => {
@@ -757,11 +779,17 @@ export default function InspectionDetailScreen() {
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
               <Text style={styles.sectionTitle}>条码扫描</Text>
+              <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
+                <Feather name="plus" size={18} color="#6C63FF" />
+                <Text style={styles.addIssueText}>添加条码扫描</Text>
+              </TouchableOpacity>
             </View>
             
-            {inspection.checklist_items
-              .filter(item => item.category === '条码')
-              .map((item, index) => (
+            {/* 条码扫描列表（包括原始项和新增项） */}
+            {barcodeItems.map((item, index) => {
+              // 判断是否是新增的条码扫描项
+              const isExtraItem = item.record_id > 1000000000000;
+              return (
                 <View key={item.record_id} style={styles.issueItem}>
                   <View style={styles.issueHeader}>
                     <View style={styles.issueNumber}>
@@ -775,6 +803,17 @@ export default function InspectionDetailScreen() {
                         <Feather name={item.status === 'pass' ? 'check' : 'x'} size={16}
                           color={item.status === 'pass' ? '#00B894' : '#FF6B6B'} />
                       </View>
+                    )}
+                    {/* 删除按钮 - 仅对新增的条码扫描项显示 */}
+                    {isExtraItem && (
+                      <TouchableOpacity 
+                        style={styles.removeIssueButton} 
+                        onPress={() => {
+                          setExtraBarcodeItems(extraBarcodeItems.filter(i => i.record_id !== item.record_id));
+                        }}
+                      >
+                        <Feather name="x" size={16} color="#FF6B6B" />
+                      </TouchableOpacity>
                     )}
                   </View>
                   
@@ -845,7 +884,8 @@ export default function InspectionDetailScreen() {
                     </View>
                   )}
                 </View>
-              ))}
+              );
+            })}
           </View>
         )}
 
