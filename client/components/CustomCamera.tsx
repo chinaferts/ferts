@@ -380,10 +380,10 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
 
-  // 预览栏 - 拍照按钮下方
+  // 预览栏 - 最下方
   previewStrip: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 90 : 70,
+    bottom: 10,
     left: 0,
     right: 0,
   },
@@ -395,21 +395,21 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   previewImage: {
-    width: 55,
-    height: 55,
-    borderRadius: 8,
+    width: 75,
+    height: 75,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: '#fff',
   },
   previewRemove: {
     position: 'absolute',
-    top: -5,
-    right: -5,
+    top: -8,
+    right: -8,
   },
   previewRemoveCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
