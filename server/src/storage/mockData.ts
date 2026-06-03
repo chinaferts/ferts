@@ -84,7 +84,18 @@ let nextRecordId = 1;
 let nextDefectId = 1;
 
 export function mockGetChecklists() {
-  return checklists;
+  // 添加通用验货模板（始终显示在最前面）
+  const universalTemplate = {
+    id: 'universal',
+    name: '通用验货模板',
+    description: '适用于所有产品的通用验货检查清单',
+    category: '通用',
+    is_active: true,
+    is_universal: true,  // 标识为通用模板，不可删除
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  return [universalTemplate, ...checklists];
 }
 
 export function mockGetChecklist(id: string) {

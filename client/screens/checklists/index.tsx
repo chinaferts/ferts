@@ -7,13 +7,14 @@ import { Feather } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 
 interface ChecklistTemplate {
-  id: number;
+  id: string | number;
   name: string;
   description: string;
   categories: number;
   items: number;
   usageCount: number;
   updatedAt: string;
+  is_universal?: boolean;  // 通用模板标识
 }
 
 export default function ChecklistsScreen() {
@@ -147,15 +148,15 @@ export default function ChecklistsScreen() {
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
               <Feather name="folder" size={14} color="#636E72" />
-              <Text style={styles.metaText}>{item.categories} 分类</Text>
+              <Text style={styles.metaText}>{item.id === 'universal' ? 6 : item.categories} 分类</Text>
             </View>
             <View style={styles.metaItem}>
               <Feather name="check-square" size={14} color="#636E72" />
-              <Text style={styles.metaText}>{item.items} 检查项</Text>
+              <Text style={styles.metaText}>{item.id === 'universal' ? 6 : item.items} 检查项</Text>
             </View>
             <View style={styles.metaItem}>
               <Feather name="trending-up" size={14} color="#636E72" />
-              <Text style={styles.metaText}>使用 {item.usageCount} 次</Text>
+              <Text style={styles.metaText}>使用 {item.usageCount || 0} 次</Text>
             </View>
           </View>
 
@@ -167,7 +168,8 @@ export default function ChecklistsScreen() {
           </View>
         </View>
       </Link>
-      {isAdmin && (
+      {/* 通用模板不显示删除按钮 */}
+      {isAdmin && item.id !== 'universal' && (
         <TouchableOpacity
           style={styles.deleteButton}
           onPress={() => confirmDelete(item)}

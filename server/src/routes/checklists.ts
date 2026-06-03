@@ -27,7 +27,20 @@ router.get('/', async (req: Request, res: Response) => {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    res.json({ success: true, data });
+    
+    // 添加通用验货模板（始终显示在最前面）
+    const universalTemplate = {
+      id: 'universal',
+      name: '通用验货模板',
+      description: '适用于所有产品的通用验货检查清单',
+      categories: 6,
+      items: 6,
+      usageCount: 0,
+      updatedAt: new Date().toISOString(),
+      is_universal: true
+    };
+    
+    res.json({ success: true, data: [universalTemplate, ...(data || [])] });
   } catch (err: any) {
     console.error('获取清单列表失败:', err);
     res.status(500).json({ success: false, error: err.message });
