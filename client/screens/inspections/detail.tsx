@@ -20,6 +20,7 @@ interface ChecklistItem {
   photos?: string[];
   barcodeCodes?: string[];  // 条码扫描记录
   barcodeType?: 'box' | 'inner' | 'color'; // 条码类型：外箱、内箱/内袋、彩盒/彩卡
+  issueIndex?: number; // 动态添加的问题描述索引
 }
 
 interface Defect {
@@ -78,8 +79,15 @@ export default function InspectionDetailScreen() {
   // 相机相关状态
   const [cameraVisible, setCameraVisible] = useState(false);
   const [cameraPhotoTarget, setCameraPhotoTarget] = useState<ChecklistItem | null>(null);
-  // 编辑照片相关状态
-  const [editingPhoto, setEditingPhoto] = useState<{ uri: string; recordId: number; index: number } | null>(null);
+  // 编辑照片相关状态 (支持检查项照片和问题描述照片)
+  const [editingPhoto, setEditingPhoto] = useState<{ 
+    uri: string; 
+    recordId?: number; 
+    index?: number;
+    issueIndex?: number;
+    photoIndex?: number;
+    item?: ChecklistItem;
+  } | null>(null);
   const [editPhotoModalVisible, setEditPhotoModalVisible] = useState(false);
   // 条码扫码相关状态
   const [barcodeScannerVisible, setBarcodeScannerVisible] = useState(false);
@@ -242,7 +250,8 @@ export default function InspectionDetailScreen() {
     if (!inspection) return;
     
     // 更新主检查项的照片
-    const updatedChecklist = inspection.checklist_items.map(item => {
+    const currentRef = inspectionRef.current || inspection;
+    const updatedItems = (currentRef.checklist_items || []).map((item: ChecklistItem) => {
       const photoIndex = (item.photos || []).findIndex((p: string) => p === originalUri);
       if (photoIndex !== -1) {
         const newPhotos = [...(item.photos || [])];
@@ -251,7 +260,9 @@ export default function InspectionDetailScreen() {
       }
       return item;
     });
-    setInspection({ ...inspection, checklist_items: updatedChecklist });
+    const updatedInspection = { ...inspection, checklist_items: updatedItems };
+    inspectionRef.current = updatedInspection;
+    setInspection(updatedInspection);
     
     // 更新额外条码项的照片
     const updatedExtraBarcode = extraBarcodeItems.map(item => {
@@ -264,6 +275,15 @@ export default function InspectionDetailScreen() {
       return item;
     });
     setExtraBarcodeItems(updatedExtraBarcode);
+    
+    // 如果是问题描述的照片，直接更新
+    if (editingPhoto?.issueIndex !== undefined && editingPhoto?.photoIndex !== undefined) {
+      const newIssues = [...issues];
+      if (newIssues[editingPhoto.issueIndex]) {
+        newIssues[editingPhoto.issueIndex].photos[editingPhoto.photoIndex] = newUri;
+        setIssues(newIssues);
+      }
+    }
     
     setEditingPhoto(null);
     setCameraVisible(false);
@@ -548,10 +568,6 @@ export default function InspectionDetailScreen() {
           editingPhotoUri={editingPhoto?.uri}
           onUpdatePhoto={handleUpdatePhoto}
           onComplete={async (photos) => {
-            // 使用 ref 获取最新的 inspection 避免闭包问题
-            const currentInspection = inspectionRef.current;
-            if (!currentInspection) return;
-            
             // 如果是编辑模式且没有新拍的照片，只关闭相机
             if (editingPhoto && photos.length === 0) {
               setCameraVisible(false);
@@ -567,6 +583,20 @@ export default function InspectionDetailScreen() {
             const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
             const photoUris = photos.map(p => p.uri);
             const targetRecordId = tempPhotoTarget?.record_id;
+            const targetIssueIndex = tempPhotoTarget?.issueIndex;
+            
+            // 处理问题描述照片 - 如果是在编辑问题照片时拍了新照片，替换原照片
+            if (editingPhoto?.issueIndex !== undefined) {
+              const newIssues = [...issues];
+              if (photos.length > 0) {
+                // 新拍的照片添加到问题描述
+                newIssues[editingPhoto.issueIndex].photos.push(...photoUris);
+              }
+              setIssues(newIssues);
+              setCameraVisible(false);
+              setEditingPhoto(null);
+              return;
+            }
             
             // 如果没有目标 record_id，不处理
             if (!targetRecordId) {
@@ -574,6 +604,9 @@ export default function InspectionDetailScreen() {
             }
             
             // 将照片添加到本地状态
+            const currentInspection = inspectionRef.current;
+            if (!currentInspection) return;
+            
             const updatedItems = currentInspection.checklist_items.map(item => {
               if (item.record_id === targetRecordId) {
                 return { ...item, photos: [...(item.photos || []), ...photoUris] };
@@ -799,15 +832,25 @@ export default function InspectionDetailScreen() {
                           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoPreviewScroll}>
                             {item.photos.map((photo, idx) => (
                               <TouchableOpacity key={idx} onPress={() => {
-                                setSelectedPhoto(photo);
-                                setSelectedPhotoItem(item);
-                                setSelectedPhotoIndex(idx);
-                                setPhotoModalVisible(true);
+                                setEditingPhoto({ uri: photo, index: idx, item });
+                                setTempPhotos([]);
+                                setCameraVisible(true);
                               }} style={styles.photoContainer}>
                                 <Image source={{ uri: photo }} style={styles.photoThumb} />
-                                <View style={styles.photoBadge}>
-                                  <Text style={styles.photoBadgeText}>{idx + 1}</Text>
-                                </View>
+                                <TouchableOpacity style={styles.photoDeleteButton}
+                                  onPress={() => {
+                                    if (!inspectionRef.current) return;
+                                    const updatedItems = (inspectionRef.current.checklist_items || []).map((i: ChecklistItem) => {
+                                      if (i.record_id === item.record_id) {
+                                        return { ...i, photos: (i.photos || []).filter((_: any, pi: number) => pi !== idx) };
+                                      }
+                                      return i;
+                                    });
+                                    const updated: InspectionDetail = { ...inspectionRef.current, checklist_items: updatedItems };
+                                    setInspection(updated);
+                                  }}>
+                                  <Text style={styles.photoDeleteText}>X</Text>
+                                </TouchableOpacity>
                               </TouchableOpacity>
                             ))}
                           </ScrollView>
@@ -968,9 +1011,15 @@ export default function InspectionDetailScreen() {
                   {item.photos && item.photos.length > 0 && (
                     <View style={styles.issuePhotosContainer}>
                       {item.photos.map((photo, idx) => (
-                        <View key={idx} style={styles.issuePhotoItem}>
+                        <TouchableOpacity key={idx} style={styles.issuePhotoItem}
+                          onPress={() => {
+                            setEditingPhoto({ uri: photo, recordId: item.record_id, index: idx });
+                            setTempPhotos([]);
+                            setTempPhotoTarget(item);
+                            setCameraVisible(true);
+                          }}>
                           <Image source={{ uri: photo }} style={styles.issuePhoto} />
-                          {/* 删除按钮 */}
+                          {/* 删除按钮 - 显示编号 */}
                           <TouchableOpacity style={styles.removeIssuePhotoButton}
                             onPress={() => {
                               const updatedItems = extraBarcodeItems.map(barcodeItem => {
@@ -981,19 +1030,9 @@ export default function InspectionDetailScreen() {
                               });
                               setExtraBarcodeItems(updatedItems);
                             }}>
-                            <Feather name="x" size={12} color="#FFFFFF" />
+                            <Text style={styles.removeIssuePhotoText}>{idx + 1}</Text>
                           </TouchableOpacity>
-                          {/* 编辑按钮 */}
-                          <TouchableOpacity style={styles.editIssuePhotoButton}
-                            onPress={() => {
-                              setEditingPhoto({ uri: photo, recordId: item.record_id, index: idx });
-                              setTempPhotos([photo]);
-                              setTempPhotoTarget(item);
-                              setCameraVisible(true);
-                            }}>
-                            <Feather name="edit-2" size={12} color="#FFFFFF" />
-                          </TouchableOpacity>
-                        </View>
+                        </TouchableOpacity>
                       ))}
                     </View>
                   )}
@@ -1179,15 +1218,14 @@ export default function InspectionDetailScreen() {
                 {issue.photos.length > 0 && (
                   <View style={styles.issuePhotosContainer}>
                     {issue.photos.map((photo, photoIndex) => (
-                      <View key={photoIndex} style={styles.issuePhotoItem}>
+                      <TouchableOpacity key={photoIndex} style={styles.issuePhotoItem}
+                        onPress={() => {
+                          setEditingPhoto({ uri: photo, issueIndex: index, photoIndex: photoIndex });
+                          setEditPhotoModalVisible(true);
+                        }}
+                        onLongPress={() => handleRemoveIssuePhoto(index, photoIndex)}>
                         <Image source={{ uri: photo }} style={styles.issuePhoto} />
-                        <TouchableOpacity 
-                          style={styles.removeIssuePhotoButton}
-                          onPress={() => handleRemoveIssuePhoto(index, photoIndex)}
-                        >
-                          <Feather name="x" size={14} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 )}
@@ -2001,18 +2039,18 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginRight: 8,
   },
-  photoBadge: {
+  photoDeleteButton: {
     position: 'absolute',
     top: 2,
     right: 2,
-    backgroundColor: 'rgba(108, 99, 255, 0.9)',
+    backgroundColor: 'rgba(255, 107, 107, 0.9)',
     borderRadius: 10,
     width: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  photoBadgeText: {
+  photoDeleteText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '600',
@@ -2577,9 +2615,14 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: 'rgba(255,0,0,0.7)',
+    backgroundColor: 'rgba(255,107,107,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  removeIssuePhotoText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
   },
   editIssuePhotoButton: {
     position: 'absolute',
