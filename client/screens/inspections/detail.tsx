@@ -494,62 +494,9 @@ export default function InspectionDetailScreen() {
           </View>
         </View>
 
-        {/* 问题分类区域 */}
-        <View style={styles.section}>
-          <View style={styles.categoryHeader}>
-            <Text style={styles.sectionTitle}>问题描述</Text>
-            <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
-              <Feather name="plus" size={18} color="#6C63FF" />
-              <Text style={styles.addIssueText}>添加问题</Text>
-            </TouchableOpacity>
-          </View>
-          {issues.map((issue, index) => (
-            <View key={index} style={styles.issueItem}>
-              <View style={styles.issueHeader}>
-                <View style={styles.issueNumber}>
-                  <Text style={styles.issueNumberText}>{index + 1}</Text>
-                </View>
-                {issues.length > 1 && (
-                  <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
-                    <Feather name="x" size={16} color="#FF6B6B" />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <TextInput
-                style={styles.issueInput}
-                placeholder="请输入问题描述..."
-                placeholderTextColor="#B2BEC3"
-                multiline
-                value={issue.text}
-                onChangeText={(text) => handleIssueChange(index, text)}
-              />
-              {/* 问题照片预览 */}
-              {issue.photos.length > 0 && (
-                <View style={styles.issuePhotosContainer}>
-                  {issue.photos.map((photo, photoIndex) => (
-                    <View key={photoIndex} style={styles.issuePhotoItem}>
-                      <Image source={{ uri: photo }} style={styles.issuePhoto} />
-                      <TouchableOpacity 
-                        style={styles.removeIssuePhotoButton}
-                        onPress={() => handleRemoveIssuePhoto(index, photoIndex)}
-                      >
-                        <Feather name="x" size={14} color="#fff" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-              {/* 拍照按钮 */}
-              <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
-                <Feather name="camera" size={18} color="#6C63FF" />
-                <Text style={styles.issueCameraText}>拍照</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-
         {/* 验货清单 */}
-        {categories.map(category => {
+        {categories.map((category, catIndex) => {
+          const isLastCategory = catIndex === categories.length - 1;
           return (
             <View key={category} style={styles.section}>
               <View style={styles.categoryHeader}>
@@ -682,6 +629,62 @@ export default function InspectionDetailScreen() {
                       )}
                     </>
                   )}
+
+                  {/* 问题描述 - 在最后一个分类（组装）下面 */}
+                  {isLastCategory && (
+                    <View style={styles.issueSection}>
+                      <View style={styles.categoryHeader}>
+                        <Text style={styles.sectionTitle}>问题描述</Text>
+                        <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
+                          <Feather name="plus" size={18} color="#6C63FF" />
+                          <Text style={styles.addIssueText}>添加问题</Text>
+                        </TouchableOpacity>
+                      </View>
+                      {issues.map((issue, index) => (
+                        <View key={index} style={styles.issueItem}>
+                          <View style={styles.issueHeader}>
+                            <View style={styles.issueNumber}>
+                              <Text style={styles.issueNumberText}>{index + 1}</Text>
+                            </View>
+                            {issues.length > 1 && (
+                              <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
+                                <Feather name="x" size={16} color="#FF6B6B" />
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                          <TextInput
+                            style={styles.issueInput}
+                            placeholder="请输入问题描述..."
+                            placeholderTextColor="#B2BEC3"
+                            multiline
+                            value={issue.text}
+                            onChangeText={(text) => handleIssueChange(index, text)}
+                          />
+                          {/* 问题照片预览 */}
+                          {issue.photos.length > 0 && (
+                            <View style={styles.issuePhotosContainer}>
+                              {issue.photos.map((photo, photoIndex) => (
+                                <View key={photoIndex} style={styles.issuePhotoItem}>
+                                  <Image source={{ uri: photo }} style={styles.issuePhoto} />
+                                  <TouchableOpacity 
+                                    style={styles.removeIssuePhotoButton}
+                                    onPress={() => handleRemoveIssuePhoto(index, photoIndex)}
+                                  >
+                                    <Feather name="x" size={14} color="#fff" />
+                                  </TouchableOpacity>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+                          {/* 拍照按钮 */}
+                          <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
+                            <Feather name="camera" size={18} color="#6C63FF" />
+                            <Text style={styles.issueCameraText}>拍照</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -723,6 +726,7 @@ export default function InspectionDetailScreen() {
               </View>
             ))}
           </View>
+
         )}
 
         {/* 已扫描条码 */}
@@ -1871,6 +1875,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(108,99,255,0.1)',
     borderRadius: 8,
     alignSelf: 'flex-start',
+  },
+  issueSection: {
+    marginTop: 16,
   },
   issueCameraText: {
     marginLeft: 6,
