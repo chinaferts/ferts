@@ -19,6 +19,7 @@ interface ChecklistItem {
   notes?: string;
   photos?: string[];
   barcodeCodes?: string[];  // 条码扫描记录
+  barcodeType?: 'box' | 'inner' | 'color'; // 条码类型：外箱、内箱/内袋、彩盒/彩卡
 }
 
 interface Defect {
@@ -125,8 +126,16 @@ export default function InspectionDetailScreen() {
       status: 'unchecked',
       photos: [],
       barcodeCodes: [],
+      barcodeType: 'box', // 默认外箱条码
     };
     setExtraBarcodeItems([...extraBarcodeItems, newItem]);
+  };
+
+  // 更新条码扫描项的类型
+  const updateBarcodeItemType = (item: ChecklistItem, type: string) => {
+    setExtraBarcodeItems(extraBarcodeItems.map(i => 
+      i.record_id === item.record_id ? { ...i, barcodeType: type as 'box' | 'inner' | 'color' } : i
+    ));
   };
   
   const handleSeverityChange = (index: number, severity: string) => {
@@ -794,6 +803,18 @@ export default function InspectionDetailScreen() {
                   <View style={styles.issueHeader}>
                     <View style={styles.issueNumber}>
                       <Text style={styles.issueNumberText}>{index + 1}</Text>
+                    </View>
+                    {/* 条码类型下拉选择 */}
+                    <View style={styles.barcodeTypeSelect}>
+                      <Picker
+                        selectedValue={item.barcodeType || 'box'}
+                        onValueChange={(value) => updateBarcodeItemType(item, value)}
+                        style={styles.barcodeTypePicker}
+                      >
+                        <Picker.Item label="外箱条码" value="box" />
+                        <Picker.Item label="内箱/内袋条码" value="inner" />
+                        <Picker.Item label="彩盒/彩卡条码" value="color" />
+                      </Picker>
                     </View>
                     <Text style={styles.checklistName}>{item.name}</Text>
                     {item.status !== 'unchecked' && (
@@ -2088,6 +2109,19 @@ const styles = StyleSheet.create({
     color: '#6C63FF',
     fontWeight: '500',
     flexShrink: 1,
+  },
+  barcodeTypeSelect: {
+    backgroundColor: 'rgba(108,99,255,0.1)',
+    borderRadius: 8,
+    marginLeft: 8,
+    marginRight: 8,
+    height: 32,
+    justifyContent: 'center',
+    minWidth: 100,
+  },
+  barcodeTypePicker: {
+    height: 32,
+    fontSize: 12,
   },
   // 条码扫码 Modal 样式
   barcodeScannerContainer: {
