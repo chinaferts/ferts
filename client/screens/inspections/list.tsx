@@ -105,9 +105,12 @@ export default function InspectionsListScreen() {
   const router = useRouter();
   const { isAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('pending');
   const [refreshing, setRefreshing] = useState(false);
   const [inspections, setInspections] = useState<Inspection[]>([]);
+
+  // 只显示待验货列表，隐藏Tab切换
+  const showTabs = false;
 
   const fetchInspections = useCallback(async () => {
     try {
@@ -193,22 +196,24 @@ export default function InspectionsListScreen() {
           </View>
         </View>
 
-        {/* 状态 Tab */}
-        <View style={styles.tabsContainer}>
-          <View style={styles.tabs}>
-            {tabs.map((tab) => (
-              <TouchableOpacity
-                key={tab.key}
-                style={[styles.tab, activeTab === tab.key && styles.activeTab]}
-                onPress={() => setActiveTab(tab.key as typeof activeTab)}
-              >
-                <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* 状态 Tab - 只显示待验货时隐藏 */}
+        {showTabs && (
+          <View style={styles.tabsContainer}>
+            <View style={styles.tabs}>
+              {tabs.map((tab) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[styles.tab, activeTab === tab.key && styles.activeTab]}
+                  onPress={() => setActiveTab(tab.key as typeof activeTab)}
+                >
+                  <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* 列表 */}
         <FlatList
