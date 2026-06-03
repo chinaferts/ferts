@@ -496,11 +496,17 @@ export default function InspectionDetailScreen() {
 
         {/* 验货清单 */}
         {categories.map((category, catIndex) => {
-          const isLastCategory = catIndex === categories.length - 1;
           return (
             <View key={category} style={styles.section}>
               <View style={styles.categoryHeader}>
                 <Text style={styles.sectionTitle}>{category}</Text>
+                <TouchableOpacity 
+                  style={styles.categoryIssueButton} 
+                  onPress={() => handleAddIssue()}
+                >
+                  <Feather name="alert-circle" size={16} color="#FF6B6B" />
+                  <Text style={styles.categoryIssueText}>问题描述</Text>
+                </TouchableOpacity>
               </View>
               {inspection.checklist_items
                 .filter(item => item.category === category)
@@ -630,66 +636,67 @@ export default function InspectionDetailScreen() {
                     </>
                   )}
 
-                  {/* 问题描述 - 在最后一个分类（组装）下面 */}
-                  {isLastCategory && (
-                    <View style={styles.issueSection}>
-                      <View style={styles.categoryHeader}>
-                        <Text style={styles.sectionTitle}>问题描述</Text>
-                        <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
-                          <Feather name="plus" size={18} color="#6C63FF" />
-                          <Text style={styles.addIssueText}>添加问题</Text>
-                        </TouchableOpacity>
-                      </View>
-                      {issues.map((issue, index) => (
-                        <View key={index} style={styles.issueItem}>
-                          <View style={styles.issueHeader}>
-                            <View style={styles.issueNumber}>
-                              <Text style={styles.issueNumberText}>{index + 1}</Text>
-                            </View>
-                            {issues.length > 1 && (
-                              <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
-                                <Feather name="x" size={16} color="#FF6B6B" />
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                          <TextInput
-                            style={styles.issueInput}
-                            placeholder="请输入问题描述..."
-                            placeholderTextColor="#B2BEC3"
-                            multiline
-                            value={issue.text}
-                            onChangeText={(text) => handleIssueChange(index, text)}
-                          />
-                          {/* 问题照片预览 */}
-                          {issue.photos.length > 0 && (
-                            <View style={styles.issuePhotosContainer}>
-                              {issue.photos.map((photo, photoIndex) => (
-                                <View key={photoIndex} style={styles.issuePhotoItem}>
-                                  <Image source={{ uri: photo }} style={styles.issuePhoto} />
-                                  <TouchableOpacity 
-                                    style={styles.removeIssuePhotoButton}
-                                    onPress={() => handleRemoveIssuePhoto(index, photoIndex)}
-                                  >
-                                    <Feather name="x" size={14} color="#fff" />
-                                  </TouchableOpacity>
-                                </View>
-                              ))}
-                            </View>
-                          )}
-                          {/* 拍照按钮 */}
-                          <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
-                            <Feather name="camera" size={18} color="#6C63FF" />
-                            <Text style={styles.issueCameraText}>拍照</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
                 </View>
               ))}
             </View>
           );
         })}
+
+        {/* 问题描述列表 */}
+        {issues.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.categoryHeader}>
+              <Text style={styles.sectionTitle}>问题描述</Text>
+              <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
+                <Feather name="plus" size={18} color="#6C63FF" />
+                <Text style={styles.addIssueText}>添加问题</Text>
+              </TouchableOpacity>
+            </View>
+            {issues.map((issue, index) => (
+              <View key={index} style={styles.issueItem}>
+                <View style={styles.issueHeader}>
+                  <View style={styles.issueNumber}>
+                    <Text style={styles.issueNumberText}>{index + 1}</Text>
+                  </View>
+                  {issues.length > 1 && (
+                    <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
+                      <Feather name="x" size={16} color="#FF6B6B" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <TextInput
+                  style={styles.issueInput}
+                  placeholder="请输入问题描述..."
+                  placeholderTextColor="#B2BEC3"
+                  multiline
+                  value={issue.text}
+                  onChangeText={(text) => handleIssueChange(index, text)}
+                />
+                {/* 问题照片预览 */}
+                {issue.photos.length > 0 && (
+                  <View style={styles.issuePhotosContainer}>
+                    {issue.photos.map((photo, photoIndex) => (
+                      <View key={photoIndex} style={styles.issuePhotoItem}>
+                        <Image source={{ uri: photo }} style={styles.issuePhoto} />
+                        <TouchableOpacity 
+                          style={styles.removeIssuePhotoButton}
+                          onPress={() => handleRemoveIssuePhoto(index, photoIndex)}
+                        >
+                          <Feather name="x" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {/* 拍照按钮 */}
+                <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
+                  <Feather name="camera" size={18} color="#6C63FF" />
+                  <Text style={styles.issueCameraText}>拍照</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* 缺陷记录 */}
         {inspection.defects.length > 0 && (
@@ -1107,6 +1114,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  categoryIssueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255,107,107,0.1)',
+    borderRadius: 6,
+    gap: 4,
+  },
+  categoryIssueText: {
+    fontSize: 12,
+    color: '#FF6B6B',
+    fontWeight: '500',
   },
   categoryActions: {
     flexDirection: 'row',
