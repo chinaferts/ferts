@@ -119,13 +119,13 @@ function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit
         {isAdmin && !isCurrentUser && (
           <View style={styles.actionButtons}>
             <TouchableOpacity
-              style={styles.editButton}
+              style={[styles.actionButton, styles.editButton]}
               onPress={() => onEdit(user)}
             >
               <Text style={styles.editText}>编辑</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.deleteButton}
+              style={[styles.actionButton, styles.deleteButton]}
               onPress={() => onDelete(user.id, user.name)}
             >
               <Text style={styles.deleteText}>删除</Text>
@@ -857,19 +857,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
+    flexDirection: 'column',
+    gap: 6,
   },
-  deleteButton: {
+  actionButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  deleteButton: {
     backgroundColor: '#FEE2E2',
   },
   editButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
     backgroundColor: '#DBEAFE',
   },
 });
