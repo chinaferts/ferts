@@ -9,6 +9,7 @@ import {
   Alert,
   Dimensions,
   Platform,
+  Modal,
 } from 'react-native';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,6 +39,9 @@ export default function CustomCamera({
   const [facing, setFacing] = useState<CameraType>('back');
   const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('auto');
   const cameraRef = useRef<CameraView>(null);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<PhotoItem | null>(null);
+  const [rotation, setRotation] = useState(0);
 
   // 重置照片列表当相机重新打开时
   useEffect(() => {
@@ -151,6 +155,36 @@ export default function CustomCamera({
     }
   };
 
+  const handlePreviewPhoto = (photo: PhotoItem) => {
+    setPreviewPhoto(photo);
+    setRotation(0);
+    setPreviewVisible(true);
+  };
+
+  const handleRotate = () => {
+    setRotation((prev) => (prev + 90) % 360);
+  };
+
+  const handleDeletePreview = () => {
+    if (previewPhoto) {
+      removePhoto(previewPhoto.timestamp);
+      setPreviewVisible(false);
+      setPreviewPhoto(null);
+    }
+  };
+
+  const handleClosePreview = () => {
+    setPreviewVisible(false);
+    setPreviewPhoto(null);
+    setRotation(0);
+  };
+
+  const handleSaveRotation = () => {
+    setPreviewVisible(false);
+    setPreviewPhoto(null);
+    setRotation(0);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.cameraWrapper}>
@@ -215,7 +249,11 @@ export default function CustomCamera({
               contentContainerStyle={styles.previewScrollContent}
             >
               {photos.map((photo) => (
-                <View key={photo.timestamp} style={styles.previewItem}>
+                <TouchableOpacity
+                  key={photo.timestamp}
+                  style={styles.previewItem}
+                  onPress={() => handlePreviewPhoto(photo)}
+                >
                   <Image source={{ uri: photo.uri }} style={styles.previewImage} />
                   <TouchableOpacity
                     style={styles.previewRemove}
@@ -225,12 +263,47 @@ export default function CustomCamera({
                       <Ionicons name="close" size={12} color="#fff" />
                     </View>
                   </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           </View>
         )}
       </View>
+
+      {/* 照片预览 Modal */}
+      <Modal visible={previewVisible} transparent animationType="fade">
+        <View style={styles.previewModal}>
+          <View style={styles.previewHeader}>
+            <TouchableOpacity onPress={handleClosePreview}>
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.previewActions}>
+              <TouchableOpacity style={styles.previewActionBtn} onPress={handleRotate}>
+                <Ionicons name="refresh" size={24} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.previewActionBtn} onPress={handleDeletePreview}>
+                <Ionicons name="trash" size={24} color="#ff4444" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.previewImageContainer}>
+            {previewPhoto && (
+              <Image
+                source={{ uri: previewPhoto.uri }}
+                style={[styles.previewFullImage, { transform: [{ rotate: `${rotation}deg` }] }]}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+
+          <View style={styles.previewFooter}>
+            <TouchableOpacity style={styles.previewSaveBtn} onPress={handleSaveRotation}>
+              <Text style={styles.previewSaveBtnText}>保存</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -418,5 +491,56 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // 照片预览 Modal
+  previewModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'space-between',
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingBottom: 16,
+  },
+  previewActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewActionBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 16,
+  },
+  previewImageContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewFullImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_WIDTH * 1.2,
+  },
+  previewFooter: {
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 30,
+    paddingTop: 16,
+  },
+  previewSaveBtn: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  previewSaveBtnText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '600',
   },
 });
