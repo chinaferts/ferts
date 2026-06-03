@@ -153,50 +153,48 @@ export default function CustomCamera({
 
   return (
     <View style={styles.container}>
-      <CameraView
-        ref={cameraRef}
-        style={styles.camera}
-        facing={facing}
-      >
-        {/* 顶部区域 */}
-        <View style={styles.topBar}>
-          {/* 关闭按钮 */}
-          <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
-            <Ionicons name="close" size={28} color="#fff" />
-          </TouchableOpacity>
+      <View style={styles.cameraWrapper}>
+        <CameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing={facing}
+        />
+      </View>
 
-          {/* 闪光灯 */}
-          <TouchableOpacity style={styles.flashButton} onPress={cycleFlashMode}>
-            <Ionicons name={getFlashIcon() as any} size={22} color="#fff" />
-            {flashMode !== 'off' && (
-              <View style={styles.flashLabel}>
-                <Text style={styles.flashLabelText}>{getFlashLabel()}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+      {/* 顶部区域 */}
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
+          <Ionicons name="close" size={28} color="#fff" />
+        </TouchableOpacity>
 
-          {/* 翻转摄像头 */}
-          <TouchableOpacity style={styles.iconButton} onPress={toggleCameraFacing}>
-            <Ionicons name="camera-reverse" size={28} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.flashButton} onPress={cycleFlashMode}>
+          <Ionicons name={getFlashIcon() as any} size={22} color="#fff" />
+          {flashMode !== 'off' && (
+            <View style={styles.flashLabel}>
+              <Text style={styles.flashLabelText}>{getFlashLabel()}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
 
-        {/* 中间区域：取消、拍照、完成 同一行 */}
-        <View style={styles.bottomArea}>
-          <View style={styles.buttonRow}>
-          {/* 左侧：取消按钮 */}
+        <TouchableOpacity style={styles.iconButton} onPress={toggleCameraFacing}>
+          <Ionicons name="camera-reverse" size={28} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* 底部区域 */}
+      <View style={styles.bottomArea}>
+        {/* 按钮组 */}
+        <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
             <Text style={styles.cancelText}>取消</Text>
           </TouchableOpacity>
 
-          {/* 中间：拍照按钮 */}
           <TouchableOpacity style={styles.shutterButton} onPress={takePicture}>
             <View style={styles.shutterButtonInner}>
               <View style={styles.shutterButtonCore} />
             </View>
           </TouchableOpacity>
 
-          {/* 右侧：完成按钮 */}
           <TouchableOpacity
             style={[styles.doneButton, photos.length === 0 && styles.doneButtonDisabled]}
             onPress={handleComplete}
@@ -206,47 +204,44 @@ export default function CustomCamera({
               完成
             </Text>
           </TouchableOpacity>
-          </View>
-
-          {/* 最下方：横向滚动的照片预览栏 */}
-          {photos.length > 0 && (
-            <View style={styles.previewStrip}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.previewScrollContent}
-              >
-                {photos.map((photo, index) => (
-                  <View key={photo.timestamp} style={styles.previewItem}>
-                    <Image source={{ uri: photo.uri }} style={styles.previewImage} />
-                    <TouchableOpacity
-                      style={styles.previewRemove}
-                      onPress={() => removePhoto(photo.timestamp)}
-                    >
-                      <View style={styles.previewRemoveCircle}>
-                        <Ionicons name="close" size={12} color="#fff" />
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
         </View>
-      </CameraView>
+
+        {/* 预览栏 */}
+        {photos.length > 0 && (
+          <View style={styles.previewStrip}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.previewScrollContent}
+            >
+              {photos.map((photo) => (
+                <View key={photo.timestamp} style={styles.previewItem}>
+                  <Image source={{ uri: photo.uri }} style={styles.previewImage} />
+                  <TouchableOpacity
+                    style={styles.previewRemove}
+                    onPress={() => removePhoto(photo.timestamp)}
+                  >
+                    <View style={styles.previewRemoveCircle}>
+                      <Ionicons name="close" size={12} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: '#000',
-    zIndex: 1000,
+  },
+  cameraWrapper: {
+    flex: 1,
   },
   camera: {
     flex: 1,
