@@ -685,7 +685,9 @@ export default function InspectionDetailScreen() {
                 <View key={item.record_id} style={styles.checklistItem}>
                   <View style={styles.checklistHeader}>
                     <View style={styles.checklistInfo}>
+                      {item.name && item.name !== '条码扫描' && (
                       <Text style={styles.checklistName}>{item.name}</Text>
+                    )}
                       {item.description && (
                         <Text style={styles.checklistDesc}>{item.description}</Text>
                       )}
