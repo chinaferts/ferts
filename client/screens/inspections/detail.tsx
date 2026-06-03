@@ -43,6 +43,8 @@ interface InspectionDetail {
   color?: string;
   size?: string;
   quantity?: string | number;
+  sample_size?: string | number;
+  aql?: string;
   inspection_date?: string;
   inspector?: string;
   notes?: string;
@@ -494,9 +496,14 @@ export default function InspectionDetailScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {/* 头部信息 */}
         <View style={styles.headerCard}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.productName}>{inspection.product_name}</Text>
+          {/* 顶部行：供应商和状态 */}
+          <View style={styles.headerTopRow}>
+            <View style={styles.headerMain}>
+              {/* 订单号 */}
+              {inspection.batch_number && (
+                <Text style={styles.orderNumber}>{inspection.batch_number}</Text>
+              )}
+              {/* 供应商 */}
               <Text style={styles.supplierName}>{inspection.supplier_name}</Text>
             </View>
             <View style={[styles.statusBadge, {
@@ -508,56 +515,67 @@ export default function InspectionDetailScreen() {
             </View>
           </View>
 
-          {/* 基本信息 */}
+          {/* 基本信息 - 两列布局 */}
           <View style={styles.basicInfoGrid}>
-            <View style={styles.basicInfoItem}>
-              <Text style={styles.basicInfoLabel}>供应商</Text>
-              <Text style={styles.basicInfoValue}>{inspection.supplier_name}</Text>
-            </View>
+            {/* 产品名称 */}
             <View style={styles.basicInfoItem}>
               <Text style={styles.basicInfoLabel}>产品名称</Text>
               <Text style={styles.basicInfoValue}>{inspection.product_name}</Text>
             </View>
-            {inspection.batch_number && (
-              <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>订单号</Text>
-                <Text style={styles.basicInfoValue}>{inspection.batch_number}</Text>
-              </View>
-            )}
+            {/* 货号 */}
             {inspection.style_number && (
               <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>款号</Text>
+                <Text style={styles.basicInfoLabel}>货号</Text>
                 <Text style={styles.basicInfoValue}>{inspection.style_number}</Text>
               </View>
             )}
-            {inspection.color && (
-              <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>颜色</Text>
-                <Text style={styles.basicInfoValue}>{inspection.color}</Text>
-              </View>
-            )}
-            {inspection.size && (
-              <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>尺码</Text>
-                <Text style={styles.basicInfoValue}>{inspection.size}</Text>
-              </View>
-            )}
+            {/* 产品数量 */}
             {inspection.quantity && (
               <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>数量</Text>
+                <Text style={styles.basicInfoLabel}>产品数量</Text>
                 <Text style={styles.basicInfoValue}>{inspection.quantity}</Text>
               </View>
             )}
+            {/* 抽样数量 */}
+            {inspection.sample_size && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>抽样数量</Text>
+                <Text style={styles.basicInfoValue}>{inspection.sample_size}</Text>
+              </View>
+            )}
+            {/* AQL质量等级 */}
+            {inspection.aql && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>AQL质量等级</Text>
+                <Text style={styles.basicInfoValue}>{inspection.aql}</Text>
+              </View>
+            )}
+            {/* 验货日期 */}
             {inspection.inspection_date && (
               <View style={styles.basicInfoItem}>
                 <Text style={styles.basicInfoLabel}>验货日期</Text>
                 <Text style={styles.basicInfoValue}>{inspection.inspection_date}</Text>
               </View>
             )}
+            {/* 验货员 */}
             {inspection.inspector && (
               <View style={styles.basicInfoItem}>
                 <Text style={styles.basicInfoLabel}>验货员</Text>
                 <Text style={styles.basicInfoValue}>{inspection.inspector}</Text>
+              </View>
+            )}
+            {/* 颜色 */}
+            {inspection.color && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>颜色</Text>
+                <Text style={styles.basicInfoValue}>{inspection.color}</Text>
+              </View>
+            )}
+            {/* 尺码 */}
+            {inspection.size && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>尺码</Text>
+                <Text style={styles.basicInfoValue}>{inspection.size}</Text>
               </View>
             )}
           </View>
@@ -1206,15 +1224,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.7,
     shadowRadius: 8,
   },
-  headerTop: {
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 16,
   },
+  headerMain: {
+    flex: 1,
+  },
+  orderNumber: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2D3436',
+    marginBottom: 4,
+  },
   supplierName: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#2D3436',
   },
   productName: {
