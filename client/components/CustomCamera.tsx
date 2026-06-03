@@ -27,6 +27,9 @@ interface CustomCameraProps {
   onClose: () => void;
   onComplete: (photos: PhotoItem[]) => void;
   itemName?: string;
+  initialPhotos?: PhotoItem[];
+  editingPhotoUri?: string | null;
+  onUpdatePhoto?: (originalUri: string, newUri: string) => void;
 }
 
 export default function CustomCamera({
@@ -34,6 +37,9 @@ export default function CustomCamera({
   onClose,
   onComplete,
   itemName = '验货',
+  initialPhotos = [],
+  editingPhotoUri = null,
+  onUpdatePhoto,
 }: CustomCameraProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
@@ -47,10 +53,18 @@ export default function CustomCamera({
   // 重置照片列表当相机重新打开时
   useEffect(() => {
     if (visible) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPhotos([]);
+      if (editingPhotoUri) {
+        // 编辑模式：加载要编辑的照片
+        const editPhoto: PhotoItem = { uri: editingPhotoUri, timestamp: Date.now() };
+        setPhotos([editPhoto]);
+        setPreviewPhoto(editPhoto);
+        setPreviewVisible(true);
+      } else {
+        // 新增模式：清空照片
+        setPhotos([]);
+      }
     }
-  }, [visible]);
+  }, [visible, editingPhotoUri]);
 
   if (!permission) {
     return (
@@ -100,6 +114,12 @@ export default function CustomCamera({
   };
 
   const handleComplete = () => {
+    // 如果是编辑模式且没有新拍的照片，直接关闭
+    if (editingPhotoUri && photos.length === 0) {
+      onComplete([]);
+      return;
+    }
+    
     if (photos.length > 0) {
       onComplete(photos);
     } else {
@@ -197,14 +217,22 @@ export default function CustomCamera({
           { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
         );
 
-        // 更新照片列表中的URI
-        setPhotos((prev) =>
-          prev.map((p) =>
-            p.timestamp === previewPhoto.timestamp
-              ? { ...p, uri: manipResult.uri }
-              : p
-          )
-        );
+        // 如果是编辑模式，调用 onUpdatePhoto 更新照片
+        if (editingPhotoUri && onUpdatePhoto) {
+          onUpdatePhoto(editingPhotoUri, manipResult.uri);
+        } else {
+          // 新增模式：更新照片列表中的URI
+          setPhotos((prev) =>
+            prev.map((p) =>
+              p.timestamp === previewPhoto.timestamp
+                ? { ...p, uri: manipResult.uri }
+                : p
+            )
+          );
+        }
+      } else if (editingPhotoUri && onUpdatePhoto) {
+        // 没有旋转但仍然是编辑模式，只调用更新
+        onUpdatePhoto(editingPhotoUri, previewPhoto.uri);
       }
     } catch (error) {
       console.error('保存旋转失败:', error);

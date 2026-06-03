@@ -237,6 +237,38 @@ export default function InspectionDetailScreen() {
     inspectionRef.current = inspection;
   }, [inspection]);
 
+  // 更新照片（用于编辑模式下替换照片）
+  const handleUpdatePhoto = async (originalUri: string, newUri: string) => {
+    if (!inspection) return;
+    
+    // 更新主检查项的照片
+    const updatedChecklist = inspection.checklist_items.map(item => {
+      const photoIndex = (item.photos || []).findIndex((p: string) => p === originalUri);
+      if (photoIndex !== -1) {
+        const newPhotos = [...(item.photos || [])];
+        newPhotos[photoIndex] = newUri;
+        return { ...item, photos: newPhotos };
+      }
+      return item;
+    });
+    setInspection({ ...inspection, checklist_items: updatedChecklist });
+    
+    // 更新额外条码项的照片
+    const updatedExtraBarcode = extraBarcodeItems.map(item => {
+      const photoIndex = (item.photos || []).findIndex((p: string) => p === originalUri);
+      if (photoIndex !== -1) {
+        const newPhotos = [...(item.photos || [])];
+        newPhotos[photoIndex] = newUri;
+        return { ...item, photos: newPhotos };
+      }
+      return item;
+    });
+    setExtraBarcodeItems(updatedExtraBarcode);
+    
+    setEditingPhoto(null);
+    setCameraVisible(false);
+  };
+
   const fetchInspection = async () => {
     if (!id) return;
     try {
@@ -505,19 +537,41 @@ export default function InspectionDetailScreen() {
   return (
     <Screen>
       {/* 自定义相机页面 - 全屏显示 */}
-      {cameraVisible && tempPhotoTarget && (
+      {cameraVisible && (tempPhotoTarget || editingPhoto) && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
           <CustomCamera
           visible={cameraVisible}
-          onClose={() => setCameraVisible(false)}
+          onClose={() => {
+            setCameraVisible(false);
+            setEditingPhoto(null);
+          }}
+          editingPhotoUri={editingPhoto?.uri}
+          onUpdatePhoto={handleUpdatePhoto}
           onComplete={async (photos) => {
             // 使用 ref 获取最新的 inspection 避免闭包问题
             const currentInspection = inspectionRef.current;
             if (!currentInspection) return;
             
+            // 如果是编辑模式且没有新拍的照片，只关闭相机
+            if (editingPhoto && photos.length === 0) {
+              setCameraVisible(false);
+              setEditingPhoto(null);
+              return;
+            }
+            
+            // 如果没有新照片且不是编辑模式，提示用户
+            if (photos.length === 0) {
+              return;
+            }
+            
             const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
             const photoUris = photos.map(p => p.uri);
-            const targetRecordId = tempPhotoTarget.record_id;
+            const targetRecordId = tempPhotoTarget?.record_id;
+            
+            // 如果没有目标 record_id，不处理
+            if (!targetRecordId) {
+              return;
+            }
             
             // 将照片添加到本地状态
             const updatedItems = currentInspection.checklist_items.map(item => {
