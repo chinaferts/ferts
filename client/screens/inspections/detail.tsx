@@ -8,6 +8,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createFormDataFile } from '@/utils';
 import CustomCamera from '@/components/CustomCamera';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from '@/contexts/LanguageContext';
 
 // 分类中英文对照映射
@@ -143,6 +144,86 @@ export default function InspectionDetailScreen() {
   const [showBarcodeCamera, setShowBarcodeCamera] = useState(false);
   // 使用 ref 同步追踪扫描状态，避免异步问题
   const isScanningRef = useRef(false);
+  // 相册权限
+  const [mediaPermission, requestMediaPermission] = ImagePicker.useMediaLibraryPermissions();
+  
+  // 从相册导入照片
+  const handleImportPhoto = async (item: ChecklistItem) => {
+    const { granted } = await requestMediaPermission();
+    if (!granted) {
+      Alert.alert(t('noPermission'), t('noPermissionEn') + ' - Media Library');
+      return;
+    }
+    
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.8,
+    });
+    
+    if (!result.canceled && result.assets[0]) {
+      const photoUri = result.assets[0].uri;
+      handlePhotoTaken(photoUri, item);
+    }
+  };
+
+  // 处理从相册导入的照片
+  const handlePhotoTaken = (photoUri: string, item: ChecklistItem) => {
+    const targetRecordId = item.record_id;
+    const targetCategoryIndex = item.categoryIndex;
+    const targetItemIndex = item.itemIndex;
+    
+    // 设置临时照片目标
+    setTempPhotoTarget({
+      record_id: targetRecordId,
+      categoryIndex: targetCategoryIndex,
+      itemIndex: targetItemIndex,
+    });
+    
+    // 创建单张照片对象
+    const photo = { uri: photoUri };
+    
+    // 直接添加照片到检查项
+    const currentInspection = inspectionRef.current;
+    if (!currentInspection) return;
+    
+    const updatedItems = currentInspection.checklist_items.map((checkItem) => {
+      if (checkItem.record_id === targetRecordId) {
+        return { ...checkItem, photos: [...(checkItem.photos || []), photoUri] };
+      }
+      return checkItem;
+    });
+    setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
+    
+    // 上传照片到服务器
+    const uploadPhoto = async () => {
+      try {
+        const filename = photoUri.split("/").pop() || `photo_${Date.now()}.jpg`;
+        const match = /\.(\w+)$/.exec(filename);
+        const ext = match ? match[1] : "jpg";
+        const formData = new FormData();
+        formData.append("file", {
+          uri: photoUri,
+          name: filename,
+          type: `image/${ext}`,
+        } as any);
+        formData.append("inspection_id", id);
+        formData.append("record_id", targetRecordId);
+        formData.append("category", item.category || item.name);
+        formData.append("item_name", item.name);
+        
+        await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos", {
+          method: "POST",
+          headers: { "Content-Type": "multipart/form-data" },
+          body: formData,
+        });
+      } catch (error) {
+        console.error("上传照片失败:", error);
+      }
+    };
+    
+    uploadPhoto();
+  };
   
   // 问题描述框状态 (每个问题包含文本、照片和严重程度)
   const [issues, setIssues] = useState<Array<{ text: string; photos: string[]; severity: string }>>([{ text: '', photos: [], severity: '' }]);
@@ -862,12 +943,23 @@ export default function InspectionDetailScreen() {
                     <View style={styles.checklistInfo}>
                       {/* 拍照按钮 */}
                       {item.status === 'unchecked' && inspection.status !== 'completed' && (
-                        <TouchableOpacity
-                          style={styles.headerCameraButton}
-                          onPress={() => takePhoto(item)}
-                        >
-                          <Feather name="camera" size={16} color="#6C63FF" />
-                        </TouchableOpacity>
+                        <>
+                          <TouchableOpacity
+                            style={styles.headerCameraButton}
+                            onPress={() => takePhoto(item)}
+                          >
+                            <Feather name="camera" size={16} color="#6C63FF" />
+                          </TouchableOpacity>
+                          {/* 导入本地照片按钮 - 仅管理员可见 */}
+                          {isAdmin && (
+                            <TouchableOpacity
+                              style={styles.headerCameraButton}
+                              onPress={() => handleImportFromGallery(item)}
+                            >
+                              <Feather name="image" size={16} color="#6C63FF" />
+                            </TouchableOpacity>
+                          )}
+                        </>
                       )}
                     </View>
                     {item.status !== 'unchecked' && (
@@ -1063,6 +1155,16 @@ export default function InspectionDetailScreen() {
                           <Feather name="camera" size={16} color="#6C63FF" />
                           <Text style={styles.headerCameraButtonText}>拍照</Text>
                         </TouchableOpacity>
+                        {/* 导入本地照片按钮 - 仅管理员可见 */}
+                        {isAdmin && (
+                          <TouchableOpacity
+                            style={styles.headerCameraButton}
+                            onPress={() => handleImportFromGallery(item)}
+                          >
+                            <Feather name="image" size={16} color="#6C63FF" />
+                            <Text style={styles.headerCameraButtonText}>导入</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     )}
                     {/* 状态图标和删除按钮换一行显示 */}
