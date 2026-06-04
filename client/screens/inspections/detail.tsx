@@ -167,7 +167,9 @@ export default function InspectionDetailScreen() {
     
     if (!result.canceled && result.assets[0]) {
       const photoUri = result.assets[0].uri;
-      handlePhotoTaken(photoUri, item);
+      // 直接添加到临时照片预览区
+      setTempPhotoTarget(item);
+      setTempPhotos([photoUri]);
     }
   };
 
