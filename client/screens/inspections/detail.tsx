@@ -1979,7 +1979,7 @@ const styles = StyleSheet.create({
   checklistNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'flex-end',
     flex: 1,
   },
   checklistName: {
