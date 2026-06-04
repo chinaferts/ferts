@@ -10,6 +10,49 @@ import CustomCamera from '@/components/CustomCamera';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useTranslation } from '@/contexts/LanguageContext';
 
+// 分类中英文对照映射
+const categoryBilingualMap: Record<string, string> = {
+  '大货仓库照以及码堆照片': '大货仓库照以及码堆照片 / Warehouse & Stacking Photos',
+  '外箱箱唛以及尺寸重量拍照': '外箱箱唛以及尺寸重量拍照 / Carton Marking & Dimensions',
+  '内箱箱唛以及尺寸重量拍照': '内箱箱唛以及尺寸重量拍照 / Inner Carton Marking & Dimensions',
+  '产品细节拍照（包括产品尺寸和重量照）': '产品细节拍照 / Product Detail Photos',
+  '产品细节拍照': '产品细节拍照 / Product Detail Photos',
+  '彩盒/彩卡信息以及其规格重量拍照': '彩盒/彩卡信息以及其规格重量拍照 / Color Box/Manual & Specs',
+  '与签样对比拍照': '与签样对比拍照 / Sample Comparison',
+  '组装以及功能测试拍照': '组装以及功能测试拍照 / Assembly & Function Test',
+  '条码扫描以及拍照': '条码扫描以及拍照 / Barcode Scan & Photo',
+  '条码扫描': '条码扫描 / Barcode Scan',
+  '问题统计以及拍照并描述': '问题统计以及拍照并描述 / Problem Statistics & Description',
+  '问题描述': '问题统计 / Problem Statistics',
+  '仓库': '大货仓库照以及码堆照片 / Warehouse & Stacking Photos',
+  '外箱': '外箱箱唛以及尺寸重量拍照 / Carton Marking & Dimensions',
+  '内箱': '内箱箱唛以及尺寸重量拍照 / Inner Carton Marking & Dimensions',
+  '产品': '产品细节拍照 / Product Detail Photos',
+  '彩盒': '彩盒/彩卡信息以及其规格重量拍照 / Color Box/Manual & Specs',
+  '对比': '与签样对比拍照 / Sample Comparison',
+  '组装': '组装以及功能测试拍照 / Assembly & Function Test',
+  '条码': '条码扫描以及拍照 / Barcode Scan & Photo',
+};
+
+// 检查项名称中英文对照映射
+const checklistItemBilingualMap: Record<string, string> = {
+  '检查外箱箱唛及尺寸重量': '检查外箱箱唛及尺寸重量 / Check Carton Marking & Dimensions',
+  '检查内箱箱唛及尺寸重量': '检查内箱箱唛及尺寸重量 / Check Inner Carton Marking & Dimensions',
+  '检查产品尺寸': '检查产品尺寸 / Check Product Dimensions',
+  '检查产品重量': '检查产品重量 / Check Product Weight',
+  '检查彩盒信息': '检查彩盒信息 / Check Color Box Info',
+  '检查组装': '检查组装 / Check Assembly',
+  '检查功能': '检查功能 / Check Function',
+  '扫描条码': '扫描条码 / Scan Barcode',
+  '拍照存档': '拍照存档 / Take Photo',
+  '检查外观': '检查外观 / Check Appearance',
+  '检查标签': '检查标签 / Check Label',
+  '功能测试': '功能测试 / Function Test',
+  '尺寸测量': '尺寸测量 / Dimension Measurement',
+  '重量测量': '重量测量 / Weight Measurement',
+  '包装检查': '包装检查 / Packaging Check',
+};
+
 interface ChecklistItem {
   id: number;
   record_id: number;
@@ -809,7 +852,7 @@ export default function InspectionDetailScreen() {
           return (
             <View key={category} style={styles.section}>
               <View style={styles.categoryHeader}>
-                <Text style={styles.sectionTitle}>{t(`category_${catIndex}` as any) || category}</Text>
+                <Text style={styles.sectionTitle}>{categoryBilingualMap[category] || category}</Text>
               </View>
               {inspection.checklist_items
                 .filter(item => item.category === category)
@@ -1015,7 +1058,9 @@ export default function InspectionDetailScreen() {
                     </TouchableOpacity>
                     <View style={styles.checklistNameRow}>
                       {item.name && item.name !== '条码扫描' && (
-                        <Text style={styles.checklistName}>{item.name}</Text>
+                        <Text style={styles.checklistName}>
+                          {item.name} / {checklistItemBilingualMap[item.name] || item.name}
+                        </Text>
                       )}
                     </View>
                     {/* 拍照按钮单独一行，靠右显示 */}
