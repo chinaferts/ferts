@@ -248,7 +248,7 @@ export function mockGetInspection(id: string) {
 }
 
 // 通用验货模板清单项（硬编码）
-const UNIVERSAL_CHECKLIST_ITEMS = [
+export const UNIVERSAL_CHECKLIST_ITEMS = [
   { id: 'u1', checklist_id: '0', name: '大货仓库照以及码堆照片', description: '拍摄大货仓库照片及码堆情况', category: '大货仓库照以及码堆照片', is_required: true, item_order: 1 },
   { id: 'u2', checklist_id: '0', name: '外箱箱唛以及尺寸重量拍照', description: '检查外箱箱唛及尺寸重量', category: '外箱箱唛以及尺寸重量拍照', is_required: true, item_order: 2 },
   { id: 'u3', checklist_id: '0', name: '内箱箱唛以及尺寸重量拍照', description: '检查内箱唛头及规格重量', category: '内箱箱唛以及尺寸重量拍照', is_required: true, item_order: 3 },

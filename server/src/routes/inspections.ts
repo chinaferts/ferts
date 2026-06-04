@@ -10,7 +10,8 @@ import {
   mockGetDefects,
   mockCreateDefect,
   mockDeleteDefect,
-  mockGetDashboardStats
+  mockGetDashboardStats,
+  UNIVERSAL_CHECKLIST_ITEMS
 } from '../storage/mockData.js';
 
 const router = Router();
@@ -50,6 +51,9 @@ router.get('/', async (req: Request, res: Response) => {
 
     const { data, error } = await query;
 
+    // 获取通用模板的 mock 数据（checklist_id=0）
+    const mockUniversalData = mockGetInspections({ checklist_id: '0' });
+    
     // 如果查询失败或返回空，使用 mock 数据兜底
     if (error || !data || data.length === 0) {
       const filters: any = {};
@@ -59,7 +63,14 @@ router.get('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: mockData });
     }
     
-    res.json({ success: true, data });
+    // 合并 Supabase 数据和通用模板 mock 数据，避免重复
+    const supabaseIds = new Set(data.map((item: any) => item.id));
+    const mergedData = [
+      ...data,
+      ...mockUniversalData.filter((item: any) => !supabaseIds.has(item.id))
+    ];
+    
+    res.json({ success: true, data: mergedData });
   } catch (err: any) {
     // 发生错误时使用 mock 数据兜底
     console.error('获取验货列表失败:', err);
@@ -172,10 +183,44 @@ router.get('/:id', async (req: Request, res: Response) => {
       .eq('inspection_id', id)
       .order('created_at', { ascending: true });
 
-    // 如果是通用模板(checklist_id=0或'universal')或没有找到记录，使用mock数据
-    const isUniversalTemplate = String(inspection.checklist_id) === '0' || String(inspection.checklist_id) === 'universal';
+    // 如果是通用模板(checklist_id=0、'universal'或11)或没有找到记录，使用mock数据
+    const isUniversalTemplate = String(inspection.checklist_id) === '0' || 
+                                String(inspection.checklist_id) === 'universal' ||
+                                String(inspection.checklist_id) === '11';
     if (isUniversalTemplate || !records || records.length === 0) {
+      // 使用 mock 数据生成验货详情和清单项
       const mockInspection = mockGetInspection(id);
+      
+      // 如果 mock 中没有该验货，但使用的是通用模板，则使用通用模板清单项
+      if (!mockInspection && isUniversalTemplate) {
+        // 返回验货基本信息 + 通用模板清单项
+        const universalItems = UNIVERSAL_CHECKLIST_ITEMS.map((item, index) => ({
+          id: `generated-${index}`,
+          checklist_item_id: item.id,
+          item_name: item.name,
+          item_description: item.description,
+          item_category: item.category,
+          result: 'unchecked',
+          score: null,
+          notes: null,
+          photos: [],
+          created_at: new Date().toISOString()
+        }));
+        
+        return res.json({
+          success: true,
+          data: {
+            ...inspection,
+            checklist_items: universalItems,
+            categories: [...new Set(universalItems.map((item: any) => item.item_category))],
+            defects: [],
+            photos: [],
+            checkedCount: 0,
+            defectCount: 0
+          }
+        });
+      }
+      
       if (mockInspection) {
         return res.json({ success: true, data: mockInspection });
       }
@@ -253,11 +298,11 @@ router.post('/', async (req: Request, res: Response) => {
       notes 
     } = req.body;
 
-    // 处理 templateId=0 的情况（通用模板）
-    const effectiveChecklistId = (templateId === 0 || templateId === '0') ? 0 : (templateId || checklist_id);
+    // 处理 templateId=0 的情况（通用模板），使用数据库中已存在的 checklist_id=11
+    const effectiveChecklistId = (templateId === 0 || templateId === '0') ? 11 : (templateId || checklist_id);
 
-    // 如果是通用模板 (templateId=0) 或 Supabase 未配置，使用 mock 模式
-    if (effectiveChecklistId === 0 || !isSupabaseConfigured()) {
+    // 如果 Supabase 未配置，使用 mock 模式
+    if (!isSupabaseConfigured()) {
       const newInspection = mockCreateInspection({
         checklist_id: effectiveChecklistId,
         supplier_name: supplier || supplier_name,
@@ -275,6 +320,7 @@ router.post('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: newInspection });
     }
 
+    // Supabase 已配置，使用数据库存储
     const client = requireSupabaseClient();
 
     // 1. 创建验货记录
@@ -298,23 +344,17 @@ router.post('/', async (req: Request, res: Response) => {
     if (inspectionError) throw inspectionError;
 
     // 2. 如果有 checklist_id，从模板复制清单项到 inspection_records
-    if (effectiveChecklistId) {
+    if (effectiveChecklistId !== undefined && effectiveChecklistId !== null) {
       console.log('Copying checklist items for checklist_id:', effectiveChecklistId);
       
-      // 获取模板的清单项
-      const { data: checklistItems, error: itemsError } = await client
-        .from('checklist_items')
-        .select('*')
-        .eq('checklist_id', effectiveChecklistId)
-        .order('item_order', { ascending: true });
-
-      console.log('Found checklist items:', checklistItems?.length, 'items error:', itemsError);
-
-      if (!itemsError && checklistItems && checklistItems.length > 0) {
-        // 为每个清单项创建检查记录
-        const records = checklistItems.map((item: any) => ({
+      // 如果是通用模板 (checklist_id=0)，使用 UNIVERSAL_CHECKLIST_ITEMS
+      if (effectiveChecklistId === 0) {
+        const records = UNIVERSAL_CHECKLIST_ITEMS.map((item: any) => ({
           inspection_id: inspection.id,
-          item_id: item.id,
+          checklist_item_id: item.id,
+          item_name: item.name,
+          item_description: item.description,
+          item_category: item.category,
           result: 'unchecked',
           score: null,
           notes: null
@@ -324,10 +364,40 @@ router.post('/', async (req: Request, res: Response) => {
           .from('inspection_records')
           .insert(records);
 
-        console.log('Inserted inspection records, error:', recordsError);
+        console.log('Inserted universal checklist records, error:', recordsError);
 
         if (recordsError) {
-          console.error('创建检查记录失败:', recordsError);
+          console.error('创建通用检查记录失败:', recordsError);
+        }
+      } else {
+        // 从数据库获取模板的清单项
+        const { data: checklistItems, error: itemsError } = await client
+          .from('checklist_items')
+          .select('*')
+          .eq('checklist_id', effectiveChecklistId)
+          .order('item_order', { ascending: true });
+
+        console.log('Found checklist items:', checklistItems?.length, 'items error:', itemsError);
+
+        if (!itemsError && checklistItems && checklistItems.length > 0) {
+          // 为每个清单项创建检查记录
+          const records = checklistItems.map((item: any) => ({
+            inspection_id: inspection.id,
+            item_id: item.id,
+            result: 'unchecked',
+            score: null,
+            notes: null
+          }));
+
+          const { error: recordsError } = await client
+            .from('inspection_records')
+            .insert(records);
+
+          console.log('Inserted inspection records, error:', recordsError);
+
+          if (recordsError) {
+            console.error('创建检查记录失败:', recordsError);
+          }
         }
       }
     } else {
