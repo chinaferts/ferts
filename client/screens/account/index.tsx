@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { useAuth, User, UserRole } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
@@ -43,13 +45,14 @@ function UserStats({ users }: { users: User[] }) {
 
 // 空状态组件
 function EmptyState() {
+  const { t } = useLanguage();
   return (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIcon}>
-        <Text style={styles.emptyIconText}>👤</Text>
+        <Feather name="user" size={48} color="#B2BEC3" />
       </View>
-      <Text style={styles.emptyTitle}>暂无用户</Text>
-      <Text style={styles.emptySubtitle}>点击上方"添加用户"创建新账号</Text>
+      <Text style={styles.emptyTitle}>{t('noUsers')}</Text>
+      <Text style={styles.emptySubtitle}>{t('clickToAddUser')}</Text>
     </View>
   );
 }
@@ -142,6 +145,7 @@ function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit
 
 export default function AccountScreen() {
   const { user: currentUser, isAdmin, updateUser } = useAuth();
+  const { t } = useLanguage();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalVisible, setEditModalVisible] = useState(false);
@@ -329,10 +333,10 @@ export default function AccountScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
           <View style={styles.lockIcon}>
-            <Text style={styles.lockIconText}>🔒</Text>
+            <Feather name="lock" size={48} color="#B2BEC3" />
           </View>
-          <Text style={styles.noPermissionTitle}>无权限访问</Text>
-          <Text style={styles.noPermissionText}>仅管理员可访问此页面</Text>
+          <Text style={styles.noPermissionTitle}>{t('noPermission')}</Text>
+          <Text style={styles.noPermissionText}>{t('adminOnlyAccess')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -368,10 +372,10 @@ export default function AccountScreen() {
         {/* 搜索和筛选 */}
         <View style={styles.filterContainer}>
           <View style={styles.searchContainer}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <Feather name="search" size={20} color="#9CA3AF" style={styles.searchIconFeather} />
             <TextInput
               style={styles.searchInput}
-              placeholder="搜索用户..."
+              placeholder={t('searchUser')}
               placeholderTextColor="#9CA3AF"
               value={searchKeyword}
               onChangeText={setSearchKeyword}
@@ -658,6 +662,9 @@ const styles = StyleSheet.create({
   },
   searchIcon: {
     fontSize: 16,
+    marginRight: 8,
+  },
+  searchIconFeather: {
     marginRight: 8,
   },
   searchInput: {

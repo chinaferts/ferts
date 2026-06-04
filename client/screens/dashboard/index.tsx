@@ -5,20 +5,23 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
 // 统计数据卡片
 interface StatCardProps {
   title: string;
+  titleEn: string;
   value: string | number;
   subtitle: string;
+  subtitleEn: string;
   icon: keyof typeof Feather.glyphMap;
   color: string;
   trend?: 'up' | 'down' | 'neutral';
 }
 
-function StatCard({ title, value, subtitle, icon, color, trend }: StatCardProps) {
+function StatCard({ title, titleEn, value, subtitle, subtitleEn, icon, color, trend }: StatCardProps) {
   return (
     <View style={styles.statCardOuter}>
       <View style={styles.statCardInner}>
@@ -27,6 +30,7 @@ function StatCard({ title, value, subtitle, icon, color, trend }: StatCardProps)
         </View>
         <Text style={styles.statValue}>{value}</Text>
         <Text style={styles.statTitle}>{title}</Text>
+        <Text style={styles.statTitleEn}>{titleEn}</Text>
         <View style={styles.trendContainer}>
           {trend && (
             <Feather 
@@ -36,6 +40,7 @@ function StatCard({ title, value, subtitle, icon, color, trend }: StatCardProps)
             />
           )}
           <Text style={styles.statSubtitle}>{subtitle}</Text>
+          <Text style={styles.statSubtitleEn}>{subtitleEn}</Text>
         </View>
       </View>
     </View>
@@ -45,12 +50,13 @@ function StatCard({ title, value, subtitle, icon, color, trend }: StatCardProps)
 // 快捷操作卡片
 interface QuickActionProps {
   title: string;
+  titleEn: string;
   icon: keyof typeof Feather.glyphMap;
   color: string;
   href: string;
 }
 
-function QuickAction({ title, icon, color, href }: QuickActionProps) {
+function QuickAction({ title, titleEn, icon, color, href }: QuickActionProps) {
   return (
     <Link href={href} asChild>
       <TouchableOpacity style={styles.quickAction}>
@@ -58,6 +64,7 @@ function QuickAction({ title, icon, color, href }: QuickActionProps) {
           <Feather name={icon} size={24} color={color} />
         </View>
         <Text style={styles.quickActionText}>{title}</Text>
+        <Text style={styles.quickActionTextEn}>{titleEn}</Text>
       </TouchableOpacity>
     </Link>
   );
@@ -75,10 +82,11 @@ interface RecentInspectionProps {
 }
 
 function RecentInspectionCard({ item, onPress }: { item: RecentInspectionProps; onPress?: (id: number) => void }) {
+  const { t } = useLanguage();
   const statusConfig = {
-    pending: { label: '待开始', color: '#FDCB6E', bg: 'rgba(253,203,110,0.15)' },
-    in_progress: { label: '进行中', color: '#0EA5E9', bg: 'rgba(14,165,233,0.15)' },
-    completed: { label: '已完成', color: '#00B894', bg: 'rgba(0,184,148,0.15)' },
+    pending: { label: t('pending'), color: '#FDCB6E', bg: 'rgba(253,203,110,0.15)' },
+    in_progress: { label: t('inProgress'), color: '#0EA5E9', bg: 'rgba(14,165,233,0.15)' },
+    completed: { label: t('completed'), color: '#00B894', bg: 'rgba(0,184,148,0.15)' },
   };
   
   const status = statusConfig[item.status];
@@ -86,7 +94,7 @@ function RecentInspectionCard({ item, onPress }: { item: RecentInspectionProps; 
   return (
     <TouchableOpacity 
       style={styles.inspectionCardOuter} 
-      onPress={() => onPress ? onPress(item.id) : Alert.alert('提示', '查看验货详情功能开发中')}
+      onPress={() => onPress ? onPress(item.id) : Alert.alert(t('tip'), t('featureComingSoon'))}
     >
       <View style={styles.inspectionCardInner}>
         <View style={styles.inspectionHeader}>
@@ -123,6 +131,7 @@ function RecentInspectionCard({ item, onPress }: { item: RecentInspectionProps; 
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
@@ -222,7 +231,7 @@ export default function DashboardScreen() {
         {/* 头部欢迎 */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>验货助手</Text>
+            <Text style={styles.greeting}>{t('qualityInspector')}</Text>
             <Text style={styles.subGreeting}>Quality Inspector</Text>
           </View>
           <View style={styles.avatarContainer}>
@@ -233,33 +242,41 @@ export default function DashboardScreen() {
         {/* 统计卡片 */}
         <View style={styles.statsRow}>
           <StatCard
-            title="总任务"
+            title={t('totalTasks')}
+            titleEn={t('totalTasksEn')}
             value={stats.total}
-            subtitle="本月验货"
+            subtitle={t('inspectionRecords')}
+            subtitleEn={t('inspectionRecordsEn')}
             icon="clipboard"
             color="#6C63FF"
             trend="up"
           />
           <StatCard
-            title="进行中"
+            title={t('inProgress')}
+            titleEn={t('inProgressEn')}
             value={stats.inProgress}
-            subtitle="今日完成"
+            subtitle={t('completed')}
+            subtitleEn={t('completedEn')}
             icon="activity"
             color="#0EA5E9"
             trend="neutral"
           />
           <StatCard
-            title="已完成"
+            title={t('completed')}
+            titleEn={t('completedEn')}
             value={stats.completed}
-            subtitle="通过率 98%"
+            subtitle={t('passRate')}
+            subtitleEn={t('passRateEn')}
             icon="check-circle"
             color="#00B894"
             trend="up"
           />
           <StatCard
-            title="待处理"
+            title={t('pending')}
+            titleEn={t('pendingEn')}
             value={stats.pending}
-            subtitle="需尽快处理"
+            subtitle={t('needHandle')}
+            subtitleEn={t('needHandleEn')}
             icon="clock"
             color="#FDCB6E"
             trend="down"
@@ -268,19 +285,20 @@ export default function DashboardScreen() {
 
         {/* 快捷操作 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>快捷操作</Text>
+          <Text style={styles.sectionTitle}>{t('quickActions')}</Text>
+          <Text style={styles.sectionTitleEn}>{t('quickActionsEn')}</Text>
           <View style={styles.quickActionsGrid}>
-            <QuickAction title="新建验货" icon="plus-circle" color="#6C63FF" href="/inspections/new" />
-            <QuickAction title="扫码识别" icon="maximize" color="#0EA5E9" href="/inspections/scan" />
-            <QuickAction title="清单模板" icon="list" color="#00B894" href="/checklists" />
-            <QuickAction title="缺陷记录" icon="alert-triangle" color="#FF6B6B" href="/defects" />
+            <QuickAction title={t('newInspection')} titleEn={t('newInspectionEn')} icon="plus-circle" color="#6C63FF" href="/inspections/new" />
+            <QuickAction title={t('scanCode')} titleEn={t('scanCodeEn')} icon="maximize" color="#0EA5E9" href="/inspections/scan" />
+            <QuickAction title={t('checklistTemplate')} titleEn={t('checklistTemplateEn')} icon="list" color="#00B894" href="/checklists" />
+            <QuickAction title={t('defectRecord')} titleEn={t('defectRecordEn')} icon="alert-triangle" color="#FF6B6B" href="/defects" />
           </View>
         </View>
 
         {/* 待验货列表 */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>待验货列表</Text>
+            <Text style={styles.sectionTitle}>{t('pendingList')}</Text>
             <Link href="/inspections" asChild>
               <TouchableOpacity style={styles.seeAllButton}>
                 <Text style={styles.seeAllText}>查看全部</Text>
@@ -295,7 +313,7 @@ export default function DashboardScreen() {
           ) : (
             <View style={styles.emptyState}>
               <Feather name="inbox" size={48} color="#B2BEC3" />
-              <Text style={styles.emptyText}>暂无待验货任务</Text>
+              <Text style={styles.emptyText}>{t('noPendingTasks')}</Text>
             </View>
           )}
         </View>
@@ -374,19 +392,31 @@ const styles = StyleSheet.create({
     color: '#6C63FF',
   },
   statTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: '#2D3436',
     marginTop: 2,
   },
+  statTitleEn: {
+    fontSize: 10,
+    color: '#636E72',
+    marginTop: 1,
+  },
   trendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   statSubtitle: {
     fontSize: 10,
     color: '#636E72',
+    marginLeft: 4,
+  },
+  statSubtitleEn: {
+    fontSize: 9,
+    color: '#B2BEC3',
     marginLeft: 4,
   },
   section: {
@@ -402,6 +432,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#2D3436',
+    marginBottom: 4,
+  },
+  sectionTitleEn: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#636E72',
     marginBottom: 12,
   },
   seeAllButton: {
@@ -442,6 +478,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#2D3436',
+  },
+  quickActionTextEn: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#636E72',
   },
   inspectionCardOuter: {
     marginBottom: 12,

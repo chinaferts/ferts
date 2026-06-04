@@ -8,6 +8,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createFormDataFile } from '@/utils';
 import CustomCamera from '@/components/CustomCamera';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 interface ChecklistItem {
   id: number;
@@ -58,6 +59,7 @@ interface InspectionDetail {
 export default function InspectionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useSafeRouter();
+  const { t } = useTranslation();
   const [inspection, setInspection] = useState<InspectionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [defectModalVisible, setDefectModalVisible] = useState(false);
@@ -115,9 +117,9 @@ export default function InspectionDetailScreen() {
   }, [inspection?.checklist_items]);
   // 严重程度选项
   const severityOptions = [
-    { label: '致命缺陷', value: 'critical', color: '#DC3545', bgColor: 'rgba(220,53,69,0.1)' },
-    { label: '严重缺陷', value: 'serious', color: '#FD7E14', bgColor: 'rgba(253,126,20,0.1)' },
-    { label: '轻微缺陷', value: 'minor', color: '#FFC107', bgColor: 'rgba(255,193,7,0.15)' },
+    { label: t('criticalDefect'), value: 'critical', color: '#DC3545', bgColor: 'rgba(220,53,69,0.1)' },
+    { label: t('majorDefect'), value: 'serious', color: '#FD7E14', bgColor: 'rgba(253,126,20,0.1)' },
+    { label: t('minorDefect'), value: 'minor', color: '#FFC107', bgColor: 'rgba(255,193,7,0.15)' },
   ];
   // 缺陷统计状态
   const [defectStats, setDefectStats] = useState({
@@ -136,9 +138,9 @@ export default function InspectionDetailScreen() {
   const [selectedBarcodeIndex, setSelectedBarcodeIndex] = useState<number | null>(null);
   // 条码类型选项
   const barcodeTypeOptions = [
-    { label: '外箱条码', value: 'box', color: '#6C63FF', bgColor: 'rgba(108,99,255,0.1)' },
-    { label: '内箱/内袋条码', value: 'inner', color: '#00B894', bgColor: 'rgba(0,184,148,0.1)' },
-    { label: '彩盒/彩卡条码', value: 'color', color: '#FDCB6E', bgColor: 'rgba(253,203,110,0.15)' },
+    { label: t('boxBarcodes'), value: 'box', color: '#6C63FF', bgColor: 'rgba(108,99,255,0.1)' },
+    { label: t('innerBarcodes'), value: 'inner', color: '#00B894', bgColor: 'rgba(0,184,148,0.1)' },
+    { label: t('colorBarcodes'), value: 'color', color: '#FDCB6E', bgColor: 'rgba(253,203,110,0.15)' },
   ];
   
   // 问题描述框处理函数
@@ -151,8 +153,8 @@ export default function InspectionDetailScreen() {
     const newItem: ChecklistItem = {
       id: Date.now(),
       record_id: Date.now(),
-      name: '条码扫描',
-      description: '扫描条码',
+      name: t('barcodeScan'),
+      description: t('barcodeScan'),
       category: '条码扫描以及拍照',
       status: 'unchecked',
       photos: [],
@@ -424,7 +426,7 @@ export default function InspectionDetailScreen() {
   // 添加缺陷
   const handleAddDefect = async () => {
     if (!selectedItem || !defectForm.description.trim()) {
-      Alert.alert('提示', '请填写缺陷描述');
+      Alert.alert(t('tip'), t('pleaseFillDefectDescription'));
       return;
     }
 
@@ -477,9 +479,9 @@ export default function InspectionDetailScreen() {
 
     const uncheckedCount = inspection.checklist_items.filter(i => i.status === 'unchecked').length;
     if (uncheckedCount > 0) {
-      Alert.alert('提示', `还有 ${uncheckedCount} 项未检查，请确认是否继续提交？`, [
-        { text: '继续检查', style: 'cancel' },
-        { text: '确认提交', onPress: doSubmit },
+      Alert.alert(t('tip'), `${uncheckedCount} ${t('itemsUnchecked')} ${t('confirmSubmit')}?`, [
+        { text: t('continueCheck'), style: 'cancel' },
+        { text: t('confirmSubmit'), onPress: doSubmit },
       ]);
     } else {
       doSubmit();
@@ -701,7 +703,7 @@ export default function InspectionDetailScreen() {
               backgroundColor: inspection.status === 'completed' ? 'rgba(0,184,148,0.15)' : 'rgba(14,165,233,0.15)'
             }]}>
               <Text style={[styles.statusText, { color: inspection.status === 'completed' ? '#00B894' : '#0EA5E9' }]}>
-                {inspection.status === 'pending' ? '待开始' : inspection.status === 'in_progress' ? '进行中' : '已完成'}
+                {inspection.status === 'pending' ? t('pending') : inspection.status === 'in_progress' ? t('inProgress') : t('completed')}
               </Text>
             </View>
           </View>
@@ -1007,7 +1009,7 @@ export default function InspectionDetailScreen() {
                       ]}>
                         {item.barcodeType 
                           ? barcodeTypeOptions.find(o => o.value === item.barcodeType)?.label 
-                          : '选择类型'}
+                          : t('selectType')}
                       </Text>
                       <Feather name="chevron-down" size={16} color={item.barcodeType ? barcodeTypeOptions.find(o => o.value === item.barcodeType)?.color : '#666'} />
                     </TouchableOpacity>
@@ -1157,16 +1159,16 @@ export default function InspectionDetailScreen() {
               <Text style={styles.sectionTitle}>问题统计以及拍照并描述</Text>
               <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
                 <Feather name="plus" size={18} color="#6C63FF" />
-                <Text style={styles.addIssueText}>添加问题</Text>
+                <Text style={styles.addIssueText}>{t('addProblem')}</Text>
               </TouchableOpacity>
             </View>
             
             {/* 缺陷统计表格 */}
             <View style={styles.defectStatsContainer}>
-              <Text style={styles.defectStatsTitle}>缺陷统计</Text>
+              <Text style={styles.defectStatsTitle}>{t('defectStatistics')}</Text>
               <View style={styles.defectStatsTable}>
                 <View style={styles.defectStatsRow}>
-                  <Text style={styles.defectStatsLabel}>致命缺陷</Text>
+                  <Text style={styles.defectStatsLabel}>{t('criticalDefect')}</Text>
                   <View style={styles.defectStatsInputWrapper}>
                     <TouchableOpacity 
                       style={styles.defectStatsBtn}
@@ -1190,7 +1192,7 @@ export default function InspectionDetailScreen() {
                   </View>
                 </View>
                 <View style={styles.defectStatsRow}>
-                  <Text style={styles.defectStatsLabel}>严重缺陷</Text>
+                  <Text style={styles.defectStatsLabel}>{t('majorDefect')}</Text>
                   <View style={styles.defectStatsInputWrapper}>
                     <TouchableOpacity 
                       style={styles.defectStatsBtn}
@@ -1278,7 +1280,7 @@ export default function InspectionDetailScreen() {
                 </View>
                 <TextInput
                   style={styles.issueInput}
-                  placeholder="请输入问题描述..."
+                  placeholder={t('pleaseInputProblemDescription')}
                   placeholderTextColor="#B2BEC3"
                   multiline
                   value={issue.text}
@@ -1323,7 +1325,7 @@ export default function InspectionDetailScreen() {
                     <Text style={[styles.severityText, {
                       color: defect.severity === 'critical' ? '#FF6B6B' : defect.severity === 'major' ? '#FDCB6E' : '#0EA5E9'
                     }]}>
-                      {defect.severity === 'critical' ? '严重' : defect.severity === 'major' ? '主要' : '次要'}
+                      {defect.severity === 'critical' ? t('critical') : defect.severity === 'major' ? t('major') : t('minor')}
                     </Text>
                   </View>
                   <Text style={styles.defectItem}>{defect.title}</Text>
@@ -1392,16 +1394,16 @@ export default function InspectionDetailScreen() {
                   onPress={() => setDefectForm({ ...defectForm, severity: level })}
                 >
                   <Text style={[styles.severityButtonText, defectForm.severity === level && styles.severityButtonTextActive]}>
-                    {level === 'critical' ? '严重' : level === 'major' ? '主要' : '次要'}
+                    {level === 'critical' ? t('critical') : level === 'major' ? t('major') : t('minor')}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.modalLabel}>缺陷描述</Text>
+            <Text style={styles.modalLabel}>{t('defectDescription')}</Text>
             <TextInput
               style={styles.textArea}
-              placeholder="请详细描述缺陷情况..."
+              placeholder={t('defectDescriptionPlaceholder')}
               placeholderTextColor="#B2BEC3"
               multiline
               numberOfLines={4}
@@ -1526,7 +1528,7 @@ export default function InspectionDetailScreen() {
             </View>
 
             <TouchableOpacity style={styles.submitButton} onPress={() => setScannerVisible(false)}>
-              <Text style={styles.submitButtonText}>完成</Text>
+              <Text style={styles.submitButtonText}>{t('complete')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -1542,7 +1544,7 @@ export default function InspectionDetailScreen() {
               <Feather name="x" size={28} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.barcodeScannerTitle}>
-              {hasScannedBarcode ? '扫码成功' : `扫描条码 - ${barcodeScanTarget?.name || ''}`}
+              {hasScannedBarcode ? t('scanSuccess') : `${t('barcodeScan')} - ${barcodeScanTarget?.name || ''}`}
             </Text>
             <View style={{ width: 28 }} />
           </View>
@@ -1555,8 +1557,8 @@ export default function InspectionDetailScreen() {
                 <View style={styles.barcodeSuccessIcon}>
                   <Feather name="check" size={60} color="#10B981" />
                 </View>
-                <Text style={styles.barcodeSuccessText}>扫码成功</Text>
-                <Text style={styles.barcodeResultLabel}>条码内容</Text>
+                <Text style={styles.barcodeSuccessText}>{t('scanSuccess')}</Text>
+                <Text style={styles.barcodeResultLabel}>{t('barcodeContent')}</Text>
                 <Text style={styles.barcodeResultValue}>
                   {barcodeScanTarget?.barcodeCodes?.[barcodeScanTarget.barcodeCodes?.length - 1] || ''}
                 </Text>
@@ -1564,7 +1566,7 @@ export default function InspectionDetailScreen() {
                   style={styles.barcodeCompleteButton}
                   onPress={finishBarcodeScan}
                 >
-                  <Text style={styles.barcodeCompleteButtonText}>完成</Text>
+                  <Text style={styles.barcodeCompleteButtonText}>{t('complete')}</Text>
                 </TouchableOpacity>
               </View>
             ) : showBarcodeCamera ? (
