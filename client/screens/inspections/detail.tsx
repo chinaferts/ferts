@@ -1082,29 +1082,25 @@ export default function InspectionDetailScreen() {
                     </View>
                   )}
                   
-                  {/* 拍照和扫码按钮 */}
-                  <View style={styles.issueCameraRow}>
-                    <TouchableOpacity style={styles.issueCameraButton} onPress={() => takePhoto(item)}>
-                      <Feather name="camera" size={18} color="#6C63FF" />
-                      <Text style={styles.issueCameraText}>拍照</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.issueCameraButton, { marginLeft: 12 }]} 
-                      onPress={() => openBarcodeScanner(item)}
-                    >
-                      <Feather name="maximize-2" size={18} color="#6C63FF" />
-                      <Text style={styles.issueCameraText}>扫码</Text>
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {/* 合格与不合格按钮 */}
+                  {/* 操作按钮行：拍照、扫码、合格、不合格、不适用 */}
                   {item.status === 'unchecked' && inspection.status !== 'completed' && (
-                    <View style={styles.actionButtons}>
+                    <View style={styles.actionButtonsRow}>
+                      <TouchableOpacity style={styles.issueCameraButton} onPress={() => takePhoto(item)}>
+                        <Feather name="camera" size={16} color="#6C63FF" />
+                        <Text style={styles.issueCameraText}>拍照</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.issueCameraButton} 
+                        onPress={() => openBarcodeScanner(item)}
+                      >
+                        <Feather name="maximize-2" size={16} color="#6C63FF" />
+                        <Text style={styles.issueCameraText}>扫码</Text>
+                      </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.passButton]}
                         onPress={() => updateChecklistItem(item, 'pass')}
                       >
-                        <Feather name="check" size={18} color="#00B894" />
+                        <Feather name="check" size={16} color="#00B894" />
                         <Text style={styles.passButtonText}>合格</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -1114,15 +1110,30 @@ export default function InspectionDetailScreen() {
                           setDefectModalVisible(true);
                         }}
                       >
-                        <Feather name="x" size={18} color="#FF6B6B" />
+                        <Feather name="x" size={16} color="#FF6B6B" />
                         <Text style={styles.failButtonText}>不合格</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.naButton]}
                         onPress={() => updateChecklistItem(item, 'na')}
                       >
-                        <Feather name="slash" size={18} color="#808080" />
+                        <Feather name="slash" size={16} color="#808080" />
                         <Text style={styles.naButtonText}>不适用</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {item.status === 'unchecked' && inspection.status === 'completed' && (
+                    <View style={styles.actionButtonsRow}>
+                      <TouchableOpacity style={styles.issueCameraButton} onPress={() => takePhoto(item)}>
+                        <Feather name="camera" size={16} color="#6C63FF" />
+                        <Text style={styles.issueCameraText}>拍照</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.issueCameraButton} 
+                        onPress={() => openBarcodeScanner(item)}
+                      >
+                        <Feather name="maximize-2" size={16} color="#6C63FF" />
+                        <Text style={styles.issueCameraText}>扫码</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -2799,10 +2810,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignSelf: 'flex-start',
   },
-  issueCameraRow: {
+  actionButtonsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginTop: 12,
     marginLeft: 44,
+    gap: 8,
   },
   issueSection: {
     marginTop: 16,
