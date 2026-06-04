@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, RefreshC
 import { Screen } from '@/components/Screen';
 import { useFocusEffect } from 'expo-router';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -44,6 +45,7 @@ function FilterButton({ label, value, count, filterStatus, onPress }: FilterButt
 
 export default function RecordsScreen() {
   const router = useSafeRouter();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [records, setRecords] = useState<InspectionReport[]>([]);
@@ -156,11 +158,11 @@ export default function RecordsScreen() {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'passed':
-        return { label: '合格', color: '#00B894', bg: 'rgba(0,184,148,0.15)', icon: 'check-circle' };
+        return { label: '合格/Pass', labelEn: 'Pass', color: '#00B894', bg: 'rgba(0,184,148,0.15)', icon: 'check-circle' };
       case 'failed':
-        return { label: '不合格', color: '#E74C3C', bg: 'rgba(231,76,60,0.15)', icon: 'x-circle' };
+        return { label: '不合格/Fail', labelEn: 'Fail', color: '#E74C3C', bg: 'rgba(231,76,60,0.15)', icon: 'x-circle' };
       default:
-        return { label: '部分合格', color: '#FDCB6E', bg: 'rgba(253,203,110,0.15)', icon: 'alert-circle' };
+        return { label: '部分合格/Partial', labelEn: 'Partial', color: '#FDCB6E', bg: 'rgba(253,203,110,0.15)', icon: 'alert-circle' };
     }
   };
 
@@ -206,22 +208,22 @@ export default function RecordsScreen() {
           <View style={styles.cardStats}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{item.passRate}%</Text>
-              <Text style={styles.statLabel}>合格率</Text>
+              <Text style={styles.statLabel}>合格率/Pass</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: '#00B894' }]}>{item.passedItems}</Text>
-              <Text style={styles.statLabel}>合格项</Text>
+              <Text style={styles.statLabel}>合格项/Pass</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: '#E74C3C' }]}>{item.failedItems}</Text>
-              <Text style={styles.statLabel}>不合格项</Text>
+              <Text style={styles.statLabel}>不合格项/Fail</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{item.totalItems}</Text>
-              <Text style={styles.statLabel}>总项数</Text>
+              <Text style={styles.statLabel}>总项数/Total</Text>
             </View>
           </View>
         
@@ -233,7 +235,7 @@ export default function RecordsScreen() {
           )}
         
           <View style={styles.cardFooter}>
-            <Text style={styles.footerText}>点击查看验货报告详情</Text>
+            <Text style={styles.footerText}>点击查看验货报告详情 / Click to view details</Text>
             <Feather name="chevron-right" size={18} color="#B2BEC3" />
           </View>
         </View>
@@ -249,7 +251,7 @@ export default function RecordsScreen() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Feather name="chevron-left" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>验货记录</Text>
+          <Text style={styles.headerTitle}>验货记录 / Records</Text>
           <View style={styles.headerRight} />
         </View>
 
@@ -259,7 +261,7 @@ export default function RecordsScreen() {
             <Feather name="search" size={18} color="#B2BEC3" />
             <TextInput
               style={styles.searchInput}
-              placeholder="搜索供应商、产品、批次号、验货员..."
+              placeholder="搜索供应商、产品、批次号、验货员... / Search supplier, product..."
               placeholderTextColor="#B2BEC3"
               value={searchQuery}
               onChangeText={handleSearch}
@@ -274,30 +276,30 @@ export default function RecordsScreen() {
 
         {/* 状态筛选 */}
         <View style={styles.filterContainer}>
-          <FilterButton label="全部" value="all" count={records.length} filterStatus={filterStatus} onPress={handleStatusFilter} />
-          <FilterButton label="合格" value="passed" count={records.filter(r => r.status === 'passed').length} filterStatus={filterStatus} onPress={handleStatusFilter} />
-          <FilterButton label="不合格" value="failed" count={records.filter(r => r.status === 'failed').length} filterStatus={filterStatus} onPress={handleStatusFilter} />
+          <FilterButton label="全部/All" value="all" count={records.length} filterStatus={filterStatus} onPress={handleStatusFilter} />
+          <FilterButton label="合格/Pass" value="passed" count={records.filter(r => r.status === 'passed').length} filterStatus={filterStatus} onPress={handleStatusFilter} />
+          <FilterButton label="不合格/Fail" value="failed" count={records.filter(r => r.status === 'failed').length} filterStatus={filterStatus} onPress={handleStatusFilter} />
         </View>
 
         {/* 统计概览 */}
         <View style={styles.summaryContainer}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>{records.length}</Text>
-            <Text style={styles.summaryLabel}>报告总数</Text>
+            <Text style={styles.summaryLabel}>报告总数/Total</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryValue, { color: '#00B894' }]}>
               {records.filter(r => r.status === 'passed').length}
             </Text>
-            <Text style={styles.summaryLabel}>合格</Text>
+            <Text style={styles.summaryLabel}>合格/Pass</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryValue, { color: '#E74C3C' }]}>
               {records.filter(r => r.status === 'failed').length}
             </Text>
-            <Text style={styles.summaryLabel}>不合格</Text>
+            <Text style={styles.summaryLabel}>不合格/Fail</Text>
           </View>
         </View>
 
@@ -314,8 +316,8 @@ export default function RecordsScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Feather name="inbox" size={48} color="#B2BEC3" />
-              <Text style={styles.emptyText}>暂无验货报告</Text>
-              <Text style={styles.emptySubtext}>提交的验货报告将显示在这里</Text>
+              <Text style={styles.emptyText}>暂无验货报告 / No Records</Text>
+              <Text style={styles.emptySubtext}>提交的验货报告将显示在这里 / Submitted reports will appear here</Text>
             </View>
           }
         />
