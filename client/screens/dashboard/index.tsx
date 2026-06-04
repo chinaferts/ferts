@@ -333,28 +333,27 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    marginBottom: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
   },
   logo: {
-    width: 180,
-    height: 70,
-    resizeMode: 'contain',
+    width: 100,
+    height: 40,
   },
   logoTextContainer: {
-    marginLeft: 16,
+    marginLeft: 12,
     flex: 1,
   },
   logoTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#333',
   },
   logoSubtitle: {
-    fontSize: 14,
+    fontSize: 11,
     color: '#666',
-    marginTop: 4,
+    marginTop: 2,
   },
   header: {
     flexDirection: 'row',
