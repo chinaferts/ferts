@@ -760,14 +760,14 @@ export default function InspectionDetailScreen() {
             {/* 颜色 */}
             {inspection.color && (
               <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>颜色</Text>
+                <Text style={styles.basicInfoLabel}>颜色 / Color</Text>
                 <Text style={styles.basicInfoValue}>{inspection.color}</Text>
               </View>
             )}
             {/* 尺码 */}
             {inspection.size && (
               <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>尺码</Text>
+                <Text style={styles.basicInfoLabel}>尺码 / Size</Text>
                 <Text style={styles.basicInfoValue}>{inspection.size}</Text>
               </View>
             )}
@@ -775,7 +775,7 @@ export default function InspectionDetailScreen() {
 
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>检查进度</Text>
+              <Text style={styles.progressLabel}>检查进度 / Progress</Text>
               <Text style={styles.progressValue}>{progress}%</Text>
             </View>
             <View style={styles.progressBar}>
@@ -784,21 +784,21 @@ export default function InspectionDetailScreen() {
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{inspection.checkedCount}</Text>
-                <Text style={styles.statLabel}>已检查</Text>
+                <Text style={styles.statLabel}>已检查 / Checked</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: '#FF6B6B' }]}>
                   {defectStats.critical + defectStats.serious + defectStats.minor}
                 </Text>
-                <Text style={styles.statLabel}>缺陷数</Text>
+                <Text style={styles.statLabel}>缺陷数 / Defects</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: '#00B894' }]}>
                   {inspection.checklist_items.length - inspection.checkedCount}
                 </Text>
-                <Text style={styles.statLabel}>待检查</Text>
+                <Text style={styles.statLabel}>待检查 / Pending</Text>
               </View>
             </View>
           </View>
@@ -809,7 +809,7 @@ export default function InspectionDetailScreen() {
           return (
             <View key={category} style={styles.section}>
               <View style={styles.categoryHeader}>
-                <Text style={styles.sectionTitle}>{category}</Text>
+                <Text style={styles.sectionTitle}>{t(`category_${catIndex}` as any) || category}</Text>
               </View>
               {inspection.checklist_items
                 .filter(item => item.category === category)
@@ -846,7 +846,7 @@ export default function InspectionDetailScreen() {
                   {tempPhotoTarget && String(tempPhotoTarget.record_id) === String(item.record_id) ? (
                     <View style={styles.tempPhotoSection}>
                       <View style={styles.tempPhotoHeader}>
-                        <Text style={styles.tempPhotoTitle}>拍照中 - {item.name}</Text>
+                        <Text style={styles.tempPhotoTitle}>拍照中 - {item.name} / Taking Photo</Text>
                         <Text style={styles.tempPhotoCount}>已拍 {tempPhotos.length} 张</Text>
                       </View>
                       <View>
@@ -862,7 +862,7 @@ export default function InspectionDetailScreen() {
                           {/* 继续拍照按钮 */}
                           <TouchableOpacity style={styles.addPhotoButton} onPress={() => takePhoto(item)}>
                             <Feather name="camera" size={24} color="#6C63FF" />
-                            <Text style={styles.addPhotoText}>继续拍</Text>
+                            <Text style={styles.addPhotoText}>继续拍 / Continue</Text>
                           </TouchableOpacity>
                         </ScrollView>
                       </View>
@@ -912,7 +912,7 @@ export default function InspectionDetailScreen() {
                             onPress={() => updateChecklistItem(item, 'pass')}
                           >
                             <Feather name="check" size={18} color="#00B894" />
-                            <Text style={styles.passButtonText}>合格</Text>
+                            <Text style={styles.passButtonText}>合格 / Pass</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.actionButton, styles.failButton]}
@@ -922,14 +922,14 @@ export default function InspectionDetailScreen() {
                             }}
                           >
                             <Feather name="x" size={18} color="#FF6B6B" />
-                            <Text style={styles.failButtonText}>不合格</Text>
+                            <Text style={styles.failButtonText}>不合格 / Fail</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.actionButton, styles.naButton]}
                             onPress={() => updateChecklistItem(item, 'na')}
                           >
                             <Feather name="slash" size={18} color="#808080" />
-                            <Text style={styles.naButtonText}>不适用</Text>
+                            <Text style={styles.naButtonText}>不适用 / N/A</Text>
                           </TouchableOpacity>
                           {/* 条码分类显示扫码按钮 */}
                           {item.category === '条码扫描以及拍照' && (
@@ -938,7 +938,7 @@ export default function InspectionDetailScreen() {
                               onPress={() => openBarcodeScanner(item)}
                             >
                               <Feather name="maximize-2" size={18} color="#6C63FF" />
-                              <Text style={styles.scanButtonText}>扫码</Text>
+                              <Text style={styles.scanButtonText}>扫码 / Scan</Text>
                             </TouchableOpacity>
                           )}
                         </View>
@@ -1107,14 +1107,14 @@ export default function InspectionDetailScreen() {
                         onPress={() => openBarcodeScanner(item)}
                       >
                         <Feather name="maximize-2" size={16} color="#6C63FF" />
-                        <Text style={styles.issueCameraText}>扫码</Text>
+                        <Text style={styles.issueCameraText}>扫码 / Scan</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.passButton]}
                         onPress={() => updateChecklistItem(item, 'pass')}
                       >
                         <Feather name="check" size={16} color="#00B894" />
-                        <Text style={styles.passButtonText}>合格</Text>
+                        <Text style={styles.passButtonText}>合格 / Pass</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.failButton]}
@@ -1124,14 +1124,14 @@ export default function InspectionDetailScreen() {
                         }}
                       >
                         <Feather name="x" size={16} color="#FF6B6B" />
-                        <Text style={styles.failButtonText}>不合格</Text>
+                        <Text style={styles.failButtonText}>不合格 / Fail</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.naButton]}
                         onPress={() => updateChecklistItem(item, 'na')}
                       >
                         <Feather name="slash" size={16} color="#808080" />
-                        <Text style={styles.naButtonText}>不适用</Text>
+                        <Text style={styles.naButtonText}>不适用 / N/A</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -1142,7 +1142,7 @@ export default function InspectionDetailScreen() {
                         onPress={() => openBarcodeScanner(item)}
                       >
                         <Feather name="maximize-2" size={16} color="#6C63FF" />
-                        <Text style={styles.issueCameraText}>扫码</Text>
+                        <Text style={styles.issueCameraText}>扫码 / Scan</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -1156,7 +1156,7 @@ export default function InspectionDetailScreen() {
         {issues.length > 0 && (
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
-              <Text style={styles.sectionTitle}>问题统计以及拍照并描述</Text>
+              <Text style={styles.sectionTitle}>问题统计以及拍照并描述 / Issues & Photos</Text>
               <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
                 <Feather name="plus" size={18} color="#6C63FF" />
                 <Text style={styles.addIssueText}>{t('addProblem')}</Text>
@@ -1216,7 +1216,7 @@ export default function InspectionDetailScreen() {
                   </View>
                 </View>
                 <View style={styles.defectStatsRow}>
-                  <Text style={styles.defectStatsLabel}>轻微缺陷</Text>
+                  <Text style={styles.defectStatsLabel}>{t('minorDefect')}</Text>
                   <View style={styles.defectStatsInputWrapper}>
                     <TouchableOpacity 
                       style={styles.defectStatsBtn}
@@ -1304,7 +1304,7 @@ export default function InspectionDetailScreen() {
                 {/* 拍照按钮 */}
                 <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
                   <Feather name="camera" size={18} color="#6C63FF" />
-                  <Text style={styles.issueCameraText}>拍照</Text>
+                  <Text style={styles.issueCameraText}>拍照 / Camera</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -1314,7 +1314,7 @@ export default function InspectionDetailScreen() {
         {/* 缺陷记录 */}
         {inspection.defects.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>缺陷记录 ({inspection.defects.length})</Text>
+            <Text style={styles.sectionTitle}>缺陷记录 / Defect Records ({inspection.defects.length})</Text>
             {inspection.defects.map(defect => (
               <View key={defect.id} style={styles.defectCard}>
                 <View style={styles.defectHeader}>
@@ -1352,7 +1352,7 @@ export default function InspectionDetailScreen() {
         {/* 已扫描条码 */}
         {scannedCodes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>已扫描条码 ({scannedCodes.length})</Text>
+            <Text style={styles.sectionTitle}>已扫描条码 / Scanned Barcodes ({scannedCodes.length})</Text>
             {scannedCodes.map((code, idx) => (
               <View key={idx} style={styles.scannedCodeItem}>
                 <Feather name="code" size={18} color="#6C63FF" />
@@ -1365,7 +1365,7 @@ export default function InspectionDetailScreen() {
         {/* 完成按钮 */}
         {inspection.status !== 'completed' && (
           <TouchableOpacity style={styles.completeButton} onPress={handleSubmit}>
-            <Text style={styles.completeButtonText}>提交验货报告</Text>
+            <Text style={styles.completeButtonText}>提交验货报告 / Submit Report</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -1377,15 +1377,15 @@ export default function InspectionDetailScreen() {
           onPress={() => setDefectModalVisible(false)}>
           <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>记录缺陷</Text>
+              <Text style={styles.modalTitle}>记录缺陷 / Record Defect</Text>
               <TouchableOpacity onPress={() => setDefectModalVisible(false)}>
                 <Feather name="x" size={24} color="#636E72" />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalLabel}>检查项目: {selectedItem?.name}</Text>
+            <Text style={styles.modalLabel}>{t('inspectionItem')}: {selectedItem?.name}</Text>
 
-            <Text style={styles.modalLabel}>缺陷等级</Text>
+            <Text style={styles.modalLabel}>{t('defectLevel')}</Text>
             <View style={styles.severityButtons}>
               {(['critical', 'major', 'minor'] as const).map(level => (
                 <TouchableOpacity
@@ -1411,11 +1411,11 @@ export default function InspectionDetailScreen() {
               onChangeText={(text) => setDefectForm({ ...defectForm, description: text })}
             />
 
-            <Text style={styles.modalLabel}>缺陷照片</Text>
+            <Text style={styles.modalLabel}>{t('defectPhoto')}</Text>
             <View style={styles.photoActions}>
               <TouchableOpacity style={styles.photoActionButton} onPress={() => takePhoto()}>
                 <Feather name="camera" size={20} color="#6C63FF" />
-                <Text style={styles.photoActionText}>拍照</Text>
+                <Text style={styles.photoActionText}>拍照 / Camera</Text>
               </TouchableOpacity>
 
             </View>
@@ -1435,7 +1435,7 @@ export default function InspectionDetailScreen() {
             )}
 
             <TouchableOpacity style={styles.submitButton} onPress={handleAddDefect}>
-              <Text style={styles.submitButtonText}>确认添加</Text>
+              <Text style={styles.submitButtonText}>{t('confirmAdd')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

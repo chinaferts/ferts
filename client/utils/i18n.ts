@@ -296,6 +296,14 @@ export const translations = {
     submitFailedEn: 'Submit failed',
     selectDefectLevel: '选择缺陷等级',
     selectDefectLevelEn: 'Select defect level',
+    inspectionItem: '检查项目',
+    inspectionItemEn: 'Inspection Item',
+    defectLevel: '缺陷等级',
+    defectLevelEn: 'Defect Level',
+    defectPhoto: '缺陷照片',
+    defectPhotoEn: 'Defect Photo',
+    confirmAdd: '确认添加',
+    confirmAddEn: 'Confirm Add',
 
     // New Inspection Page
     tipEn: 'Tip',
