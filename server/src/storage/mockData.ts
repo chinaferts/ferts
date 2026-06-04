@@ -123,8 +123,8 @@ let nextRecordId = 1;
 let nextDefectId = 1;
 
 export function mockGetChecklists() {
-  // 使用可编辑的通用验货模板数据
-  return [universalTemplateData, ...checklists];
+  // 返回普通模板列表（不包含通用模板）
+  return checklists;
 }
 
 export function mockGetChecklist(id: string) {
