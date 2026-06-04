@@ -338,8 +338,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   logo: {
-    width: 100,
-    height: 40,
+    width: 140,
+    height: 56,
+    resizeMode: 'contain',
   },
   logoTextContainer: {
     marginLeft: 12,
