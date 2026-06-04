@@ -194,6 +194,21 @@ router.delete('/:id', async (req: Request, res: Response) => {
     }
 
     const client = requireSupabaseClient();
+
+    // 检查是否有验货任务使用该模板
+    const { data: relatedInspections } = await client!
+      .from('inspections')
+      .select('id')
+      .eq('checklist_id', id)
+      .limit(1);
+
+    if (relatedInspections && relatedInspections.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: '该模板正在被验货任务使用，无法删除'
+      });
+    }
+
     const { error } = await client!
       .from('checklists')
       .delete()
