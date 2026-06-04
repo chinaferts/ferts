@@ -15,7 +15,7 @@ interface ChecklistItem {
   name: string;
   description?: string;
   category: string;
-  status: 'pass' | 'fail' | 'unchecked';
+  status: 'pass' | 'fail' | 'na' | 'unchecked';
   notes?: string;
   photos?: string[];
   barcodeCodes?: string[];  // 条码扫描记录
@@ -343,7 +343,7 @@ export default function InspectionDetailScreen() {
   );
 
   // 更新检查项状态
-  const updateChecklistItem = async (item: ChecklistItem, status: 'pass' | 'fail') => {
+  const updateChecklistItem = async (item: ChecklistItem, status: 'pass' | 'fail' | 'na') => {
     if (!inspection) return;
 
     try {
@@ -914,6 +914,13 @@ export default function InspectionDetailScreen() {
                             <Feather name="x" size={18} color="#FF6B6B" />
                             <Text style={styles.failButtonText}>不合格</Text>
                           </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.naButton]}
+                            onPress={() => updateChecklistItem(item, 'na')}
+                          >
+                            <Feather name="slash" size={18} color="#808080" />
+                            <Text style={styles.naButtonText}>不适用</Text>
+                          </TouchableOpacity>
                           {/* 条码分类显示扫码按钮 */}
                           {item.category === '条码' && (
                             <TouchableOpacity
@@ -1109,6 +1116,13 @@ export default function InspectionDetailScreen() {
                       >
                         <Feather name="x" size={18} color="#FF6B6B" />
                         <Text style={styles.failButtonText}>不合格</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.naButton]}
+                        onPress={() => updateChecklistItem(item, 'na')}
+                      >
+                        <Feather name="slash" size={18} color="#808080" />
+                        <Text style={styles.naButtonText}>不适用</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -2072,6 +2086,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FF6B6B',
+  },
+  naButton: {
+    backgroundColor: 'rgba(128,128,128,0.15)',
+  },
+  naButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#808080',
   },
   photoButton: {
     backgroundColor: 'rgba(108,99,255,0.15)',
