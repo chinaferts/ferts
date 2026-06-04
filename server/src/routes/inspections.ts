@@ -172,6 +172,15 @@ router.get('/:id', async (req: Request, res: Response) => {
       .eq('inspection_id', id)
       .order('created_at', { ascending: true });
 
+    // 如果是通用模板(checklist_id=0或'universal')或没有找到记录，使用mock数据
+    const isUniversalTemplate = String(inspection.checklist_id) === '0' || String(inspection.checklist_id) === 'universal';
+    if (isUniversalTemplate || !records || records.length === 0) {
+      const mockInspection = mockGetInspection(id);
+      if (mockInspection) {
+        return res.json({ success: true, data: mockInspection });
+      }
+    }
+
     // 获取缺陷记录
     const { data: defects } = await client
       .from('defects')
