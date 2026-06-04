@@ -949,7 +949,7 @@ export default function InspectionDetailScreen() {
                             style={styles.headerCameraButton}
                             onPress={() => takePhoto(item)}
                           >
-                            <Feather name="camera" size={16} color="#6C63FF" />
+                            <Feather name="camera" size={16} color="#FFFFFF" />
                           </TouchableOpacity>
                           {/* 导入本地照片按钮 - 仅管理员可见 */}
                           {isAdmin && (
@@ -957,7 +957,7 @@ export default function InspectionDetailScreen() {
                               style={styles.headerCameraButton}
                               onPress={() => handleImportFromGallery(item)}
                             >
-                              <Feather name="image" size={16} color="#6C63FF" />
+                              <Feather name="image" size={16} color="#FFFFFF" />
                             </TouchableOpacity>
                           )}
                         </>
@@ -992,7 +992,7 @@ export default function InspectionDetailScreen() {
                           ))}
                           {/* 继续拍照按钮 */}
                           <TouchableOpacity style={styles.addPhotoButton} onPress={() => takePhoto(item)}>
-                            <Feather name="camera" size={24} color="#6C63FF" />
+                            <Feather name="camera" size={24} color="#FFFFFF" />
                             <Text style={styles.addPhotoText}>继续拍 / Continue</Text>
                           </TouchableOpacity>
                         </ScrollView>
@@ -1153,7 +1153,7 @@ export default function InspectionDetailScreen() {
                           style={styles.headerCameraButton}
                           onPress={() => takePhoto(item)}
                         >
-                          <Feather name="camera" size={16} color="#6C63FF" />
+                          <Feather name="camera" size={16} color="#FFFFFF" />
                           <Text style={styles.headerCameraButtonText}>拍照</Text>
                         </TouchableOpacity>
                         {/* 导入本地照片按钮 - 仅管理员可见 */}
@@ -1162,7 +1162,7 @@ export default function InspectionDetailScreen() {
                             style={styles.headerCameraButton}
                             onPress={() => handleImportFromGallery(item)}
                           >
-                            <Feather name="image" size={16} color="#6C63FF" />
+                            <Feather name="image" size={16} color="#FFFFFF" />
                             <Text style={styles.headerCameraButtonText}>导入</Text>
                           </TouchableOpacity>
                         )}
@@ -1440,7 +1440,7 @@ export default function InspectionDetailScreen() {
                 )}
                 {/* 拍照按钮 */}
                 <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
-                  <Feather name="camera" size={18} color="#6C63FF" />
+                  <Feather name="camera" size={18} color="#FFFFFF" />
                   <Text style={styles.issueCameraText}>拍照 / Camera</Text>
                 </TouchableOpacity>
               </View>
@@ -1551,7 +1551,7 @@ export default function InspectionDetailScreen() {
             <Text style={styles.modalLabel}>{t('defectPhoto')}</Text>
             <View style={styles.photoActions}>
               <TouchableOpacity style={styles.photoActionButton} onPress={() => takePhoto()}>
-                <Feather name="camera" size={20} color="#6C63FF" />
+                <Feather name="camera" size={20} color="#FFFFFF" />
                 <Text style={styles.photoActionText}>拍照 / Camera</Text>
               </TouchableOpacity>
 
@@ -2140,16 +2140,16 @@ const styles = StyleSheet.create({
   headerCameraButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: 'rgba(108,99,255,0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#8B7FF5',
     gap: 6,
   },
   headerCameraButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#6C63FF',
+    color: '#FFFFFF',
   },
   checklistDesc: {
     fontSize: 13,
@@ -2519,15 +2519,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    backgroundColor: '#8B7FF5',
     borderRadius: 12,
     gap: 8,
   },
   photoActionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6C63FF',
+    color: '#FFFFFF',
   },
   defectPhotoPreview: {
     marginTop: 12,
@@ -2983,9 +2983,10 @@ const styles = StyleSheet.create({
     marginLeft: 44,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(108,99,255,0.1)',
-    borderRadius: 8,
+    backgroundColor: '#8B7FF5',
+    borderRadius: 10,
     alignSelf: 'flex-start',
+    gap: 6,
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -2998,10 +2999,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   issueCameraText: {
-    marginLeft: 6,
     fontSize: 14,
-    color: '#6C63FF',
-    fontWeight: '500',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   // 缺陷统计表格样式
   defectStatsContainer: {
