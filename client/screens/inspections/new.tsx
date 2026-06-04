@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 interface ChecklistTemplate {
   id: number;
@@ -16,7 +17,7 @@ interface ChecklistTemplate {
 // 硬编码的通用验货模板（始终可用）
 const UNIVERSAL_TEMPLATE: ChecklistTemplate = {
   id: 0,
-  name: '通用验货模板',
+  name: 'Universal Template',
   categories: 5,
   items: 8
 };
@@ -29,6 +30,7 @@ const STORAGE_KEYS = {
 
 export default function NewInspectionScreen() {
   const router = useSafeRouter();
+  const { t } = useTranslation();
   const [orderNo, setOrderNo] = useState('');
   const [productNo, setProductNo] = useState('');
   const [supplier, setSupplier] = useState('');
@@ -308,23 +310,23 @@ export default function NewInspectionScreen() {
     Keyboard.dismiss();
 
     if (!supplier.trim()) {
-      Alert.alert('提示', '请输入供应商名称');
+      Alert.alert(t('tip'), t('enterSupplierName'));
       return;
     }
     if (!product.trim()) {
-      Alert.alert('提示', '请输入产品名称');
+      Alert.alert(t('tip'), t('enterProductName'));
       return;
     }
     if (!quantity.trim() || parseInt(quantity, 10) <= 0) {
-      Alert.alert('提示', '请输入有效的产品数量');
+      Alert.alert(t('tip'), t('enterValidQuantity'));
       return;
     }
     if (!sampleSize) {
-      Alert.alert('提示', '请输入产品数量以计算抽样数量');
+      Alert.alert(t('tip'), t('enterQuantityForSample'));
       return;
     }
     if (!selectedTemplate) {
-      Alert.alert('提示', '请选择验货清单模板');
+      Alert.alert(t('tip'), t('selectTemplate'));
       return;
     }
 
@@ -354,13 +356,14 @@ export default function NewInspectionScreen() {
       });
 
       if (response.ok) {
+        Alert.alert(t('success'), t('createInspectionSuccess'));
         router.replace('/inspections');
       } else {
-        Alert.alert('错误', '创建验货任务失败');
+        Alert.alert(t('error'), t('createInspectionFailed'));
       }
     } catch (error) {
       console.error('Failed to create inspection:', error);
-      Alert.alert('提示', '创建验货任务成功');
+      Alert.alert(t('success'), t('createInspectionSuccess'));
       router.replace('/inspections');
     } finally {
       setLoading(false);
@@ -415,15 +418,15 @@ export default function NewInspectionScreen() {
       >
         {/* 基本信息 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>基本信息</Text>
+          <Text style={styles.sectionTitle}>{t('basicInfo')} / {t('basicInfoEn')}</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>订单号</Text>
+            <Text style={styles.label}>{t('orderNo')} / {t('orderNoEn')}</Text>
             <View style={styles.inputWrapper}>
               <Feather name="hash" size={20} color="#B2BEC3" />
               <TextInput
                 style={styles.input}
-                placeholder="请输入订单号"
+                placeholder={`${t('enterOrderNo')} / ${t('enterOrderNoEn')}`}
                 placeholderTextColor="#B2BEC3"
                 value={orderNo}
                 onChangeText={setOrderNo}
@@ -433,13 +436,13 @@ export default function NewInspectionScreen() {
 
           {/* 货号 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>货号</Text>
+            <Text style={styles.label}>{t('productNo')} / {t('productNoEn')}</Text>
             <View style={styles.inputWithButton}>
               <View style={styles.inputWrapper}>
                 <Feather name="tag" size={20} color="#B2BEC3" />
                 <TextInput
                   style={styles.input}
-                  placeholder="请输入货号"
+                  placeholder={`${t('enterProductNoPlaceholder')} / ${t('enterProductNoPlaceholderEn')}`}
                   placeholderTextColor="#B2BEC3"
                   value={productNo}
                   onChangeText={handleProductNoChange}
@@ -473,13 +476,13 @@ export default function NewInspectionScreen() {
 
           {/* 产品名称 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>产品名称</Text>
+            <Text style={styles.label}>{t('productName')} / {t('productNameEn')}</Text>
             <View style={styles.inputWithButton}>
               <View style={styles.inputWrapper}>
                 <Feather name="box" size={20} color="#B2BEC3" />
                 <TextInput
                   style={styles.input}
-                  placeholder="请输入产品名称"
+                  placeholder={`${t('enterProductNamePlaceholder')} / ${t('enterProductNamePlaceholderEn')}`}
                   placeholderTextColor="#B2BEC3"
                   value={product}
                   onChangeText={handleProductChange}
@@ -515,13 +518,13 @@ export default function NewInspectionScreen() {
 
           {/* 供应商名称 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>供应商名称</Text>
+            <Text style={styles.label}>{t('supplier')} / {t('supplierEn')}</Text>
             <View style={styles.inputWithButton}>
               <View style={styles.inputWrapper}>
                 <Feather name="home" size={20} color="#B2BEC3" />
                 <TextInput
                   style={styles.input}
-                  placeholder="请输入供应商名称"
+                  placeholder={`${t('enterSupplierNamePlaceholder')} / ${t('enterSupplierNamePlaceholderEn')}`}
                   placeholderTextColor="#B2BEC3"
                   value={supplier}
                   onChangeText={handleSupplierChange}
@@ -557,12 +560,12 @@ export default function NewInspectionScreen() {
 
           {/* 产品数量 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>产品数量</Text>
+            <Text style={styles.label}>{t('quantity')} / {t('quantityEn')}</Text>
             <View style={styles.inputWrapper}>
               <Feather name="package" size={20} color="#B2BEC3" />
               <TextInput
                 style={styles.input}
-                placeholder="请输入产品数量"
+                placeholder={`${t('enterQuantityPlaceholder')} / ${t('enterQuantityPlaceholderEn')}`}
                 placeholderTextColor="#B2BEC3"
                 value={quantity}
                 onChangeText={handleQuantityChange}
@@ -668,7 +671,7 @@ export default function NewInspectionScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.createButtonText}>
-              {loading ? '创建中...' : '创建验货任务'}
+              {loading ? t('creating') : `${t('createInspectionTask')} / ${t('createInspectionTaskEn')}`}
             </Text>
           </TouchableOpacity>
         </View>

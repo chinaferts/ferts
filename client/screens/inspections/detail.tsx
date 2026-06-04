@@ -312,9 +312,9 @@ export default function InspectionDetailScreen() {
         const checklistItems = (data.inspection_records || []).map((record: any, index: number) => ({
           id: parseInt(record.checklist_item_id || record.id || index),
           record_id: parseInt(record.id || index),
-          name: record.item_name || record.name || '未命名',
+          name: record.item_name || record.name || t('unnamed'),
           description: record.item_description || record.description,
-          category: record.item_category || record.category || '其他',
+          category: record.item_category || record.category || t('other'),
           status: record.result || 'unchecked',
           notes: record.notes,
           photos: record.photos || [],
@@ -332,7 +332,7 @@ export default function InspectionDetailScreen() {
       }
     } catch (error) {
       console.error('Failed to fetch inspection:', error);
-      Alert.alert('错误', '获取验货详情失败');
+      Alert.alert(t('error'), t('getDetailFailed'));
     } finally {
       setLoading(false);
     }
@@ -373,7 +373,7 @@ export default function InspectionDetailScreen() {
           status: 'in_progress',
         });
       } else {
-        Alert.alert('错误', '更新失败');
+        Alert.alert(t('error'), t('updateFailed'));
       }
     } catch (error) {
       console.error('Failed to update checklist item:', error);
@@ -498,15 +498,15 @@ export default function InspectionDetailScreen() {
       });
 
       if (response.ok) {
-        Alert.alert('成功', '验货报告已提交', [
-          { text: '确定', onPress: () => router.navigate('/inspections') },
+        Alert.alert(t('success'), t('submitSuccess'), [
+          { text: t('ok'), onPress: () => router.navigate('/inspections') },
         ]);
       } else {
-        Alert.alert('错误', '提交失败');
+        Alert.alert(t('error'), t('submitFailed'));
       }
     } catch (error) {
       console.error('Failed to submit:', error);
-      Alert.alert('错误', '提交失败');
+      Alert.alert(t('error'), t('submitFailed'));
     }
   };
 

@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Inspection {
   id: number;
@@ -21,12 +22,13 @@ interface Inspection {
 }
 
 const STATUS_CONFIG = {
-  pending: { label: '待开始', color: '#FDCB6E', bg: 'rgba(253,203,110,0.15)' },
-  in_progress: { label: '进行中', color: '#0EA5E9', bg: 'rgba(14,165,233,0.15)' },
-  completed: { label: '已完成', color: '#00B894', bg: 'rgba(0,184,148,0.15)' },
+  pending: { label: '待开始', labelEn: 'Pending', color: '#FDCB6E', bg: 'rgba(253,203,110,0.15)' },
+  in_progress: { label: '进行中', labelEn: 'In Progress', color: '#0EA5E9', bg: 'rgba(14,165,233,0.15)' },
+  completed: { label: '已完成', labelEn: 'Completed', color: '#00B894', bg: 'rgba(0,184,148,0.15)' },
 };
 
 function InspectionCard({ item }: { item: Inspection }) {
+  const { t } = useLanguage();
   const status = STATUS_CONFIG[item.status];
   const router = useRouter();
   
@@ -46,6 +48,7 @@ function InspectionCard({ item }: { item: Inspection }) {
           </View>
           <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
             <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+            <Text style={styles.statusTextEn}>{status.labelEn}</Text>
           </View>
         </View>
       
@@ -65,7 +68,7 @@ function InspectionCard({ item }: { item: Inspection }) {
             {item.sampleSize && (
               <View style={styles.metaItem}>
                 <Feather name="layers" size={14} color="#636E72" />
-                <Text style={styles.metaText}>抽样 {item.sampleSize}件</Text>
+                <Text style={styles.metaText}>{t('sample')} {item.sampleSize}{t('pcs')}</Text>
               </View>
             )}
           </View>
@@ -79,7 +82,7 @@ function InspectionCard({ item }: { item: Inspection }) {
               activeOpacity={0.7}
             >
               <Feather name="play-circle" size={16} color="#FFFFFF" />
-              <Text style={styles.startButtonText}>开始验货</Text>
+              <Text style={styles.startButtonText}>{t('startInspection')}</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.progressContainer}>
@@ -104,6 +107,7 @@ function InspectionCard({ item }: { item: Inspection }) {
 export default function InspectionsListScreen() {
   const router = useRouter();
   const { isAdmin } = useAuth();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('pending');
   const [refreshing, setRefreshing] = useState(false);
@@ -168,17 +172,18 @@ export default function InspectionsListScreen() {
   });
 
   const tabs = [
-    { key: 'all', label: '全部' },
-    { key: 'pending', label: '待开始' },
-    { key: 'in_progress', label: '进行中' },
-    { key: 'completed', label: '已完成' },
+    { key: 'all', label: t('all'), labelEn: t('allEn') },
+    { key: 'pending', label: t('pending'), labelEn: t('pendingEn') },
+    { key: 'in_progress', label: t('inProgress'), labelEn: t('inProgressEn') },
+    { key: 'completed', label: t('completed'), labelEn: t('completedEn') },
   ];
 
   return (
     <Screen>
       {/* 自定义 Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>验货任务</Text>
+        <Text style={styles.headerTitle}>{t('inspectionTasks')}</Text>
+        <Text style={styles.headerTitleEn}>{t('inspectionTasksEn')}</Text>
       </View>
       <View style={styles.container}>
         {/* 搜索栏 */}
@@ -187,7 +192,7 @@ export default function InspectionsListScreen() {
             <Feather name="search" size={20} color="#B2BEC3" />
             <TextInput
               style={styles.searchInput}
-              placeholder="搜索供应商或产品..."
+              placeholder={t('searchSupplierOrProduct')}
               placeholderTextColor="#B2BEC3"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -213,6 +218,9 @@ export default function InspectionsListScreen() {
                   <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
                     {tab.label}
                   </Text>
+                  <Text style={[styles.tabTextEn, activeTab === tab.key && styles.activeTabTextEn]}>
+                    {tab.labelEn}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -232,8 +240,8 @@ export default function InspectionsListScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Feather name="inbox" size={64} color="#B2BEC3" />
-              <Text style={styles.emptyTitle}>暂无验货任务</Text>
-              <Text style={styles.emptySubtitle}>点击下方按钮创建新的验货任务</Text>
+              <Text style={styles.emptyTitle}>{t('noInspectionTasks')}</Text>
+              <Text style={styles.emptySubtitle}>{t('clickBelowToCreate')}</Text>
             </View>
           }
         />
@@ -267,6 +275,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  headerTitleEn: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
   },
   container: {
     flex: 1,
@@ -315,7 +329,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#636E72',
   },
+  tabTextEn: {
+    fontSize: 10,
+    fontWeight: '400',
+    color: '#636E72',
+    marginTop: 1,
+  },
   activeTabText: {
+    color: '#6C63FF',
+  },
+  activeTabTextEn: {
     color: '#6C63FF',
   },
   listContent: {
@@ -364,6 +387,10 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  statusTextEn: {
+    fontSize: 9,
+    fontWeight: '400',
   },
   cardBody: {
     marginBottom: 12,
