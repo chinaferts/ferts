@@ -1016,7 +1016,7 @@ export default function InspectionDetailScreen() {
                     </TouchableOpacity>
                     <View style={styles.checklistNameRow}>
                       {item.name && item.name !== '条码扫描' && (
-                        <Text style={styles.checklistName}>{item.name}</Text>
+                        <Text style={styles.checklistName} numberOfLines={1}>{item.name}</Text>
                       )}
                       {/* 拍照按钮放在标题后面 */}
                       {item.status === 'unchecked' && inspection.status !== 'completed' && (
@@ -1979,7 +1979,7 @@ const styles = StyleSheet.create({
   checklistNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     flex: 1,
   },
   checklistName: {
