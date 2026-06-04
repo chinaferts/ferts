@@ -95,6 +95,8 @@ export default function InspectionDetailScreen() {
   const [barcodePermission, requestBarcodePermission] = useCameraPermissions();
   const barcodeCameraRef = useRef<CameraView>(null);
   const [hasScannedBarcode, setHasScannedBarcode] = useState(false);
+  // 使用 ref 同步追踪扫描状态，避免异步问题
+  const isScanningRef = useRef(false);
   
   // 问题描述框状态 (每个问题包含文本、照片和严重程度)
   const [issues, setIssues] = useState<Array<{ text: string; photos: string[]; severity: string }>>([{ text: '', photos: [], severity: '' }]);
@@ -513,9 +515,11 @@ export default function InspectionDetailScreen() {
 
   // 处理条码扫描结果
   const handleBarcodeScanned = (result: BarcodeScanningResult) => {
-    // 只扫描一次，扫描后不再响应
-    if (!result.data || !barcodeScanTarget || hasScannedBarcode) return;
+    // 使用 ref 检查，避免异步状态更新导致的问题
+    if (!result.data || !barcodeScanTarget || isScanningRef.current) return;
     
+    // 立即标记为已扫描，防止重复触发
+    isScanningRef.current = true;
     setHasScannedBarcode(true);
     
     // 将扫描到的条码添加到对应检查项
@@ -561,6 +565,7 @@ export default function InspectionDetailScreen() {
     setBarcodeScannerVisible(false);
     setBarcodeScanTarget(null);
     setHasScannedBarcode(false);
+    isScanningRef.current = false;
     // 恢复相机预览
     if (barcodeCameraRef.current) {
       barcodeCameraRef.current.resumePreview();
@@ -1537,7 +1542,7 @@ export default function InspectionDetailScreen() {
                   barcodeScannerSettings={{
                     barcodeTypes: ["qr", "ean13", "ean8", "code39", "code93", "code128", "upc_a", "upc_e", "pdf417", "aztec", "datamatrix", "itf14"],
                   }}
-                  onBarcodeScanned={handleBarcodeScanned}
+                  onBarcodeScanned={hasScannedBarcode ? undefined : handleBarcodeScanned}
                 >
                   {/* 扫描框 */}
                   <View style={styles.scanFrame}>
