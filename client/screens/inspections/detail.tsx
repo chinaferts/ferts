@@ -1028,6 +1028,7 @@ export default function InspectionDetailScreen() {
                           onPress={() => takePhoto(item)}
                         >
                           <Feather name="camera" size={16} color="#6C63FF" />
+                          <Text style={styles.headerCameraButtonText}>拍照</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -2005,9 +2006,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerCameraButton: {
-    padding: 4,
-    backgroundColor: 'rgba(108,99,255,0.1)',
-    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(108,99,255,0.15)',
+    gap: 6,
+  },
+  headerCameraButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6C63FF',
   },
   checklistDesc: {
     fontSize: 13,
