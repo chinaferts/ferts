@@ -276,7 +276,7 @@ router.post('/', async (req: Request, res: Response) => {
         supplier_name: supplier || supplier_name,
         product_name: product || product_name,
         product_sku: productNo || null,
-        order_number: orderNo || null,
+        order_number: orderNo || '',
         quantity: quantity || null,
         status: 'pending',
         inspector_name: inspector,
@@ -370,7 +370,9 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const { notes, result } = req.body;
 
-    if (!isSupabaseConfigured()) {
+    // 先检查记录是否存在于 mock 数据中，如果存在则使用 mock 模式
+    const existingMockRecord = mockGetInspection(id);
+    if (existingMockRecord || !isSupabaseConfigured()) {
       const records = mockGetInspectionRecords(id);
       const defects = mockGetDefects(id);
       

@@ -304,10 +304,13 @@ export function mockCreateInspection(data: any) {
 
 export function mockUpdateInspection(id: string, data: any) {
   const index = inspections.findIndex(i => i.id === id);
+  console.log('[mockUpdateInspection] 查找 id:', id, '数组中的 ids:', inspections.map(i => i.id), '找到的 index:', index);
   if (index !== -1) {
     inspections[index] = { ...inspections[index], ...data };
+    console.log('[mockUpdateInspection] 更新后的记录:', inspections[index]);
     return inspections[index];
   }
+  console.log('[mockUpdateInspection] 未找到记录');
   return null;
 }
 
