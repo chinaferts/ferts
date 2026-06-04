@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image, Platform, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image, Platform, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -95,6 +95,7 @@ export default function InspectionDetailScreen() {
   const [barcodePermission, requestBarcodePermission] = useCameraPermissions();
   const barcodeCameraRef = useRef<CameraView>(null);
   const [hasScannedBarcode, setHasScannedBarcode] = useState(false);
+  const [showBarcodeCamera, setShowBarcodeCamera] = useState(false);
   // 使用 ref 同步追踪扫描状态，避免异步问题
   const isScanningRef = useRef(false);
   
@@ -511,6 +512,9 @@ export default function InspectionDetailScreen() {
   const openBarcodeScanner = (item: ChecklistItem) => {
     setBarcodeScanTarget(item);
     setBarcodeScannerVisible(true);
+    setShowBarcodeCamera(true);
+    setHasScannedBarcode(false);
+    isScanningRef.current = false;
   };
 
   // 处理条码扫描结果
@@ -521,6 +525,8 @@ export default function InspectionDetailScreen() {
     // 立即标记为已扫描，防止重复触发
     isScanningRef.current = true;
     setHasScannedBarcode(true);
+    // 完全隐藏相机组件，停止扫描
+    setShowBarcodeCamera(false);
     
     // 将扫描到的条码添加到对应检查项
     const targetRecordId = String(barcodeScanTarget.record_id);
@@ -565,11 +571,8 @@ export default function InspectionDetailScreen() {
     setBarcodeScannerVisible(false);
     setBarcodeScanTarget(null);
     setHasScannedBarcode(false);
+    setShowBarcodeCamera(false);
     isScanningRef.current = false;
-    // 恢复相机预览
-    if (barcodeCameraRef.current) {
-      barcodeCameraRef.current.resumePreview();
-    }
   };
 
   if (loading || !inspection) {
@@ -1532,7 +1535,7 @@ export default function InspectionDetailScreen() {
                   <Text style={styles.barcodeCompleteButtonText}>完成</Text>
                 </TouchableOpacity>
               </View>
-            ) : (
+            ) : showBarcodeCamera ? (
               // 扫描中显示相机
               <View style={styles.cameraContainer}>
                 <CameraView
@@ -1542,7 +1545,7 @@ export default function InspectionDetailScreen() {
                   barcodeScannerSettings={{
                     barcodeTypes: ["qr", "ean13", "ean8", "code39", "code93", "code128", "upc_a", "upc_e", "pdf417", "aztec", "datamatrix", "itf14"],
                   }}
-                  onBarcodeScanned={hasScannedBarcode ? undefined : handleBarcodeScanned}
+                  onBarcodeScanned={handleBarcodeScanned}
                 >
                   {/* 扫描框 */}
                   <View style={styles.scanFrame}>
@@ -1552,6 +1555,14 @@ export default function InspectionDetailScreen() {
                     <View style={[styles.scanCorner, styles.scanCornerBR]} />
                   </View>
                 </CameraView>
+              </View>
+            ) : (
+              // 相机已隐藏，等待显示结果
+              <View style={styles.cameraContainer}>
+                <View style={styles.barcodeResultContainer}>
+                  <ActivityIndicator size="large" color="#3B82F6" />
+                  <Text style={styles.barcodeSuccessText}>处理中...</Text>
+                </View>
               </View>
             )
           ) : (
