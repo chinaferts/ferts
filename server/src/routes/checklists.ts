@@ -186,14 +186,17 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
     if (!isSupabaseConfigured()) {
-      mockUpdateChecklist(id, { is_active: false });
+      const index = checklists.findIndex(c => c.id === id);
+      if (index > -1) {
+        checklists.splice(index, 1);
+      }
       return res.json({ success: true });
     }
 
     const client = requireSupabaseClient();
     const { error } = await client!
       .from('checklists')
-      .update({ is_active: false })
+      .delete()
       .eq('id', id);
 
     if (error) throw error;
