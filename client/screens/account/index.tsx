@@ -108,39 +108,42 @@ function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit
             {user.name}
             {isCurrentUser && <Text style={styles.currentBadge}> ({t('currentUser')} / {t('currentUserEn')})</Text>}
           </Text>
-          <View style={styles.userMetaRow}>
-            <Text style={styles.userMeta}>@{user.username}</Text>
-            {user.phone && <Text style={styles.userPhone}>{user.phone}</Text>}
-          </View>
-          {isAdmin && user.password && (
-            <Text style={styles.passwordText}>{t('password')} / {t('passwordEn')}: {user.password}</Text>
-          )}
+          <Text style={styles.userMeta}>@{user.username}</Text>
         </View>
       </View>
       <View style={styles.userActions}>
-        <TouchableOpacity
-          style={[styles.roleBadge, { backgroundColor: badge.bg }]}
-          onPress={handleRoleToggle}
-          disabled={isCurrentUser}
-        >
-          <Text style={[styles.roleText, { color: badge.color }]}>{badge.text}</Text>
-          {!isCurrentUser && <Text style={styles.arrow}>›</Text>}
-        </TouchableOpacity>
         {isAdmin && !isCurrentUser && (
-          <View style={styles.actionButtons}>
+          <>
             <TouchableOpacity
-              style={[styles.actionButton, styles.editButton]}
-              onPress={() => onEdit(user)}
+              style={[styles.roleBadge, { backgroundColor: badge.bg }]}
+              onPress={handleRoleToggle}
             >
-              <Text style={styles.editText}>{t('edit')} / {t('editEn')}</Text>
+              <Text style={[styles.roleText, { color: badge.color }]}>{badge.text}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.deleteButton]}
-              onPress={() => onDelete(user.id, user.name)}
-            >
-              <Text style={styles.deleteText}>{t('delete')} / {t('deleteEn')}</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.editButton]}
+                onPress={() => onEdit(user)}
+              >
+                <Feather name="edit-2" size={14} color="#4F46E5" />
+                <Text style={styles.editText}>{t('edit')} / {t('editEn')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.deleteButton]}
+                onPress={() => onDelete(user.id, user.name)}
+              >
+                <Feather name="trash-2" size={14} color="#EF4444" />
+                <Text style={styles.deleteText}>{t('delete')} / {t('deleteEn')}</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+        {isCurrentUser && (
+          <TouchableOpacity
+            style={[styles.roleBadge, { backgroundColor: badge.bg }]}
+          >
+            <Text style={[styles.roleText, { color: badge.color }]}>{badge.text}</Text>
+          </TouchableOpacity>
         )}
       </View>
     </View>
@@ -391,29 +394,57 @@ export default function AccountScreen() {
             )}
           </View>
           <View style={styles.filterTabs}>
-            {[
-              { key: 'all', label: `${t('all')} / ${t('allEn')}` },
-              { key: 'admin', label: `${t('admin')} / ${t('adminEn')}` },
-              { key: 'inspector', label: `${t('inspector')} / ${t('inspectorEn')}` },
-            ].map(tab => (
-              <TouchableOpacity
-                key={tab.key}
+            <TouchableOpacity
+              key="all"
+              style={[
+                styles.filterTab,
+                filterRole === 'all' && styles.filterTabActive,
+              ]}
+              onPress={() => setFilterRole('all')}
+            >
+              <Text
                 style={[
-                  styles.filterTab,
-                  filterRole === tab.key && styles.filterTabActive,
+                  styles.filterTabText,
+                  filterRole === 'all' && styles.filterTabTextActive,
                 ]}
-                onPress={() => setFilterRole(tab.key as 'all' | 'admin' | 'inspector')}
               >
-                <Text
-                  style={[
-                    styles.filterTabText,
-                    filterRole === tab.key && styles.filterTabTextActive,
-                  ]}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                {t('all')} / {t('allEn')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              key="admin"
+              style={[
+                styles.filterTab,
+                filterRole === 'admin' && styles.filterTabActive,
+              ]}
+              onPress={() => setFilterRole('admin')}
+            >
+              <Text
+                style={[
+                  styles.filterTabText,
+                  filterRole === 'admin' && styles.filterTabTextActive,
+                ]}
+              >
+                {t('admin')} / {t('adminEn')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              key="inspector"
+              style={[
+                styles.filterTab,
+                filterRole === 'inspector' && styles.filterTabActive,
+              ]}
+              onPress={() => setFilterRole('inspector')}
+            >
+              <Text
+                style={[
+                  styles.filterTabText,
+                  filterRole === 'inspector' && styles.filterTabTextActive,
+                ]}
+              >
+                {t('inspector')} / {t('inspectorEn')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -720,6 +751,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     padding: 4,
+    gap: 4,
   },
   filterTab: {
     flex: 1,
@@ -840,12 +872,12 @@ const styles = StyleSheet.create({
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   roleText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   editText: {
@@ -969,20 +1001,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   userActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 8,
   },
   actionButtons: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     gap: 6,
   },
   actionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    minWidth: 60,
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    gap: 4,
   },
   deleteButton: {
     backgroundColor: '#FEE2E2',
