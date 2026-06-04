@@ -71,6 +71,11 @@ export default function CustomCamera({
     }
   }, [visible, editingPhotoUri]);
 
+  // 如果相机不可见，直接返回null，不请求任何权限
+  if (!visible) {
+    return null;
+  }
+
   if (!permission) {
     return (
       <View style={styles.container}>
