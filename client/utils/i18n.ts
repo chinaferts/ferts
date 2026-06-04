@@ -72,7 +72,7 @@ export const translations = {
     weekInspectionsEn: 'This Week',
     inspectionRecords: '验货记录',
     inspectionRecordsEn: 'Inspection Records',
-    startInspection: '开始验货',
+    startInspection: '开始验货 / Start',
     startInspectionEn: 'Start',
     noPendingTasks: '暂无待验货任务',
     noPendingTasksEn: 'No Pending Tasks',

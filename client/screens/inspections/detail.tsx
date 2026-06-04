@@ -1268,7 +1268,7 @@ export default function InspectionDetailScreen() {
                     ]}>
                       {issue.severity 
                         ? severityOptions.find(o => o.value === issue.severity)?.label 
-                        : '选择缺陷等级'}
+                        : `${t('selectDefectLevel')} / Select defect level`}
                     </Text>
                     <Feather name="chevron-down" size={16} color={issue.severity ? severityOptions.find(o => o.value === issue.severity)?.color : '#666'} />
                   </TouchableOpacity>
