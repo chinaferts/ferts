@@ -266,6 +266,7 @@ export const translations = {
     noPhotosToExport: '暂无照片可导出',
     exportingPhotos: '正在导出照片...',
     exportFailed: '导出失败',
+    photos: '张照片',
     continueCheck: '继续检查',
     defectDescriptionPlaceholder: '请详细描述问题...',
 
@@ -665,6 +666,7 @@ export const translations = {
     noPhotosToExport: 'No photos to export',
     exportingPhotos: 'Exporting photos...',
     exportFailed: 'Export failed',
+    photos: ' photos',
     continueCheck: 'Continue Check',
     defectDescriptionPlaceholder: 'Please describe the problem in detail...',
 

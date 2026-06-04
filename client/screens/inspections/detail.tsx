@@ -634,13 +634,13 @@ export default function InspectionDetailScreen() {
     try {
       if (!inspection) return;
       
-      // 收集所有照片
+      // 收集所有照片 - photos 是字符串数组，直接是 URI
       const allPhotos: string[] = [];
       inspection.checklist_items.forEach((item: any) => {
         if (item.photos && Array.isArray(item.photos)) {
-          item.photos.forEach((photo: any) => {
-            if (photo.uri) {
-              allPhotos.push(photo.uri);
+          item.photos.forEach((photo: string) => {
+            if (photo) {
+              allPhotos.push(photo);
             }
           });
         }
@@ -651,10 +651,12 @@ export default function InspectionDetailScreen() {
         return;
       }
 
-      // 提示用户开始导出
-      Alert.alert(t('exportPhotos'), t('exportingPhotos'), [
-        { text: t('cancel'), style: 'cancel' },
-      ]);
+      // 显示照片数量和提示
+      Alert.alert(
+        t('exportPhotos'),
+        `${t('exportingPhotos')}\n${allPhotos.length} ${t('photos')}`,
+        [{ text: t('ok') }]
+      );
     } catch (error) {
       console.error('Export photos error:', error);
       Alert.alert(t('error'), t('exportFailed'));
