@@ -10,6 +10,7 @@ import { useTranslation } from '@/contexts/LanguageContext';
 interface ChecklistTemplate {
   id: number;
   name: string;
+  nameZh?: string;
   categories: number;
   items: number;
 }
@@ -18,6 +19,7 @@ interface ChecklistTemplate {
 const UNIVERSAL_TEMPLATE: ChecklistTemplate = {
   id: 0,
   name: 'Universal Template',
+  nameZh: '通用验货模板',
   categories: 5,
   items: 8
 };
@@ -643,7 +645,9 @@ export default function NewInspectionScreen() {
                 onPress={() => setSelectedTemplate(template)}
               >
                 <View style={styles.templateInfo}>
-                  <Text style={styles.templateName}>{template.name}</Text>
+                  <Text style={styles.templateName}>
+                    {template.nameZh ? `${template.nameZh} / ${template.name}` : template.name}
+                  </Text>
                   <Text style={styles.templateMeta}>
                     {template.categories}个分类 · {template.items}个检查项
                   </Text>
