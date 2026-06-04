@@ -10,6 +10,7 @@ import CustomCamera from '@/components/CustomCamera';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 // 分类中英文对照映射
 const categoryBilingualMap: Record<string, string> = {
@@ -66,6 +67,8 @@ interface ChecklistItem {
   barcodeCodes?: string[];  // 条码扫描记录
   barcodeType?: 'box' | 'inner' | 'color'; // 条码类型：外箱、内箱/内袋、彩盒/彩卡
   issueIndex?: number; // 动态添加的问题描述索引
+  categoryIndex?: number; // 分类索引
+  itemIndex?: number; // 项目索引
 }
 
 interface Defect {
@@ -104,6 +107,7 @@ export default function InspectionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useSafeRouter();
   const { t } = useTranslation();
+  const { isAdmin } = useAuth();
   const [inspection, setInspection] = useState<InspectionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [defectModalVisible, setDefectModalVisible] = useState(false);
@@ -151,7 +155,7 @@ export default function InspectionDetailScreen() {
   const handleImportPhoto = async (item: ChecklistItem) => {
     const { granted } = await requestMediaPermission();
     if (!granted) {
-      Alert.alert(t('noPermission'), t('noPermissionEn') + ' - Media Library');
+      Alert.alert(t('noPermission'), t('noPermission'));
       return;
     }
     
@@ -167,18 +171,15 @@ export default function InspectionDetailScreen() {
     }
   };
 
+  // 相册导入别名
+  const handleImportFromGallery = handleImportPhoto;
+
   // 处理从相册导入的照片
   const handlePhotoTaken = (photoUri: string, item: ChecklistItem) => {
     const targetRecordId = item.record_id;
-    const targetCategoryIndex = item.categoryIndex;
-    const targetItemIndex = item.itemIndex;
     
     // 设置临时照片目标
-    setTempPhotoTarget({
-      record_id: targetRecordId,
-      categoryIndex: targetCategoryIndex,
-      itemIndex: targetItemIndex,
-    });
+    setTempPhotoTarget(item);
     
     // 创建单张照片对象
     const photo = { uri: photoUri };
@@ -207,12 +208,12 @@ export default function InspectionDetailScreen() {
           name: filename,
           type: `image/${ext}`,
         } as any);
-        formData.append("inspection_id", id);
-        formData.append("record_id", targetRecordId);
+        formData.append("inspection_id", String(id));
+        formData.append("record_id", String(targetRecordId));
         formData.append("category", item.category || item.name);
         formData.append("item_name", item.name);
         
-        await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos", {
+        await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
           method: "POST",
           headers: { "Content-Type": "multipart/form-data" },
           body: formData,
@@ -1101,7 +1102,7 @@ export default function InspectionDetailScreen() {
         {categories.includes('条码扫描以及拍照') && (
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
-              <Text style={styles.sectionTitle}> </Text>
+              <Text style={styles.sectionTitle}>条码扫描（所有含有条码的地方均要扫描拍照） / Barcode Scan (Scan & Photo All Barcodes)</Text>
               <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
                 <Feather name="plus" size={18} color="#6C63FF" />
                 <Text style={styles.addIssueText}>添加条码扫描</Text>
