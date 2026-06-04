@@ -338,8 +338,8 @@ const styles = StyleSheet.create({
     marginLeft: -20,
   },
   logo: {
-    width: 120,
-    height: 48,
+    width: 90,
+    height: 36,
     resizeMode: 'contain',
     backgroundColor: '#F0F0F3',
     borderRadius: 8,
