@@ -155,7 +155,31 @@ export default function InspectionsListScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchInspections();
+      const loadData = async () => {
+        try {
+          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+          const response = await fetch(`${baseUrl}/api/v1/inspections?status=${activeTab}`);
+          if (response.ok) {
+            const result = await response.json();
+            const list = Array.isArray(result) ? result : (result.data || []);
+            const filtered = list.filter((item: any) => item.supplier_name || item.product);
+            const mapped = filtered.map((item: any) => ({
+              id: parseInt(item.id),
+              supplier: item.supplier_name || item.supplier || '',
+              product: item.product_name || item.product || '',
+              status: item.status || 'pending',
+              date: item.inspection_date || item.created_at || new Date().toISOString(),
+              progress: item.status === 'completed' ? 100 : item.status === 'in_progress' ? 50 : 0,
+              inspector: item.inspector,
+              batch_number: item.batch_number,
+            }));
+            setInspections(mapped);
+          }
+        } catch (error) {
+          console.error('Failed to fetch inspections:', error);
+        }
+      };
+      loadData();
     }, [activeTab])
   );
 
