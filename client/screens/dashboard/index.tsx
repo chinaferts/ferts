@@ -228,15 +228,9 @@ export default function DashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6C63FF" />
         }
       >
-        {/* 头部欢迎 */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>{t('qualityInspector')}</Text>
-            <Text style={styles.subGreeting}>Quality Inspector</Text>
-          </View>
-          <View style={styles.avatarContainer}>
-            <Feather name="user" size={24} color="#FFFFFF" />
-          </View>
+        {/* 头部LOGO */}
+        <View style={styles.logoContainer}>
+          <Image source={require('@/assets/logo.png')} style={styles.logo} resizeMode="contain" />
         </View>
 
         {/* 统计卡片 */}
@@ -331,6 +325,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 120,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingVertical: 16,
+  },
+  logo: {
+    width: 200,
+    height: 60,
   },
   header: {
     flexDirection: 'row',
