@@ -964,6 +964,7 @@ export default function InspectionDetailScreen() {
                             onPress={() => takePhoto(item)}
                           >
                             <Feather name="camera" size={16} color="#FFFFFF" />
+                            <Text style={styles.headerCameraButtonText}>拍照</Text>
                           </TouchableOpacity>
                           {/* 导入本地照片按钮 - 仅管理员可见 */}
                           {isAdmin && (
@@ -972,6 +973,7 @@ export default function InspectionDetailScreen() {
                               onPress={() => handleImportFromGallery(item)}
                             >
                               <Feather name="image" size={16} color="#FFFFFF" />
+                              <Text style={styles.headerCameraButtonText}>导入</Text>
                             </TouchableOpacity>
                           )}
                         </>
@@ -2632,7 +2634,7 @@ const styles = StyleSheet.create({
   photoActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(108,99,255,0.8)',
+    backgroundColor: '#8B7FF5',
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 30,
