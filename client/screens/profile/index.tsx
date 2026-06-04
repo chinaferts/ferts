@@ -22,11 +22,11 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     Alert.alert(
-      t('logout'),
+      `${t('logout')} / ${t('logoutEn')}`,
       t('logoutConfirm'),
       [
-        { text: t('cancel'), style: 'cancel' },
-        { text: t('confirm'), onPress: logout, style: 'destructive' },
+        { text: `${t('cancel')} / ${t('cancelEn')}`, style: 'cancel' },
+        { text: `${t('confirm')} / ${t('confirmEn')}`, onPress: logout, style: 'destructive' },
       ]
     );
   };
@@ -40,11 +40,12 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>{user?.name?.[0] || 'U'}</Text>
           </View>
           <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: text }]}>{user?.name || t('user')}</Text>
-            <Text style={[styles.userMeta, { color: muted }]}>@{user?.username || 'username'}</Text>
+            <Text style={[styles.userName, { color: text }]}>
+              {user?.name || t('user')} / {user?.username || 'User'}
+            </Text>
             <View style={[styles.roleBadge, { backgroundColor: isAdmin ? '#EEF2FF' : '#ECFDF5' }]}>
               <Text style={[styles.roleText, { color: isAdmin ? '#4F46E5' : '#059669' }]}>
-                {isAdmin ? t('admin') : t('inspector')}
+                {isAdmin ? `${t('admin')} / ${t('adminEn')}` : `${t('inspector')} / ${t('inspectorEn')}`}
               </Text>
             </View>
           </View>
@@ -58,7 +59,10 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuLeft}>
               <Feather name="settings" size={18} color="#6B7280" style={styles.menuIcon} />
-              <Text style={[styles.menuText, { color: text }]}>{t('accountSettings')}</Text>
+              <View>
+                <Text style={[styles.menuText, { color: text }]}>{t('accountSettings')}</Text>
+                <Text style={[styles.menuTextEn, { color: muted }]}>{t('accountSettingsEn')}</Text>
+              </View>
             </View>
             <Text style={{ color: muted }}>›</Text>
           </TouchableOpacity>
@@ -66,7 +70,10 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <Feather name="bell" size={18} color="#6B7280" style={styles.menuIcon} />
-              <Text style={[styles.menuText, { color: text }]}>{t('notificationSettings')}</Text>
+              <View>
+                <Text style={[styles.menuText, { color: text }]}>{t('notificationSettings')}</Text>
+                <Text style={[styles.menuTextEn, { color: muted }]}>{t('notificationSettingsEn')}</Text>
+              </View>
             </View>
             <Text style={{ color: muted }}>›</Text>
           </TouchableOpacity>
@@ -74,7 +81,10 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <Feather name="info" size={18} color="#6B7280" style={styles.menuIcon} />
-              <Text style={[styles.menuText, { color: text }]}>{t('aboutUs')}</Text>
+              <View>
+                <Text style={[styles.menuText, { color: text }]}>{t('aboutUs')}</Text>
+                <Text style={[styles.menuTextEn, { color: muted }]}>{t('aboutUsEn')}</Text>
+              </View>
             </View>
             <Text style={{ color: muted }}>›</Text>
           </TouchableOpacity>
@@ -82,7 +92,10 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <Feather name="message-circle" size={18} color="#6B7280" style={styles.menuIcon} />
-              <Text style={[styles.menuText, { color: text }]}>{t('helpFeedback')}</Text>
+              <View>
+                <Text style={[styles.menuText, { color: text }]}>{t('helpFeedback')}</Text>
+                <Text style={[styles.menuTextEn, { color: muted }]}>{t('helpFeedbackEn')}</Text>
+              </View>
             </View>
             <Text style={{ color: muted }}>›</Text>
           </TouchableOpacity>
@@ -93,7 +106,10 @@ export default function ProfileScreen() {
           <View style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <Feather name="smartphone" size={18} color="#6B7280" style={styles.menuIcon} />
-              <Text style={[styles.menuText, { color: text }]}>{t('version')}</Text>
+              <View>
+                <Text style={[styles.menuText, { color: text }]}>{t('version')}</Text>
+                <Text style={[styles.menuTextEn, { color: muted }]}>{t('versionEn')}</Text>
+              </View>
             </View>
             <Text style={{ color: muted }}>v1.0.0</Text>
           </View>
@@ -103,7 +119,7 @@ export default function ProfileScreen() {
           style={styles.logoutButton}
           onPress={handleLogout}
         >
-          <Text style={styles.logoutText}>{t('logout')}</Text>
+          <Text style={styles.logoutText}>{t('logout')} / {t('logoutEn')}</Text>
         </TouchableOpacity>
       </View>
     </Screen>
@@ -145,10 +161,6 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 4,
-  },
-  userMeta: {
-    fontSize: 14,
     marginBottom: 8,
   },
   roleBadge: {
@@ -159,7 +171,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   card: {
     width: '90%',
@@ -170,20 +182,26 @@ const styles = StyleSheet.create({
   },
   menuItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
+    justifyContent: 'space-between',
+    paddingVertical: 14,
     paddingHorizontal: 16,
   },
   menuLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   menuIcon: {
     marginRight: 12,
   },
   menuText: {
-    fontSize: 15,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  menuTextEn: {
+    fontSize: 11,
+    marginTop: 2,
   },
   divider: {
     height: 1,
@@ -191,13 +209,15 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     width: '90%',
-    paddingVertical: 16,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 16,
   },
   logoutText: {
+    color: '#DC2626',
     fontSize: 16,
-    color: '#EF4444',
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
