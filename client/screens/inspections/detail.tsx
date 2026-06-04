@@ -836,13 +836,14 @@ export default function InspectionDetailScreen() {
                 <Text style={styles.orderNumber}>{inspection.batch_number}</Text>
               )}
               {/* 供应商 */}
-              <Text style={styles.supplierName}>{inspection.supplier_name}</Text>
+              <Text style={styles.supplierName}>供应商 / Supplier</Text>
+              <Text style={styles.supplierNameValue}>{inspection.supplier_name}</Text>
             </View>
             <View style={[styles.statusBadge, {
               backgroundColor: inspection.status === 'completed' ? 'rgba(0,184,148,0.15)' : 'rgba(14,165,233,0.15)'
             }]}>
               <Text style={[styles.statusText, { color: inspection.status === 'completed' ? '#00B894' : '#0EA5E9' }]}>
-                {inspection.status === 'pending' ? t('pending') : inspection.status === 'in_progress' ? t('inProgress') : t('completed')}
+                {inspection.status === 'pending' ? '待验货 / Pending' : inspection.status === 'in_progress' ? '进行中 / In Progress' : '已完成 / Completed'}
               </Text>
             </View>
           </View>
@@ -851,48 +852,48 @@ export default function InspectionDetailScreen() {
           <View style={styles.basicInfoGrid}>
             {/* 产品名称 */}
             <View style={styles.basicInfoItem}>
-              <Text style={styles.basicInfoLabel}>产品名称</Text>
+              <Text style={styles.basicInfoLabel}>产品名称 / Product</Text>
               <Text style={styles.basicInfoValue}>{inspection.product_name}</Text>
             </View>
             {/* 货号 */}
             {inspection.style_number && (
               <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>货号</Text>
+                <Text style={styles.basicInfoLabel}>货号 / Style No.</Text>
                 <Text style={styles.basicInfoValue}>{inspection.style_number}</Text>
               </View>
             )}
             {/* 产品数量 */}
             {inspection.quantity && (
               <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>产品数量</Text>
+                <Text style={styles.basicInfoLabel}>产品数量 / Quantity</Text>
                 <Text style={styles.basicInfoValue}>{inspection.quantity}</Text>
               </View>
             )}
             {/* 抽样数量 */}
             {inspection.sample_size && (
               <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>抽样数量</Text>
+                <Text style={styles.basicInfoLabel}>抽样数量 / Sample Qty</Text>
                 <Text style={styles.basicInfoValue}>{inspection.sample_size}</Text>
               </View>
             )}
             {/* AQL质量等级 */}
             {inspection.aql && (
               <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>AQL质量等级</Text>
+                <Text style={styles.basicInfoLabel}>AQL 等级 / AQL Level</Text>
                 <Text style={styles.basicInfoValue}>{inspection.aql}</Text>
               </View>
             )}
             {/* 验货日期 */}
             {inspection.inspection_date && (
               <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>验货日期</Text>
+                <Text style={styles.basicInfoLabel}>验货日期 / Date</Text>
                 <Text style={styles.basicInfoValue}>{inspection.inspection_date}</Text>
               </View>
             )}
             {/* 验货员 */}
             {inspection.inspector && (
               <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>验货员</Text>
+                <Text style={styles.basicInfoLabel}>验货员 / Inspector</Text>
                 <Text style={styles.basicInfoValue}>{inspection.inspector}</Text>
               </View>
             )}
@@ -1904,6 +1905,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   supplierName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2D3436',
+  },
+  supplierNameValue: {
     fontSize: 18,
     fontWeight: '600',
     color: '#2D3436',
