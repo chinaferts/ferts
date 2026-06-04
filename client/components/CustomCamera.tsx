@@ -131,8 +131,7 @@ export default function CustomCamera({
     if (photos.length > 0) {
       setSaving(true);
       onComplete(photos);
-      // 保存完成后关闭（由父组件调用onClose）
-      setTimeout(() => setSaving(false), 1000);
+      // saving状态由父组件调用onClose时重置
     } else {
       Alert.alert('提示', '请至少拍摄一张照片');
     }
@@ -173,6 +172,9 @@ export default function CustomCamera({
   };
 
   const handleClose = () => {
+    // 重置保存状态
+    setSaving(false);
+    
     if (photos.length > 0) {
       Alert.alert(
         '确认退出',
