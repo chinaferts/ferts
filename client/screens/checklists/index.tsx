@@ -194,6 +194,7 @@ export default function ChecklistsScreen() {
         <TouchableOpacity
           style={styles.deleteButton}
           onPress={() => confirmDelete(item)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Feather name="trash-2" size={18} color="#E74C3C" />
         </TouchableOpacity>
@@ -417,7 +418,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   cardLink: {
-    // Link wrapper styles
+    // Link wrapper styles - 使用 box-none 允许子元素接收触摸事件
+    pointerEvents: 'box-none',
   },
   deleteButton: {
     position: 'absolute',
