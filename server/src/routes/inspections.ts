@@ -257,8 +257,8 @@ router.post('/', async (req: Request, res: Response) => {
       notes 
     } = req.body;
 
-    // 处理 templateId=0 的情况（通用模板）- 改用数据库存储，不使用 mock 模式
-    const effectiveChecklistId = (templateId === 0 || templateId === '0') ? 1 : (templateId || checklist_id);
+    // 处理 templateId=0 的情况（通用模板）- 使用数据库中的"通用验货模板"ID
+    const effectiveChecklistId = (templateId === 0 || templateId === '0') ? 11 : (templateId || checklist_id);
 
     // 只有当 Supabase 未配置时才使用 mock 模式
     if (!isSupabaseConfigured()) {
