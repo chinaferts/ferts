@@ -433,3 +433,11 @@ export function updateUserRole(id: string, role: 'admin' | 'inspector'): User | 
   users[index].role = role;
   return users[index];
 }
+
+export function deleteMockUser(id: string): boolean {
+  const index = users.findIndex(u => u.id === id);
+  if (index === -1) return false;
+  
+  users.splice(index, 1);
+  return true;
+}

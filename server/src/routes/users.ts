@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMockUsers, getMockCurrentUser, updateMockUser, createMockUser, updateUserRole } from '../storage/mockData';
+import { getMockUsers, getMockCurrentUser, updateMockUser, createMockUser, updateUserRole, deleteMockUser } from '../storage/mockData';
 
 const router = Router();
 
@@ -111,6 +111,25 @@ router.put('/:id/role', (req, res) => {
   }
   
   res.json(updatedUser);
+});
+
+// 删除用户
+router.delete('/:id', (req, res) => {
+  const { id } = req.params;
+  
+  // 不允许删除自己
+  const currentUser = getMockCurrentUser();
+  if (currentUser && currentUser.id === id) {
+    return res.status(400).json({ error: '不能删除自己' });
+  }
+  
+  const deleted = deleteMockUser(id);
+  
+  if (!deleted) {
+    return res.status(404).json({ error: '用户不存在' });
+  }
+  
+  res.json({ success: true, message: '用户已删除' });
 });
 
 export default router;
