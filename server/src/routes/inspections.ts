@@ -368,7 +368,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.post('/:id/submit', async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { notes } = req.body;
+    const { notes, result } = req.body;
 
     if (!isSupabaseConfigured()) {
       const records = mockGetInspectionRecords(id);
@@ -377,10 +377,21 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
       const passedItems = records.filter((r: any) => r.result === 'passed').length;
       const failedItems = defects.length;
       
+      // 根据结果计算通过数
+      let passedItemsFinal = passedItems;
+      if (result === 'pass') {
+        // 合格提交：未检查的项目也算通过
+        passedItemsFinal = records.length;
+      } else if (result === 'fail') {
+        // 不合格提交：保持原来的通过数
+        passedItemsFinal = passedItems;
+      }
+      
       const updated = mockUpdateInspection(id, {
         status: 'completed',
+        result: result,
         total_items: records.length,
-        passed_items: passedItems,
+        passed_items: passedItemsFinal,
         failed_items: failedItems,
         notes
       });

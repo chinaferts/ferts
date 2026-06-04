@@ -253,6 +253,12 @@ export const translations = {
 
     // Submit
     submitInspection: '提交验货',
+    submitPass: '合格提交',
+    submitFail: '不合格提交',
+    submitPassSuccess: '验货合格，已提交',
+    submitFailSuccess: '验货不合格，已提交',
+    submitPassConfirm: '确认将此验货标记为合格？',
+    submitFailConfirm: '确认将此验货标记为不合格？',
     itemsUnchecked: '项未检查',
     confirmSubmit: '确认提交',
     continueCheck: '继续检查',
@@ -640,6 +646,12 @@ export const translations = {
 
     // Submit
     submitInspection: 'Submit Inspection',
+    submitPass: 'Submit Pass',
+    submitFail: 'Submit Fail',
+    submitPassSuccess: 'Inspection passed, submitted successfully',
+    submitFailSuccess: 'Inspection failed, submitted successfully',
+    submitPassConfirm: 'Confirm to mark this inspection as PASS?',
+    submitFailConfirm: 'Confirm to mark this inspection as FAIL?',
     itemsUnchecked: 'items unchecked',
     confirmSubmit: 'Confirm Submit',
     continueCheck: 'Continue Check',

@@ -598,32 +598,46 @@ export default function InspectionDetailScreen() {
     setSelectedItem(null);
   };
 
-  // 提交验货
-  const handleSubmit = async () => {
+  // 合格提交验货
+  const handleSubmitPass = async () => {
     if (!inspection) return;
 
     const uncheckedCount = inspection.checklist_items.filter(i => i.status === 'unchecked').length;
     if (uncheckedCount > 0) {
-      Alert.alert(t('tip'), `${uncheckedCount} ${t('itemsUnchecked')} ${t('confirmSubmit')}?`, [
-        { text: t('continueCheck'), style: 'cancel' },
-        { text: t('confirmSubmit'), onPress: doSubmit },
+      Alert.alert(t('tip'), `${uncheckedCount} ${t('itemsUnchecked')} ${t('submitPassConfirm')}`, [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('confirm'), onPress: () => doSubmit('pass') },
       ]);
     } else {
-      doSubmit();
+      Alert.alert(t('tip'), t('submitPassConfirm'), [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('confirm'), onPress: () => doSubmit('pass') },
+      ]);
     }
   };
 
-  const doSubmit = async () => {
+  // 不合格提交验货
+  const handleSubmitFail = async () => {
+    if (!inspection) return;
+
+    Alert.alert(t('tip'), t('submitFailConfirm'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('confirm'), onPress: () => doSubmit('fail') },
+    ]);
+  };
+
+  const doSubmit = async (result: 'pass' | 'fail') => {
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ result }),
       });
 
+      const successMsg = result === 'pass' ? t('submitPassSuccess') : t('submitFailSuccess');
       if (response.ok) {
-        Alert.alert(t('success'), t('submitSuccess'), [
+        Alert.alert(t('success'), successMsg, [
           { text: t('ok'), onPress: () => router.navigate('/inspections') },
         ]);
       } else {
@@ -1499,11 +1513,16 @@ export default function InspectionDetailScreen() {
           </View>
         )}
 
-        {/* 完成按钮 */}
+        {/* 提交按钮 */}
         {inspection.status !== 'completed' && (
-          <TouchableOpacity style={styles.completeButton} onPress={handleSubmit}>
-            <Text style={styles.completeButtonText}>提交验货报告 / Submit Report</Text>
-          </TouchableOpacity>
+          <View style={styles.flexRow}>
+            <TouchableOpacity style={styles.submitPassButton} onPress={handleSubmitPass}>
+              <Text style={styles.submitButtonText}>{t('submitPass')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.submitFailButton} onPress={handleSubmitFail}>
+              <Text style={styles.submitButtonText}>{t('submitFail')}</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </ScrollView>
 
@@ -2433,19 +2452,37 @@ const styles = StyleSheet.create({
     color: '#2D3436',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
-  completeButton: {
+  submitPassButton: {
+    flex: 1,
     marginTop: 20,
-    backgroundColor: '#6C63FF',
+    marginRight: 8,
+    backgroundColor: '#10B981',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#6C63FF',
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,
   },
-  completeButtonText: {
-    fontSize: 16,
+  flexRow: {
+    flexDirection: 'row',
+  },
+  submitFailButton: {
+    flex: 1,
+    marginTop: 20,
+    marginLeft: 8,
+    backgroundColor: '#EF4444',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+  },
+  submitButtonText: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
   },
