@@ -20,6 +20,7 @@ const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL ||
 
 // 用户统计信息组件
 function UserStats({ users }: { users: User[] }) {
+  const { t } = useLanguage();
   const adminCount = useMemo(() => users.filter(u => u.role === 'admin').length, [users]);
   const inspectorCount = useMemo(() => users.filter(u => u.role === 'inspector').length, [users]);
 
@@ -27,17 +28,17 @@ function UserStats({ users }: { users: User[] }) {
     <View style={styles.statsContainer}>
       <View style={styles.statItem}>
         <Text style={styles.statNumber}>{users.length}</Text>
-        <Text style={styles.statLabel}>总用户</Text>
+        <Text style={styles.statLabel}>{t('totalUsers')} / {t('totalUsersEn')}</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Text style={[styles.statNumber, { color: '#4F46E5' }]}>{adminCount}</Text>
-        <Text style={styles.statLabel}>管理员</Text>
+        <Text style={styles.statLabel}>{t('admin')} / {t('adminEn')}</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Text style={[styles.statNumber, { color: '#059669' }]}>{inspectorCount}</Text>
-        <Text style={styles.statLabel}>验货员</Text>
+        <Text style={styles.statLabel}>{t('inspector')} / {t('inspectorEn')}</Text>
       </View>
     </View>
   );
@@ -67,26 +68,29 @@ interface UserItemProps {
 }
 
 function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit }: UserItemProps) {
+  const { t } = useLanguage();
+  
   const getRoleBadge = (role: UserRole) => {
     if (role === 'admin') {
-      return { text: '管理员', bg: '#EEF2FF', color: '#4F46E5' };
+      return { text: `${t('admin')} / ${t('adminEn')}`, bg: '#EEF2FF', color: '#4F46E5' };
     }
-    return { text: '验货员', bg: '#ECFDF5', color: '#059669' };
+    return { text: `${t('inspector')} / ${t('inspectorEn')}`, bg: '#ECFDF5', color: '#059669' };
   };
   const badge = getRoleBadge(user.role);
 
   const handleRoleToggle = () => {
     if (isCurrentUser) {
-      Alert.alert('提示', '不能修改自己的角色');
+      Alert.alert(t('tip'), t('cannotChangeOwnRole'));
       return;
     }
     const newRole = user.role === 'admin' ? 'inspector' : 'admin';
+    const newRoleText = newRole === 'admin' ? `${t('admin')} / ${t('adminEn')}` : `${t('inspector')} / ${t('inspectorEn')}`;
     Alert.alert(
-      '确认修改',
-      `确定将 ${user.name} 的角色修改为 ${newRole === 'admin' ? '管理员' : '验货员'} 吗？`,
+      t('confirmChange'),
+      `${t('confirmChangeRole')} ${user.name} → ${newRoleText}`,
       [
-        { text: '取消', style: 'cancel' },
-        { text: '确定', onPress: () => onRoleChange(user.id, newRole) },
+        { text: `${t('cancel')} / ${t('cancelEn')}`, style: 'cancel' },
+        { text: `${t('confirm')} / ${t('confirmEn')}`, onPress: () => onRoleChange(user.id, newRole) },
       ]
     );
   };
@@ -102,14 +106,14 @@ function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit
         <View style={styles.userDetails}>
           <Text style={styles.userName}>
             {user.name}
-            {isCurrentUser && <Text style={styles.currentBadge}> (本人)</Text>}
+            {isCurrentUser && <Text style={styles.currentBadge}> ({t('currentUser')} / {t('currentUserEn')})</Text>}
           </Text>
           <View style={styles.userMetaRow}>
             <Text style={styles.userMeta}>@{user.username}</Text>
             {user.phone && <Text style={styles.userPhone}>{user.phone}</Text>}
           </View>
           {isAdmin && user.password && (
-            <Text style={styles.passwordText}>密码: {user.password}</Text>
+            <Text style={styles.passwordText}>{t('password')} / {t('passwordEn')}: {user.password}</Text>
           )}
         </View>
       </View>
@@ -128,13 +132,13 @@ function UserItem({ user, isCurrentUser, isAdmin, onRoleChange, onDelete, onEdit
               style={[styles.actionButton, styles.editButton]}
               onPress={() => onEdit(user)}
             >
-              <Text style={styles.editText}>编辑</Text>
+              <Text style={styles.editText}>{t('edit')} / {t('editEn')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.deleteButton]}
               onPress={() => onDelete(user.id, user.name)}
             >
-              <Text style={styles.deleteText}>删除</Text>
+              <Text style={styles.deleteText}>{t('delete')} / {t('deleteEn')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -217,26 +221,26 @@ export default function AccountScreen() {
         if (userId === currentUser?.id) {
           updateUser(updatedUser);
         }
-        Alert.alert('成功', '角色已更新');
+        Alert.alert(`${t('success')} / ${t('successEn')}`, `${t('roleUpdated')} / ${t('roleUpdatedEn')}`);
       } else {
-        Alert.alert('错误', '更新失败');
+        Alert.alert(`${t('error')} / ${t('errorEn')}`, `${t('updateFailed')} / ${t('updateFailedEn')}`);
       }
     } catch (error) {
-      Alert.alert('错误', '网络错误');
+      Alert.alert(`${t('error')} / ${t('errorEn')}`, `${t('networkError')} / ${t('networkErrorEn')}`);
     }
   };
 
   const handleDeleteUser = (userId: string, userName: string) => {
     if (userId === currentUser?.id) {
-      Alert.alert('提示', '不能删除自己的账号');
+      Alert.alert(`${t('tip')} / ${t('tipEn')}`, `${t('cannotDeleteOwn')} / ${t('cannotDeleteOwnEn')}`);
       return;
     }
     Alert.alert(
-      '确认删除',
-      `确定要删除用户 "${userName}" 吗？此操作不可撤销。`,
+      `${t('confirmDelete')} / ${t('confirmDeleteEn')}`,
+      `${t('confirmDeleteUser')} "${userName}"？${t('cannotUndo')} / ${t('cannotUndoEn')}`,
       [
-        { text: '取消', style: 'cancel' },
-        { text: '删除', style: 'destructive', onPress: () => doDeleteUser(userId) },
+        { text: `${t('cancel')} / ${t('cancelEn')}`, style: 'cancel' },
+        { text: `${t('delete')} / ${t('deleteEn')}`, style: 'destructive', onPress: () => doDeleteUser(userId) },
       ]
     );
   };
@@ -248,12 +252,12 @@ export default function AccountScreen() {
       });
       if (response.ok) {
         setUsers(users.filter(u => u.id !== userId));
-        Alert.alert('成功', '用户已删除');
+        Alert.alert(`${t('success')} / ${t('successEn')}`, `${t('userDeleted')} / ${t('userDeletedEn')}`);
       } else {
-        Alert.alert('错误', '删除失败');
+        Alert.alert(`${t('error')} / ${t('errorEn')}`, `${t('deleteFailed')} / ${t('deleteFailedEn')}`);
       }
     } catch (error) {
-      Alert.alert('错误', '网络错误');
+      Alert.alert(`${t('error')} / ${t('errorEn')}`, `${t('networkError')} / ${t('networkErrorEn')}`);
     }
   };
 
@@ -271,12 +275,12 @@ export default function AccountScreen() {
 
   const handleSaveUser = async () => {
     if (!editForm.name.trim()) {
-      Alert.alert('错误', '请输入姓名');
+      Alert.alert(`${t('error')} / ${t('errorEn')}`, `${t('enterNameRequired')} / ${t('enterNameRequiredEn')}`);
       return;
     }
     // 新建用户时必须设置密码
     if (!editingUser && !editForm.password.trim()) {
-      Alert.alert('错误', '请设置密码');
+      Alert.alert(`${t('error')} / ${t('errorEn')}`, `${t('enterPwdRequired')} / ${t('enterPwdRequiredEn')}`);
       return;
     }
 
@@ -305,7 +309,7 @@ export default function AccountScreen() {
             updateUser(updatedUser);
           }
           setEditModalVisible(false);
-          Alert.alert('成功', '用户信息已更新');
+          Alert.alert(`${t('success')} / ${t('successEn')}`, `${t('userUpdated')} / ${t('userUpdatedEn')}`);
         }
       } else {
         // 创建新用户
@@ -318,11 +322,11 @@ export default function AccountScreen() {
           const newUser = await response.json();
           setUsers([...users, newUser]);
           setEditModalVisible(false);
-          Alert.alert('成功', '用户已创建');
+          Alert.alert(`${t('success')} / ${t('successEn')}`, `${t('userCreated')} / ${t('userCreatedEn')}`);
         }
       }
     } catch (error) {
-      Alert.alert('错误', '操作失败');
+      Alert.alert(`${t('error')} / ${t('errorEn')}`, `${t('operationFailed')} / ${t('operationFailedEn')}`);
     } finally {
       setIsSaving(false);
     }
@@ -353,7 +357,7 @@ export default function AccountScreen() {
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerName}>{currentUser?.name}</Text>
             <Text style={styles.headerRole}>
-              {currentUser?.role === 'admin' ? '管理员' : '验货员'}
+              {currentUser?.role === 'admin' ? `${t('admin')} / ${t('adminEn')}` : `${t('inspector')} / ${t('inspectorEn')}`}
             </Text>
           </View>
         </View>
@@ -363,9 +367,9 @@ export default function AccountScreen() {
       {/* User List */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>账号管理</Text>
+          <Text style={styles.sectionTitle}>{t('accountManagement')} / {t('accountManagementEn')}</Text>
           <TouchableOpacity style={styles.addButton} onPress={handleAddUser}>
-            <Text style={styles.addButtonText}>+ 添加用户</Text>
+            <Text style={styles.addButtonText}>+ {t('addUser')} / {t('addUserEn')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -375,7 +379,7 @@ export default function AccountScreen() {
             <Feather name="search" size={20} color="#9CA3AF" style={styles.searchIconFeather} />
             <TextInput
               style={styles.searchInput}
-              placeholder={t('searchUser')}
+              placeholder={`${t('searchUser')} / ${t('searchUserEn')}`}
               placeholderTextColor="#9CA3AF"
               value={searchKeyword}
               onChangeText={setSearchKeyword}
@@ -388,9 +392,9 @@ export default function AccountScreen() {
           </View>
           <View style={styles.filterTabs}>
             {[
-              { key: 'all', label: '全部' },
-              { key: 'admin', label: '管理员' },
-              { key: 'inspector', label: '验货员' },
+              { key: 'all', label: `${t('all')} / ${t('allEn')}` },
+              { key: 'admin', label: `${t('admin')} / ${t('adminEn')}` },
+              { key: 'inspector', label: `${t('inspector')} / ${t('inspectorEn')}` },
             ].map(tab => (
               <TouchableOpacity
                 key={tab.key}
@@ -418,8 +422,8 @@ export default function AccountScreen() {
         ) : filteredUsers.length === 0 ? (
           searchKeyword || filterRole !== 'all' ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>未找到匹配用户</Text>
-              <Text style={styles.emptySubtitle}>尝试调整搜索条件</Text>
+              <Text style={styles.emptyTitle}>{t('noMatchFound')} / {t('noMatchFoundEn')}</Text>
+              <Text style={styles.emptySubtitle}>{t('tryAdjust')} / {t('tryAdjustEn')}</Text>
             </View>
           ) : (
             <EmptyState />
@@ -454,24 +458,24 @@ export default function AccountScreen() {
         >
           <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {editingUser ? '编辑用户' : '添加用户'}
+              {editingUser ? `${t('editUser')} / ${t('editUserEn')}` : `${t('addUser')} / ${t('addUserEn')}`}
             </Text>
             <View style={styles.modalForm}>
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>姓名</Text>
+                <Text style={styles.formLabel}>{t('name')} / {t('nameEn')}</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="请输入姓名"
+                  placeholder={`${t('enterName')} / ${t('enterNameEn')}`}
                   value={editForm.name}
                   onChangeText={(text) => setEditForm({ ...editForm, name: text })}
                 />
               </View>
               {isAdmin && (
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>密码 {editingUser ? '（留空则不修改）' : ''}</Text>
+                  <Text style={styles.formLabel}>{t('password')} / {t('passwordEn')} {editingUser ? `(${t('optional')} / ${t('optionalEn')})` : ''}</Text>
                   <TextInput
                     style={styles.formInput}
-                    placeholder={editingUser ? '输入新密码（选填）' : '请设置密码'}
+                    placeholder={editingUser ? `${t('enterNewPwd')} / ${t('enterNewPwdEn')}` : `${t('setPwd')} / ${t('setPwdEn')}`}
                     value={editForm.password}
                     onChangeText={(text) => setEditForm({ ...editForm, password: text })}
                     secureTextEntry
@@ -479,10 +483,10 @@ export default function AccountScreen() {
                 </View>
               )}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>电话</Text>
+                <Text style={styles.formLabel}>{t('phone')} / {t('phoneEn')}</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="请输入电话（选填）"
+                  placeholder={`${t('enterPhone')} / ${t('enterPhoneEn')}`}
                   value={editForm.phone}
                   onChangeText={(text) => setEditForm({ ...editForm, phone: text })}
                   keyboardType="phone-pad"
@@ -494,7 +498,7 @@ export default function AccountScreen() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setEditModalVisible(false)}
               >
-                <Text style={styles.cancelButtonText}>取消</Text>
+                <Text style={styles.cancelButtonText}>{t('cancel')} / {t('cancelEn')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
@@ -504,7 +508,7 @@ export default function AccountScreen() {
                 {isSaving ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.saveButtonText}>保存</Text>
+                  <Text style={styles.saveButtonText}>{t('save')} / {t('saveEn')}</Text>
                 )}
               </TouchableOpacity>
             </View>
