@@ -289,7 +289,8 @@ router.post('/', async (req: Request, res: Response) => {
         supplier_name: supplier || supplier_name,
         product_name: product || product_name,
         product_sku: productNo || null,
-        order_number: orderNo || '',
+        // 生成唯一订单号（order_number 不能为空）
+        order_number: orderNo || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
         quantity: quantity || null,
         status: 'pending',
         inspector_name: inspector,
