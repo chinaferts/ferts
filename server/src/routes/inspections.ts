@@ -1,5 +1,4 @@
 import { Router, type Request, type Response } from 'express';
-import multer from 'multer';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 import {
   mockGetInspections,
@@ -185,17 +184,6 @@ router.get('/:id', async (req: Request, res: Response) => {
       .select('*')
       .eq('inspection_id', id);
 
-    // 获取验货模板名称
-    let checklist_name = null;
-    if (inspection.checklist_id) {
-      const { data: checklist } = await client
-        .from('checklists')
-        .select('name')
-        .eq('id', inspection.checklist_id)
-        .single();
-      checklist_name = checklist?.name || null;
-    }
-
     // 组合数据
     const checklist_items = (records || []).map((record: any) => {
       const item = record.checklist_items;
@@ -220,7 +208,6 @@ router.get('/:id', async (req: Request, res: Response) => {
       // 字段映射：数据库字段名 -> 前端期望的字段名
       inspector: inspection.inspector_name || inspection.inspector,
       inspection_date: inspection.scheduled_date || inspection.inspection_date,
-      checklist_name,
       checklist_items,
       categories,
       defects: defects || [],
@@ -257,11 +244,11 @@ router.post('/', async (req: Request, res: Response) => {
       notes 
     } = req.body;
 
-    // 处理 templateId=0 的情况（通用模板）- 使用数据库中的"通用验货模板"ID
-    const effectiveChecklistId = (templateId === 0 || templateId === '0') ? 11 : (templateId || checklist_id);
+    // 处理 templateId=0 的情况（通用模板）
+    const effectiveChecklistId = (templateId === 0 || templateId === '0') ? 0 : (templateId || checklist_id);
 
-    // 只有当 Supabase 未配置时才使用 mock 模式
-    if (!isSupabaseConfigured()) {
+    // 如果是通用模板 (templateId=0) 或 Supabase 未配置，使用 mock 模式
+    if (effectiveChecklistId === 0 || !isSupabaseConfigured()) {
       const newInspection = mockCreateInspection({
         checklist_id: effectiveChecklistId,
         supplier_name: supplier || supplier_name,
@@ -289,8 +276,7 @@ router.post('/', async (req: Request, res: Response) => {
         supplier_name: supplier || supplier_name,
         product_name: product || product_name,
         product_sku: productNo || null,
-        // 生成唯一订单号（order_number 不能为空）
-        order_number: orderNo || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+        order_number: orderNo || null,
         quantity: quantity || null,
         status: 'pending',
         inspector_name: inspector,
@@ -384,9 +370,7 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const { notes, result } = req.body;
 
-    // 先检查记录是否存在于 mock 数据中，如果存在则使用 mock 模式
-    const existingMockRecord = mockGetInspection(id);
-    if (existingMockRecord || !isSupabaseConfigured()) {
+    if (!isSupabaseConfigured()) {
       const records = mockGetInspectionRecords(id);
       const defects = mockGetDefects(id);
       
@@ -573,7 +557,7 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
 });
 
 // 上传检查照片
-router.post('/:id/photos', multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }).single('file'), async (req: Request, res: Response) => {
+router.post('/:id/photos', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { record_id } = req.body; // 清单项记录ID
@@ -583,43 +567,14 @@ router.post('/:id/photos', multer({ storage: multer.memoryStorage(), limits: { f
       return res.status(400).json({ success: false, error: '请上传图片文件' });
     }
 
-    // 生成唯一文件名
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = file.originalname.split('.').pop() || 'jpg';
-    const filename = `${uniqueSuffix}.${ext}`;
-    let photoUrl = `/uploads/${filename}`;
+    const photoUrl = `/uploads/${file.filename}`;
 
-    // 检查验货记录是否存在
-    const client = requireSupabaseClient();
-    const { data: inspection } = await client
-      .from('inspections')
-      .select('id')
-      .eq('id', parseInt(id as string))
-      .single();
-
-    if (!inspection) {
-      // Mock 模式：记录不存在于数据库中，返回成功响应
+    if (!isSupabaseConfigured()) {
+      // Mock 模式：返回成功响应
       return res.json({ success: true, data: { photoUrl, inspection_id: id, record_id } });
     }
 
-    // 记录存在，尝试使用 S3 存储
-    let savedUrl = photoUrl;
-    if (isSupabaseConfigured()) {
-      try {
-        const { storage } = await import('../storage/s3.js');
-        const key = `inspections/${id}/${filename}`;
-        savedUrl = await (storage as any).uploadBuffer(file.buffer, key, file.mimetype);
-        photoUrl = savedUrl;
-      } catch (storageErr) {
-        console.log('S3存储失败，使用mock URL:', storageErr);
-      }
-    } else {
-      // Mock 模式使用可访问的 URL
-      savedUrl = `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091'}/uploads/${filename}`;
-      photoUrl = savedUrl;
-    }
-
-    // 保存照片到数据库
+    const client = requireSupabaseClient();
     const { data, error } = await client
       .from('inspection_photos')
       .insert({

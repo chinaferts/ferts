@@ -123,8 +123,8 @@ let nextRecordId = 1;
 let nextDefectId = 1;
 
 export function mockGetChecklists() {
-  // 返回普通模板列表（不包含通用模板）
-  return checklists;
+  // 使用可编辑的通用验货模板数据
+  return [universalTemplateData, ...checklists];
 }
 
 export function mockGetChecklist(id: string) {
@@ -304,13 +304,10 @@ export function mockCreateInspection(data: any) {
 
 export function mockUpdateInspection(id: string, data: any) {
   const index = inspections.findIndex(i => i.id === id);
-  console.log('[mockUpdateInspection] 查找 id:', id, '数组中的 ids:', inspections.map(i => i.id), '找到的 index:', index);
   if (index !== -1) {
     inspections[index] = { ...inspections[index], ...data };
-    console.log('[mockUpdateInspection] 更新后的记录:', inspections[index]);
     return inspections[index];
   }
-  console.log('[mockUpdateInspection] 未找到记录');
   return null;
 }
 

@@ -116,46 +116,18 @@ export default function InspectionsListScreen() {
   // 只显示待验货列表，隐藏Tab切换
   const showTabs = false;
 
-  // 页面获得焦点时重新获取数据
-  useFocusEffect(
-    useCallback(() => {
-      const loadData = async () => {
-        try {
-          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-          const response = await fetch(`${baseUrl}/api/v1/inspections?status=${activeTab}`);
-          if (response.ok) {
-            const result = await response.json();
-            const list = Array.isArray(result) ? result : (result.data || []);
-            const mapped = list.map((item: any) => ({
-              id: parseInt(item.id),
-              supplier: item.supplier_name || item.supplier || '',
-              product: item.product_name || item.product || '',
-              status: item.status || 'pending',
-              date: item.inspection_date || item.created_at || new Date().toISOString(),
-              progress: item.status === 'completed' ? 100 : item.status === 'in_progress' ? 50 : 0,
-              inspector: item.inspector,
-              batch_number: item.batch_number,
-            }));
-            setInspections(mapped);
-          }
-        } catch (error) {
-          console.error('Failed to fetch inspections:', error);
-        }
-      };
-      loadData();
-    }, [activeTab])
-  );
-
-  // 下拉刷新
-  const onRefresh = async () => {
-    setRefreshing(true);
+  const fetchInspections = useCallback(async () => {
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/inspections?status=${activeTab}`);
       if (response.ok) {
         const result = await response.json();
+        // API返回格式: { success: true, data: [...] }
         const list = Array.isArray(result) ? result : (result.data || []);
-        const mapped = list.map((item: any) => ({
+        // 过滤掉没有 supplier_name 的无效数据
+        const filtered = list.filter((item: any) => item.supplier_name || item.product);
+        // 映射字段：supplier_name -> supplier, product_name -> product
+        const mapped = filtered.map((item: any) => ({
           id: parseInt(item.id),
           supplier: item.supplier_name || item.supplier || '',
           product: item.product_name || item.product || '',
@@ -168,8 +140,28 @@ export default function InspectionsListScreen() {
         setInspections(mapped);
       }
     } catch (error) {
-      console.error('Failed to refresh:', error);
+      console.error('Failed to fetch inspections:', error);
+      // 使用模拟数据
+      setInspections([
+        { id: 1, supplier: '深圳华强电子', product: '智能手表 PCB板', status: 'in_progress', date: '2024-01-15', progress: 65 },
+        { id: 2, supplier: '东莞智造工厂', product: '蓝牙耳机外壳', status: 'pending', date: '2024-01-16', progress: 0 },
+        { id: 3, supplier: '广州精品制造', product: '无线充电器', status: 'completed', date: '2024-01-14', progress: 100 },
+        { id: 4, supplier: '杭州数码科技', product: 'Type-C数据线', status: 'pending', date: '2024-01-17', progress: 0 },
+        { id: 5, supplier: '上海精密科技', product: '手机摄像头模组', status: 'in_progress', date: '2024-01-13', progress: 40 },
+        { id: 6, supplier: '北京智造电子', product: '智能手环显示屏', status: 'completed', date: '2024-01-12', progress: 100 },
+      ]);
     }
+  }, [activeTab]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchInspections();
+    }, [fetchInspections])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchInspections();
     setRefreshing(false);
   };
 

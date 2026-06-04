@@ -10,7 +10,6 @@ import { useTranslation } from '@/contexts/LanguageContext';
 interface ChecklistTemplate {
   id: number;
   name: string;
-  nameZh?: string;
   categories: number;
   items: number;
 }
@@ -19,7 +18,6 @@ interface ChecklistTemplate {
 const UNIVERSAL_TEMPLATE: ChecklistTemplate = {
   id: 0,
   name: 'Universal Template',
-  nameZh: '通用验货模板',
   categories: 5,
   items: 8
 };
@@ -84,8 +82,8 @@ export default function NewInspectionScreen() {
     }
   }, []);
 
-  // 模板列表状态
-  const [templateList, setTemplateList] = useState<ChecklistTemplate[]>([]);
+  // 模板列表状态 - 初始化包含通用模板
+  const [templateList, setTemplateList] = useState<ChecklistTemplate[]>([UNIVERSAL_TEMPLATE]);
 
   // 加载模板列表（从API加载其他模板，通用模板始终在第一位）
   const loadTemplates = useCallback(async () => {
@@ -95,14 +93,19 @@ export default function NewInspectionScreen() {
       if (result.success && result.data) {
         const templates = Array.isArray(result.data) ? result.data : [];
         const otherTemplates = templates.map((t: any) => {
-          // API 直接返回 categories 和 items 数量
-          const categoryCount = typeof t.categories === 'number' ? t.categories : 0;
-          const itemCount = typeof t.items === 'number' ? t.items : 0;
+          // 处理 category 可能是数组或字符串的情况
+          const categories = Array.isArray(t.category) 
+            ? t.category 
+            : (t.category ? [t.category] : []);
+          
+          const categoryCount = categories.length;
+          const itemCount = Array.isArray(t.category) 
+            ? t.category.reduce((sum: number, cat: any) => sum + (cat.items?.length || 0), 0)
+            : 0;
           
           return {
             id: parseInt(t.id, 10),
             name: t.name,
-            nameZh: t.name_zh,
             categories: categoryCount,
             items: itemCount
           };
@@ -354,16 +357,14 @@ export default function NewInspectionScreen() {
 
       if (response.ok) {
         Alert.alert(t('success'), t('createInspectionSuccess'));
-        // 返回验货列表页面
-        router.back();
+        router.replace('/inspections');
       } else {
         Alert.alert(t('error'), t('createInspectionFailed'));
       }
     } catch (error) {
       console.error('Failed to create inspection:', error);
       Alert.alert(t('success'), t('createInspectionSuccess'));
-      // 出错时也返回验货列表页面
-      router.back();
+      router.replace('/inspections');
     } finally {
       setLoading(false);
     }
@@ -640,9 +641,7 @@ export default function NewInspectionScreen() {
                 onPress={() => setSelectedTemplate(template)}
               >
                 <View style={styles.templateInfo}>
-                  <Text style={styles.templateName}>
-                    {template.nameZh ? `${template.nameZh} / ${template.name}` : template.name}
-                  </Text>
+                  <Text style={styles.templateName}>{template.name}</Text>
                   <Text style={styles.templateMeta}>
                     {template.categories}个分类 · {template.items}个检查项
                   </Text>

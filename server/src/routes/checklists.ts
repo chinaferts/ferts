@@ -23,11 +23,24 @@ router.get('/', async (req: Request, res: Response) => {
     const { data, error } = await client!!
       .from('checklists')
       .select('*')
+      .eq('is_active', true)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     
-    res.json({ success: true, data: data || [] });
+    // 添加通用验货模板（始终显示在最前面）
+    const universalTemplate = {
+      id: 'universal',
+      name: '通用验货模板',
+      description: '适用于所有产品的通用验货检查清单',
+      categories: 6,
+      items: 6,
+      usageCount: 0,
+      updatedAt: new Date().toISOString(),
+      is_universal: true
+    };
+    
+    res.json({ success: true, data: [universalTemplate, ...(data || [])] });
   } catch (err: any) {
     console.error('获取清单列表失败:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -186,32 +199,14 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
     if (!isSupabaseConfigured()) {
-      const index = checklists.findIndex(c => c.id === id);
-      if (index > -1) {
-        checklists.splice(index, 1);
-      }
+      mockUpdateChecklist(id, { is_active: false });
       return res.json({ success: true });
     }
 
     const client = requireSupabaseClient();
-
-    // 检查是否有验货任务使用该模板
-    const { data: relatedInspections } = await client!
-      .from('inspections')
-      .select('id')
-      .eq('checklist_id', id)
-      .limit(1);
-
-    if (relatedInspections && relatedInspections.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: '该模板正在被验货任务使用，无法删除'
-      });
-    }
-
     const { error } = await client!
       .from('checklists')
-      .delete()
+      .update({ is_active: false })
       .eq('id', id);
 
     if (error) throw error;
