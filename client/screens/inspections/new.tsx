@@ -15,6 +15,15 @@ interface ChecklistTemplate {
   items: number;
 }
 
+// 硬编码的通用验货模板（始终可用）
+const UNIVERSAL_TEMPLATE: ChecklistTemplate = {
+  id: 0,
+  name: 'Universal Template',
+  nameZh: '通用验货模板',
+  categories: 5,
+  items: 8
+};
+
 const STORAGE_KEYS = {
   SUPPLIERS: '@inspection_suppliers',
   PRODUCTS: '@inspection_products',
@@ -31,7 +40,7 @@ export default function NewInspectionScreen() {
   const [quantity, setQuantity] = useState('');
   const [aql, setAql] = useState('2.5');
   const [sampleSize, setSampleSize] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(UNIVERSAL_TEMPLATE);
   const [loading, setLoading] = useState(false);
 
   // 历史记录状态
@@ -78,14 +87,14 @@ export default function NewInspectionScreen() {
   // 模板列表状态
   const [templateList, setTemplateList] = useState<ChecklistTemplate[]>([]);
 
-  // 加载模板列表
+  // 加载模板列表（从API加载其他模板，通用模板始终在第一位）
   const loadTemplates = useCallback(async () => {
     try {
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/checklists`);
       const result = await response.json();
       if (result.success && result.data) {
         const templates = Array.isArray(result.data) ? result.data : [];
-        const mappedTemplates = templates.map((t: any) => {
+        const otherTemplates = templates.map((t: any) => {
           // 处理 category 可能是数组或字符串的情况
           const categories = Array.isArray(t.category) 
             ? t.category 
@@ -104,11 +113,13 @@ export default function NewInspectionScreen() {
             items: itemCount
           };
         });
-        setTemplateList(mappedTemplates);
+        // 通用模板始终在第一位，后面加上其他模板
+        setTemplateList([UNIVERSAL_TEMPLATE, ...otherTemplates]);
       }
     } catch (error) {
       console.error('Failed to load templates:', error);
-      setTemplateList([]);
+      // 即使API失败，通用模板仍然可用
+      setTemplateList([UNIVERSAL_TEMPLATE]);
     }
   }, []);
 
