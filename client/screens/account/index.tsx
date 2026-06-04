@@ -154,7 +154,7 @@ export default function AccountScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', password: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', password: '', role: 'inspector' as UserRole });
   const [isSaving, setIsSaving] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'inspector'>('all');
@@ -263,13 +263,13 @@ export default function AccountScreen() {
 
   const handleAddUser = () => {
     setEditingUser(null);
-    setEditForm({ name: '', phone: '', password: '' });
+    setEditForm({ name: '', phone: '', password: '', role: 'inspector' });
     setEditModalVisible(true);
   };
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
-    setEditForm({ name: user.name, phone: user.phone || '', password: user.password || '' });
+    setEditForm({ name: user.name, phone: user.phone || '', password: user.password || '', role: user.role });
     setEditModalVisible(true);
   };
 
@@ -287,7 +287,7 @@ export default function AccountScreen() {
     setIsSaving(true);
     try {
       // 构建请求数据，只包含非空字段
-      const requestData: any = { name: editForm.name };
+      const requestData: any = { name: editForm.name, role: editForm.role };
       if (editForm.phone.trim()) {
         requestData.phone = editForm.phone;
       }
@@ -492,6 +492,39 @@ export default function AccountScreen() {
                   keyboardType="phone-pad"
                 />
               </View>
+              {isAdmin && (
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>{t('role')} / {t('roleEn')}</Text>
+                  <View style={styles.roleSelector}>
+                    <TouchableOpacity
+                      style={[styles.roleButton, editForm.role === 'admin' && styles.roleButtonActive]}
+                      onPress={() => setEditForm({ ...editForm, role: 'admin' })}
+                    >
+                      <Feather
+                        name={editForm.role === 'admin' ? 'check-circle' : 'circle'}
+                        size={18}
+                        color={editForm.role === 'admin' ? '#4F46E5' : '#9CA3AF'}
+                      />
+                      <Text style={[styles.roleButtonText, editForm.role === 'admin' && styles.roleButtonTextActive]}>
+                        {t('admin')} / {t('adminEn')}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.roleButton, editForm.role === 'inspector' && styles.roleButtonActive]}
+                      onPress={() => setEditForm({ ...editForm, role: 'inspector' })}
+                    >
+                      <Feather
+                        name={editForm.role === 'inspector' ? 'check-circle' : 'circle'}
+                        size={18}
+                        color={editForm.role === 'inspector' ? '#4F46E5' : '#9CA3AF'}
+                      />
+                      <Text style={[styles.roleButtonText, editForm.role === 'inspector' && styles.roleButtonTextActive]}>
+                        {t('inspector')} / {t('inspectorEn')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -883,6 +916,35 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
+  },
+  roleSelector: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  roleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 8,
+  },
+  roleButtonActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#4F46E5',
+  },
+  roleButtonText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  roleButtonTextActive: {
+    color: '#4F46E5',
+    fontWeight: '600',
   },
   modalButton: {
     flex: 1,

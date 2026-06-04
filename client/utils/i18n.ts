@@ -98,6 +98,7 @@ export const translations = {
     accountSettings: '账号设置',
     accountSettingsEn: 'Account Settings',
     role: '角色',
+    roleEn: 'Role',
     admin: '管理员',
     adminEn: 'Admin',
     inspector: '验货员',
