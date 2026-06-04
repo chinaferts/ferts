@@ -185,6 +185,17 @@ router.get('/:id', async (req: Request, res: Response) => {
       .select('*')
       .eq('inspection_id', id);
 
+    // 获取验货模板名称
+    let checklist_name = null;
+    if (inspection.checklist_id) {
+      const { data: checklist } = await client
+        .from('checklists')
+        .select('name')
+        .eq('id', inspection.checklist_id)
+        .single();
+      checklist_name = checklist?.name || null;
+    }
+
     // 组合数据
     const checklist_items = (records || []).map((record: any) => {
       const item = record.checklist_items;
@@ -209,6 +220,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       // 字段映射：数据库字段名 -> 前端期望的字段名
       inspector: inspection.inspector_name || inspection.inspector,
       inspection_date: inspection.scheduled_date || inspection.inspection_date,
+      checklist_name,
       checklist_items,
       categories,
       defects: defects || [],

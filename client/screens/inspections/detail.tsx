@@ -87,6 +87,7 @@ interface InspectionDetail {
   status: 'pending' | 'in_progress' | 'completed';
   scheduled_date: string;
   checklist_id: number;
+  checklist_name?: string;
   checkedCount: number;
   defectCount: number;
   batch_number?: string;
@@ -928,6 +929,13 @@ export default function InspectionDetailScreen() {
               <View style={styles.basicInfoItem}>
                 <Text style={styles.basicInfoLabel}>验货日期 / Date</Text>
                 <Text style={styles.basicInfoValue}>{inspection.inspection_date}</Text>
+              </View>
+            )}
+            {/* 验货模板 */}
+            {inspection.checklist_name && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>验货模板 / Checklist</Text>
+                <Text style={styles.basicInfoValue}>{inspection.checklist_name}</Text>
               </View>
             )}
             {/* 验货员 */}
