@@ -1064,26 +1064,34 @@ export default function InspectionDetailScreen() {
                         <View style={styles.photoPreviewSection}>
                           <View style={styles.photoGridContainer}>
                             {item.photos.map((photo, idx) => (
-                              <TouchableOpacity key={idx} onPress={() => {
-                                setEditingPhoto({ uri: photo, index: idx, item });
-                                setTempPhotos([]);
-                                setCameraVisible(true);
-                              }} style={styles.photoContainer}>
+                              <TouchableOpacity 
+                                key={idx} 
+                                onPress={() => {
+                                  // completed 状态下不能编辑照片
+                                  if (inspection.status === 'completed') return;
+                                  setEditingPhoto({ uri: photo, index: idx, item });
+                                  setTempPhotos([]);
+                                  setCameraVisible(true);
+                                }} 
+                                style={[styles.photoContainer, inspection.status === 'completed' && styles.photoContainerDisabled]}
+                              >
                                 <Image source={{ uri: photo }} style={styles.photoThumb} />
-                                <TouchableOpacity style={styles.photoDeleteButton}
-                                  onPress={() => {
-                                    if (!inspectionRef.current) return;
-                                    const updatedItems = (inspectionRef.current.checklist_items || []).map((i: ChecklistItem) => {
-                                      if (i.record_id === item.record_id) {
-                                        return { ...i, photos: (i.photos || []).filter((_: any, pi: number) => pi !== idx) };
-                                      }
-                                      return i;
-                                    });
-                                    const updated: InspectionDetail = { ...inspectionRef.current, checklist_items: updatedItems };
-                                    setInspection(updated);
-                                  }}>
-                                  <Text style={styles.photoDeleteText}>X</Text>
-                                </TouchableOpacity>
+                                {inspection.status !== 'completed' && (
+                                  <TouchableOpacity style={styles.photoDeleteButton}
+                                    onPress={() => {
+                                      if (!inspectionRef.current) return;
+                                      const updatedItems = (inspectionRef.current.checklist_items || []).map((i: ChecklistItem) => {
+                                        if (i.record_id === item.record_id) {
+                                          return { ...i, photos: (i.photos || []).filter((_: any, pi: number) => pi !== idx) };
+                                        }
+                                        return i;
+                                      });
+                                      const updated: InspectionDetail = { ...inspectionRef.current, checklist_items: updatedItems };
+                                      setInspection(updated);
+                                    }}>
+                                    <Text style={styles.photoDeleteText}>X</Text>
+                                  </TouchableOpacity>
+                                )}
                               </TouchableOpacity>
                             ))}
                           </View>
@@ -1116,8 +1124,8 @@ export default function InspectionDetailScreen() {
                             <Feather name="slash" size={18} color="#808080" />
                             <Text style={styles.naButtonText}>不适用 / N/A</Text>
                           </TouchableOpacity>
-                          {/* 条码分类显示扫码按钮 */}
-                          {item.category === '条码扫描以及拍照' && (
+                          {/* 条码分类显示扫码按钮 - completed 状态下不显示 */}
+                          {item.category === '条码扫描以及拍照' && (inspection.status as string) !== 'completed' && (
                             <TouchableOpacity
                               style={[styles.actionButton, styles.scanButton]}
                               onPress={() => openBarcodeScanner(item)}
@@ -1152,15 +1160,17 @@ export default function InspectionDetailScreen() {
           );
         })}
 
-        {/* 条码扫描分类 - 问题描述格式 */}
+        {/* 条码扫描分类 - 问题描述格式 - completed 状态下不显示添加按钮 */}
         {categories.includes('条码扫描以及拍照') && (
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
               <Text style={styles.sectionTitle}>条码扫描（所有含有条码的地方均要扫描拍照） / Barcode Scan (Scan & Photo All Barcodes)</Text>
-              <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
-                <Feather name="plus" size={18} color="#6C63FF" />
-                <Text style={styles.addIssueText}>添加条码扫描</Text>
-              </TouchableOpacity>
+              {inspection.status !== 'completed' && (
+                <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
+                  <Feather name="plus" size={18} color="#6C63FF" />
+                  <Text style={styles.addIssueText}>添加条码扫描</Text>
+                </TouchableOpacity>
+              )}
             </View>
             
             {/* 条码扫描列表（包括原始项和新增项） */}
@@ -1231,8 +1241,8 @@ export default function InspectionDetailScreen() {
                             color={item.status === 'pass' ? '#00B894' : '#FF6B6B'} />
                         </View>
                       )}
-                      {/* 删除按钮 - 仅对新增的条码扫描项显示 */}
-                      {isExtraItem && (
+                      {/* 删除按钮 - 仅对新增的条码扫描项显示，completed 状态下不显示 */}
+                      {isExtraItem && inspection.status !== 'completed' && (
                         <TouchableOpacity 
                           style={styles.removeIssueButton} 
                           onPress={() => {
@@ -1263,27 +1273,33 @@ export default function InspectionDetailScreen() {
                   {item.photos && item.photos.length > 0 && (
                     <View style={styles.issuePhotosContainer}>
                       {item.photos.map((photo, idx) => (
-                        <TouchableOpacity key={idx} style={styles.issuePhotoItem}
+                        <TouchableOpacity 
+                          key={idx} 
+                          style={[styles.issuePhotoItem, inspection.status === 'completed' && styles.photoContainerDisabled]}
                           onPress={() => {
+                            // completed 状态下不能编辑照片
+                            if (inspection.status === 'completed') return;
                             setEditingPhoto({ uri: photo, recordId: item.record_id, index: idx });
                             setTempPhotos([]);
                             setTempPhotoTarget(item);
                             setCameraVisible(true);
                           }}>
                           <Image source={{ uri: photo }} style={styles.issuePhoto} />
-                          {/* 删除按钮 - 显示编号 */}
-                          <TouchableOpacity style={styles.removeIssuePhotoButton}
-                            onPress={() => {
-                              const updatedItems = barcodeItems.map(barcodeItem => {
-                                if (barcodeItem.record_id === item.record_id) {
-                                  return { ...barcodeItem, photos: (barcodeItem.photos || []).filter((_, i) => i !== idx) };
-                                }
-                                return barcodeItem;
-                              });
-                              setBarcodeItems(updatedItems);
-                            }}>
-                            <Text style={styles.removeIssuePhotoText}>{idx + 1}</Text>
-                          </TouchableOpacity>
+                          {/* 删除按钮 - completed 状态下不显示 */}
+                          {inspection.status !== 'completed' && (
+                            <TouchableOpacity style={styles.removeIssuePhotoButton}
+                              onPress={() => {
+                                const updatedItems = barcodeItems.map(barcodeItem => {
+                                  if (barcodeItem.record_id === item.record_id) {
+                                    return { ...barcodeItem, photos: (barcodeItem.photos || []).filter((_, i) => i !== idx) };
+                                  }
+                                  return barcodeItem;
+                                });
+                                setBarcodeItems(updatedItems);
+                              }}>
+                              <Text style={styles.removeIssuePhotoText}>{idx + 1}</Text>
+                            </TouchableOpacity>
+                          )}
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -2387,6 +2403,9 @@ const styles = StyleSheet.create({
   photoContainer: {
     position: 'relative',
     marginRight: 8,
+  },
+  photoContainerDisabled: {
+    opacity: 0.7,
   },
   photoDeleteButton: {
     position: 'absolute',
