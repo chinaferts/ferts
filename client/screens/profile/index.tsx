@@ -2,10 +2,12 @@ import { Screen } from '@/components/Screen';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useCSSVariable } from 'uniwind';
 import { Feather } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
+  const { t } = useLanguage();
   const [background, card, text, muted, accent, border] = useCSSVariable([
     '--color-background',
     '--color-card',
@@ -20,11 +22,11 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     Alert.alert(
-      '退出登录',
-      '确定要退出登录吗？',
+      t('logout'),
+      t('logoutConfirm'),
       [
-        { text: '取消', style: 'cancel' },
-        { text: '确定', onPress: logout, style: 'destructive' },
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('confirm'), onPress: logout, style: 'destructive' },
       ]
     );
   };
@@ -38,11 +40,11 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>{user?.name?.[0] || 'U'}</Text>
           </View>
           <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: text }]}>{user?.name || '用户'}</Text>
+            <Text style={[styles.userName, { color: text }]}>{user?.name || t('user')}</Text>
             <Text style={[styles.userMeta, { color: muted }]}>@{user?.username || 'username'}</Text>
             <View style={[styles.roleBadge, { backgroundColor: isAdmin ? '#EEF2FF' : '#ECFDF5' }]}>
               <Text style={[styles.roleText, { color: isAdmin ? '#4F46E5' : '#059669' }]}>
-                {isAdmin ? '管理员' : '验货员'}
+                {isAdmin ? t('admin') : t('inspector')}
               </Text>
             </View>
           </View>
@@ -56,7 +58,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuLeft}>
               <Feather name="settings" size={18} color="#6B7280" style={styles.menuIcon} />
-              <Text style={[styles.menuText, { color: text }]}>账号设置</Text>
+              <Text style={[styles.menuText, { color: text }]}>{t('accountSettings')}</Text>
             </View>
             <Text style={{ color: muted }}>›</Text>
           </TouchableOpacity>
@@ -64,7 +66,7 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <Feather name="bell" size={18} color="#6B7280" style={styles.menuIcon} />
-              <Text style={[styles.menuText, { color: text }]}>通知设置</Text>
+              <Text style={[styles.menuText, { color: text }]}>{t('notificationSettings')}</Text>
             </View>
             <Text style={{ color: muted }}>›</Text>
           </TouchableOpacity>
@@ -72,7 +74,7 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <Feather name="info" size={18} color="#6B7280" style={styles.menuIcon} />
-              <Text style={[styles.menuText, { color: text }]}>关于我们</Text>
+              <Text style={[styles.menuText, { color: text }]}>{t('aboutUs')}</Text>
             </View>
             <Text style={{ color: muted }}>›</Text>
           </TouchableOpacity>
@@ -80,7 +82,7 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <Feather name="message-circle" size={18} color="#6B7280" style={styles.menuIcon} />
-              <Text style={[styles.menuText, { color: text }]}>帮助与反馈</Text>
+              <Text style={[styles.menuText, { color: text }]}>{t('helpFeedback')}</Text>
             </View>
             <Text style={{ color: muted }}>›</Text>
           </TouchableOpacity>
@@ -91,7 +93,7 @@ export default function ProfileScreen() {
           <View style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <Feather name="smartphone" size={18} color="#6B7280" style={styles.menuIcon} />
-              <Text style={[styles.menuText, { color: text }]}>版本</Text>
+              <Text style={[styles.menuText, { color: text }]}>{t('version')}</Text>
             </View>
             <Text style={{ color: muted }}>v1.0.0</Text>
           </View>
@@ -101,7 +103,7 @@ export default function ProfileScreen() {
           style={styles.logoutButton}
           onPress={handleLogout}
         >
-          <Text style={styles.logoutText}>退出登录</Text>
+          <Text style={styles.logoutText}>{t('logout')}</Text>
         </TouchableOpacity>
       </View>
     </Screen>
