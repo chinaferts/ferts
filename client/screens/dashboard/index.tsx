@@ -231,10 +231,10 @@ export default function DashboardScreen() {
         {/* 头部LOGO */}
         <View style={styles.logoContainer}>
           <Image source={require('@/assets/logo.png')} style={styles.logo} resizeMode="contain" />
-          <View style={styles.logoTextContainer}>
-            <Text style={styles.logoTitle}>FERTS{'\n'}验货管理系统</Text>
-            <Text style={styles.logoSubtitle}>FERTS Inspection Management System</Text>
-          </View>
+        </View>
+        <View style={styles.logoTextContainer}>
+          <Text style={styles.logoTitle}>FERTS{'\n'}验货管理系统</Text>
+          <Text style={styles.logoSubtitle}>FERTS Inspection Management System</Text>
         </View>
 
         {/* 统计卡片 */}
@@ -345,8 +345,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   logoTextContainer: {
-    marginLeft: 12,
-    flex: 1,
+    marginBottom: 8,
   },
   logoTitle: {
     fontSize: 18,
