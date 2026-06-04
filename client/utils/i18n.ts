@@ -267,6 +267,7 @@ export const translations = {
     // Other
     featureComingSoon: '功能即将上线',
     qualityInspector: 'FERTS验货管理系统',
+    qualityInspectorEn: 'FERTS Inspection System',
     pendingList: '待验货列表',
     pendingListEn: 'Pending List',
     noUsers: '暂无用户',
