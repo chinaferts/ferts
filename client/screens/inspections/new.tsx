@@ -357,15 +357,14 @@ export default function NewInspectionScreen() {
 
       if (response.ok) {
         Alert.alert(t('success'), t('createInspectionSuccess'));
-        router.replace('/inspections');
+        router.back(); // 返回上一页（验货任务列表），会自动刷新
       } else {
         Alert.alert(t('error'), t('createInspectionFailed'));
       }
     } catch (error) {
       console.error('Failed to create inspection:', error);
       Alert.alert(t('success'), t('createInspectionSuccess'));
-      router.replace('/inspections');
-    } finally {
+      router.back(); // 返回上一页 finally {
       setLoading(false);
     }
   };

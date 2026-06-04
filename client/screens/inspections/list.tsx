@@ -153,6 +153,9 @@ export default function InspectionsListScreen() {
     }
   }, [activeTab]);
 
+  // 页面获得焦点时重新获取数据
+  const [refreshKey, setRefreshKey] = useState(0);
+  
   useFocusEffect(
     useCallback(() => {
       const loadData = async () => {
@@ -180,7 +183,7 @@ export default function InspectionsListScreen() {
         }
       };
       loadData();
-    }, [activeTab])
+    }, [activeTab, refreshKey])
   );
 
   const onRefresh = async () => {
