@@ -94,6 +94,7 @@ export default function InspectionDetailScreen() {
   const [barcodeScanTarget, setBarcodeScanTarget] = useState<ChecklistItem | null>(null);
   const [barcodePermission, requestBarcodePermission] = useCameraPermissions();
   const barcodeCameraRef = useRef<CameraView>(null);
+  const [hasScannedBarcode, setHasScannedBarcode] = useState(false);
   
   // 问题描述框状态 (每个问题包含文本、照片和严重程度)
   const [issues, setIssues] = useState<Array<{ text: string; photos: string[]; severity: string }>>([{ text: '', photos: [], severity: '' }]);
@@ -512,27 +513,46 @@ export default function InspectionDetailScreen() {
 
   // 处理条码扫描结果
   const handleBarcodeScanned = (result: BarcodeScanningResult) => {
-    if (result.data && barcodeScanTarget) {
-      // 将扫描到的条码添加到对应检查项
-      const targetRecordId = String(barcodeScanTarget.record_id);
-      setInspection(prev => {
-        if (!prev) return null;
-        const updatedItems = prev.checklist_items.map(i =>
-          String(i.record_id) === targetRecordId
-            ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), result.data] }
-            : i
-        );
-        // 同时更新检查状态为已检查
-        const updatedItemsWithStatus = updatedItems.map(i =>
-          String(i.record_id) === targetRecordId && i.status === 'unchecked'
-            ? { ...i, status: 'pass' as const }
-            : i
-        );
-        const checkedCount = updatedItemsWithStatus.filter(i => i.status !== 'unchecked').length;
-        const defectCount = updatedItemsWithStatus.filter(i => i.status === 'fail').length;
-        return { ...prev, checklist_items: updatedItemsWithStatus, checkedCount, defectCount };
-      });
-      Alert.alert('扫码成功', `条码: ${result.data}`);
+    // 只扫描一次，扫描后不再响应
+    if (!result.data || !barcodeScanTarget || hasScannedBarcode) return;
+    
+    setHasScannedBarcode(true);
+    
+    // 将扫描到的条码添加到对应检查项
+    const targetRecordId = String(barcodeScanTarget.record_id);
+    setInspection(prev => {
+      if (!prev) return null;
+      const updatedItems = prev.checklist_items.map(i =>
+        String(i.record_id) === targetRecordId
+          ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), result.data] }
+          : i
+      );
+      // 同时更新检查状态为已检查
+      const updatedItemsWithStatus = updatedItems.map(i =>
+        String(i.record_id) === targetRecordId && i.status === 'unchecked'
+          ? { ...i, status: 'pass' as const }
+          : i
+      );
+      const checkedCount = updatedItemsWithStatus.filter(i => i.status !== 'unchecked').length;
+      const defectCount = updatedItemsWithStatus.filter(i => i.status === 'fail').length;
+      return { ...prev, checklist_items: updatedItemsWithStatus, checkedCount, defectCount };
+    });
+    
+    // 关闭相机预览，只显示结果
+    if (barcodeCameraRef.current) {
+      barcodeCameraRef.current.pausePreview();
+    }
+  };
+
+  // 完成条码扫描，跳转到检查项目页面
+  const finishBarcodeScan = () => {
+    closeBarcodeScanner();
+    // 滚动到检查项目区域
+    // 这里假设跳转到对应的分类检查项
+    const categories = inspection?.checklist_items.map(item => item.category) || [];
+    const barcodeCategoryIndex = categories.indexOf('条码');
+    if (barcodeCategoryIndex > -1) {
+      // 可以通过ref或者FlatList的scrollToIndex来滚动
     }
   };
 
@@ -540,6 +560,11 @@ export default function InspectionDetailScreen() {
   const closeBarcodeScanner = () => {
     setBarcodeScannerVisible(false);
     setBarcodeScanTarget(null);
+    setHasScannedBarcode(false);
+    // 恢复相机预览
+    if (barcodeCameraRef.current) {
+      barcodeCameraRef.current.resumePreview();
+    }
   };
 
   if (loading || !inspection) {
@@ -1477,32 +1502,53 @@ export default function InspectionDetailScreen() {
               <Feather name="x" size={28} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.barcodeScannerTitle}>
-              扫描条码 - {barcodeScanTarget?.name || ''}
+              {hasScannedBarcode ? '扫码成功' : `扫描条码 - ${barcodeScanTarget?.name || ''}`}
             </Text>
             <View style={{ width: 28 }} />
           </View>
 
-          {/* 相机预览 */}
+          {/* 相机预览 - 扫描前显示 */}
           {barcodePermission?.granted ? (
-            <View style={styles.cameraContainer}>
-              <CameraView
-                ref={barcodeCameraRef}
-                style={styles.barcodeCamera}
-                facing="back"
-                barcodeScannerSettings={{
-                  barcodeTypes: ["qr", "ean13", "ean8", "code39", "code93", "code128", "upc_a", "upc_e", "pdf417", "aztec", "datamatrix", "itf14"],
-                }}
-                onBarcodeScanned={handleBarcodeScanned}
-              >
-                {/* 扫描框 */}
-                <View style={styles.scanFrame}>
-                  <View style={[styles.scanCorner, styles.scanCornerTL]} />
-                  <View style={[styles.scanCorner, styles.scanCornerTR]} />
-                  <View style={[styles.scanCorner, styles.scanCornerBL]} />
-                  <View style={[styles.scanCorner, styles.scanCornerBR]} />
+            hasScannedBarcode ? (
+              // 扫描成功后的结果展示
+              <View style={styles.barcodeResultContainer}>
+                <View style={styles.barcodeSuccessIcon}>
+                  <Feather name="check" size={60} color="#10B981" />
                 </View>
-              </CameraView>
-            </View>
+                <Text style={styles.barcodeSuccessText}>扫码成功</Text>
+                <Text style={styles.barcodeResultLabel}>条码内容</Text>
+                <Text style={styles.barcodeResultValue}>
+                  {barcodeScanTarget?.barcodeCodes?.[barcodeScanTarget.barcodeCodes?.length - 1] || ''}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.barcodeCompleteButton}
+                  onPress={finishBarcodeScan}
+                >
+                  <Text style={styles.barcodeCompleteButtonText}>完成</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              // 扫描中显示相机
+              <View style={styles.cameraContainer}>
+                <CameraView
+                  ref={barcodeCameraRef}
+                  style={styles.barcodeCamera}
+                  facing="back"
+                  barcodeScannerSettings={{
+                    barcodeTypes: ["qr", "ean13", "ean8", "code39", "code93", "code128", "upc_a", "upc_e", "pdf417", "aztec", "datamatrix", "itf14"],
+                  }}
+                  onBarcodeScanned={handleBarcodeScanned}
+                >
+                  {/* 扫描框 */}
+                  <View style={styles.scanFrame}>
+                    <View style={[styles.scanCorner, styles.scanCornerTL]} />
+                    <View style={[styles.scanCorner, styles.scanCornerTR]} />
+                    <View style={[styles.scanCorner, styles.scanCornerBL]} />
+                    <View style={[styles.scanCorner, styles.scanCornerBR]} />
+                  </View>
+                </CameraView>
+              </View>
+            )
           ) : (
             <View style={styles.barcodePermissionContainer}>
               <Text style={styles.barcodePermissionText}>需要相机权限来扫描条码</Text>
@@ -1513,10 +1559,12 @@ export default function InspectionDetailScreen() {
           )}
 
           {/* 底部提示 */}
-          <View style={styles.barcodeScannerFooter}>
-            <Text style={styles.barcodeScannerHint}>将条码对准扫描框内</Text>
-            <Text style={styles.barcodeScannerHintSub}>支持二维码、 EAN、 UPC、 Code 等格式</Text>
-          </View>
+          {!hasScannedBarcode && (
+            <View style={styles.barcodeScannerFooter}>
+              <Text style={styles.barcodeScannerHint}>将条码对准扫描框内</Text>
+              <Text style={styles.barcodeScannerHintSub}>支持二维码、 EAN、 UPC、 Code 等格式</Text>
+            </View>
+          )}
         </View>
       </Modal>
 
@@ -2514,6 +2562,57 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255,255,255,0.6)',
     marginTop: 8,
+  },
+  // 条码扫描结果样式
+  barcodeResultContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a2e',
+    paddingHorizontal: 40,
+  },
+  barcodeSuccessIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(16,185,129,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  barcodeSuccessText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#10B981',
+    marginBottom: 30,
+  },
+  barcodeResultLabel: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: 8,
+  },
+  barcodeResultValue: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '500',
+    textAlign: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  barcodeCompleteButton: {
+    marginTop: 40,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 60,
+    paddingVertical: 16,
+    borderRadius: 30,
+  },
+  barcodeCompleteButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
   },
   // 问题描述框样式
   addIssueButton: {
