@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 220,
     height: 88,
-    resizeMode: 'contain',
+    resizeMode: 'cover',
     backgroundColor: '#F0F0F3',
     borderRadius: 8,
   },
