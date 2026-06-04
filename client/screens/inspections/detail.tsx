@@ -816,7 +816,18 @@ export default function InspectionDetailScreen() {
                   <View style={styles.checklistHeader}>
                     <View style={styles.checklistInfo}>
                       {item.name && item.name !== '条码扫描' && (
-                        <Text style={styles.checklistName}>{item.name}</Text>
+                        <View style={styles.checklistNameRow}>
+                          <Text style={styles.checklistName}>{item.name}</Text>
+                          {/* 拍照按钮放在标题后面 */}
+                          {item.status === 'unchecked' && inspection.status !== 'completed' && (
+                            <TouchableOpacity
+                              style={styles.headerCameraButton}
+                              onPress={() => takePhoto(item)}
+                            >
+                              <Feather name="camera" size={16} color="#6C63FF" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       )}
                     </View>
                     {item.description && (
@@ -931,13 +942,6 @@ export default function InspectionDetailScreen() {
                               <Text style={styles.scanButtonText}>扫码</Text>
                             </TouchableOpacity>
                           )}
-                          <TouchableOpacity
-                            style={[styles.actionButton, styles.photoButton]}
-                            onPress={() => takePhoto(item)}
-                          >
-                            <Feather name="camera" size={18} color="#6C63FF" />
-                            <Text style={styles.photoButtonText}>拍照</Text>
-                          </TouchableOpacity>
                         </View>
                       )}
 
@@ -1010,9 +1014,20 @@ export default function InspectionDetailScreen() {
                       </Text>
                       <Feather name="chevron-down" size={16} color={item.barcodeType ? barcodeTypeOptions.find(o => o.value === item.barcodeType)?.color : '#666'} />
                     </TouchableOpacity>
-                    {item.name && item.name !== '条码扫描' && (
-                      <Text style={styles.checklistName}>{item.name}</Text>
-                    )}
+                    <View style={styles.checklistNameRow}>
+                      {item.name && item.name !== '条码扫描' && (
+                        <Text style={styles.checklistName}>{item.name}</Text>
+                      )}
+                      {/* 拍照按钮放在标题后面 */}
+                      {item.status === 'unchecked' && inspection.status !== 'completed' && (
+                        <TouchableOpacity
+                          style={styles.headerCameraButton}
+                          onPress={() => takePhoto(item)}
+                        >
+                          <Feather name="camera" size={16} color="#6C63FF" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                     {item.status !== 'unchecked' && (
                       <View style={[styles.statusIcon, {
                         backgroundColor: item.status === 'pass' ? 'rgba(0,184,148,0.15)' : 'rgba(255,107,107,0.15)'
@@ -1082,13 +1097,9 @@ export default function InspectionDetailScreen() {
                     </View>
                   )}
                   
-                  {/* 操作按钮行：拍照、扫码、合格、不合格、不适用 */}
+                  {/* 操作按钮行：扫码、合格、不合格、不适用 */}
                   {item.status === 'unchecked' && inspection.status !== 'completed' && (
                     <View style={styles.actionButtonsRow}>
-                      <TouchableOpacity style={styles.issueCameraButton} onPress={() => takePhoto(item)}>
-                        <Feather name="camera" size={16} color="#6C63FF" />
-                        <Text style={styles.issueCameraText}>拍照</Text>
-                      </TouchableOpacity>
                       <TouchableOpacity 
                         style={styles.issueCameraButton} 
                         onPress={() => openBarcodeScanner(item)}
@@ -1124,10 +1135,6 @@ export default function InspectionDetailScreen() {
                   )}
                   {item.status === 'unchecked' && inspection.status === 'completed' && (
                     <View style={styles.actionButtonsRow}>
-                      <TouchableOpacity style={styles.issueCameraButton} onPress={() => takePhoto(item)}>
-                        <Feather name="camera" size={16} color="#6C63FF" />
-                        <Text style={styles.issueCameraText}>拍照</Text>
-                      </TouchableOpacity>
                       <TouchableOpacity 
                         style={styles.issueCameraButton} 
                         onPress={() => openBarcodeScanner(item)}
@@ -1969,10 +1976,20 @@ const styles = StyleSheet.create({
   checklistInfo: {
     flex: 1,
   },
+  checklistNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   checklistName: {
     fontSize: 15,
     fontWeight: '600',
     color: '#2D3436',
+  },
+  headerCameraButton: {
+    padding: 4,
+    backgroundColor: 'rgba(108,99,255,0.1)',
+    borderRadius: 6,
   },
   checklistDesc: {
     fontSize: 13,
