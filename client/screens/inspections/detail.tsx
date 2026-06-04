@@ -1980,11 +1980,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
   },
   checklistName: {
     fontSize: 15,
     fontWeight: '600',
     color: '#2D3436',
+    flexShrink: 1,
   },
   headerCameraButton: {
     padding: 4,
