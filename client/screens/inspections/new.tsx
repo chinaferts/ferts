@@ -357,16 +357,16 @@ export default function NewInspectionScreen() {
 
       if (response.ok) {
         Alert.alert(t('success'), t('createInspectionSuccess'));
-        // 直接跳转到验货列表页面（不是 back，因为栈中可能有其他页面）
-        router.replace('/inspections');
+        // 返回验货列表页面
+        router.back();
       } else {
         Alert.alert(t('error'), t('createInspectionFailed'));
       }
     } catch (error) {
       console.error('Failed to create inspection:', error);
       Alert.alert(t('success'), t('createInspectionSuccess'));
-      // 出错时也跳转到验货列表页面
-      router.replace('/inspections');
+      // 出错时也返回验货列表页面
+      router.back();
     } finally {
       setLoading(false);
     }
