@@ -233,7 +233,7 @@ export default function DashboardScreen() {
           <Image source={require('@/assets/logo.png')} style={styles.logo} resizeMode="contain" />
         </View>
         <View style={styles.logoTextContainer}>
-          <Text style={styles.logoTitle}>FERTS{'\n'}验货管理系统</Text>
+          <Text style={styles.logoTitle}>FERTS 验货管理系统</Text>
           <Text style={styles.logoSubtitle}>FERTS Inspection Management System</Text>
         </View>
 
