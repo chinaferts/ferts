@@ -10,6 +10,7 @@ import {
   Dimensions,
   Platform,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,8 +50,10 @@ export default function CustomCamera({
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<PhotoItem | null>(null);
   const [rotation, setRotation] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   // 重置照片列表当相机重新打开时
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (visible) {
       if (editingPhotoUri) {
@@ -63,6 +66,8 @@ export default function CustomCamera({
         // 新增模式：清空照片
         setPhotos([]);
       }
+      // 重置保存状态
+      setSaving(false);
     }
   }, [visible, editingPhotoUri]);
 
@@ -114,6 +119,9 @@ export default function CustomCamera({
   };
 
   const handleComplete = () => {
+    // 防止重复点击
+    if (saving) return;
+    
     // 如果是编辑模式且没有新拍的照片，直接关闭
     if (editingPhotoUri && photos.length === 0) {
       onComplete([]);
@@ -121,7 +129,10 @@ export default function CustomCamera({
     }
     
     if (photos.length > 0) {
+      setSaving(true);
       onComplete(photos);
+      // 保存完成后关闭（由父组件调用onClose）
+      setTimeout(() => setSaving(false), 1000);
     } else {
       Alert.alert('提示', '请至少拍摄一张照片');
     }
@@ -296,13 +307,17 @@ export default function CustomCamera({
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.doneButton, photos.length === 0 && styles.doneButtonDisabled]}
+              style={[styles.doneButton, (photos.length === 0 || saving) && styles.doneButtonDisabled]}
               onPress={handleComplete}
-              disabled={photos.length === 0}
+              disabled={photos.length === 0 || saving}
             >
-              <Text style={[styles.doneText, photos.length === 0 && styles.doneTextDisabled]}>
-                完成
-              </Text>
+              {saving ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={[styles.doneText, photos.length === 0 && styles.doneTextDisabled]}>
+                  完成
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
 
