@@ -212,7 +212,7 @@ export default function InspectionDetailScreen() {
           type: `image/${ext}`,
         } as any);
         formData.append("inspection_id", String(id));
-        formData.append("record_id", String(targetRecordId));
+        // 不传递 record_id，因为 inspection_photos 表的外键约束要求 record_id 存在于 inspection_records 表中
         formData.append("category", item.category || item.name);
         formData.append("item_name", item.name);
         
@@ -842,7 +842,10 @@ export default function InspectionDetailScreen() {
                 const fileObj = await createFormDataFile(photo.uri, filename, mimeType);
                 
                 const formData = new FormData();
-                formData.append('record_id', String(targetRecordId));
+                // 不传递 record_id，因为 inspection_photos 表的外键约束要求 record_id 存在于 inspection_records 表中
+                formData.append('inspection_id', String(id));
+                formData.append('category', tempPhotoTarget?.category || '');
+                formData.append('item_name', tempPhotoTarget?.name || '');
                 formData.append('photo', fileObj as any);
                 
                 await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {

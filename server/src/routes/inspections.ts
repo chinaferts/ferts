@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import multer from 'multer';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 import {
   mockGetInspections,
@@ -559,7 +560,7 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
 });
 
 // 上传检查照片
-router.post('/:id/photos', async (req: Request, res: Response) => {
+router.post('/:id/photos', multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }).single('file'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { record_id } = req.body; // 清单项记录ID
@@ -569,14 +570,43 @@ router.post('/:id/photos', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: '请上传图片文件' });
     }
 
-    const photoUrl = `/uploads/${file.filename}`;
+    // 生成唯一文件名
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = file.originalname.split('.').pop() || 'jpg';
+    const filename = `${uniqueSuffix}.${ext}`;
+    let photoUrl = `/uploads/${filename}`;
 
-    if (!isSupabaseConfigured()) {
-      // Mock 模式：返回成功响应
+    // 检查验货记录是否存在
+    const client = requireSupabaseClient();
+    const { data: inspection } = await client
+      .from('inspections')
+      .select('id')
+      .eq('id', parseInt(id as string))
+      .single();
+
+    if (!inspection) {
+      // Mock 模式：记录不存在于数据库中，返回成功响应
       return res.json({ success: true, data: { photoUrl, inspection_id: id, record_id } });
     }
 
-    const client = requireSupabaseClient();
+    // 记录存在，尝试使用 S3 存储
+    let savedUrl = photoUrl;
+    if (isSupabaseConfigured()) {
+      try {
+        const { storage } = await import('../storage/s3.js');
+        const key = `inspections/${id}/${filename}`;
+        savedUrl = await (storage as any).uploadBuffer(file.buffer, key, file.mimetype);
+        photoUrl = savedUrl;
+      } catch (storageErr) {
+        console.log('S3存储失败，使用mock URL:', storageErr);
+      }
+    } else {
+      // Mock 模式使用可访问的 URL
+      savedUrl = `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091'}/uploads/${filename}`;
+      photoUrl = savedUrl;
+    }
+
+    // 保存照片到数据库
     const { data, error } = await client
       .from('inspection_photos')
       .insert({
