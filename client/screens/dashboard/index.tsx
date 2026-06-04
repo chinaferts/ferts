@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Dimensions, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Dimensions, Alert } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -228,12 +228,14 @@ export default function DashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6C63FF" />
         }
       >
-        {/* 头部LOGO */}
-        <View style={styles.logoContainer}>
-          <Image source={require('@/assets/logo.png')} style={styles.logo} resizeMode="contain" />
-          <View style={styles.logoTextContainer}>
-            <Text style={styles.logoTitle}>FERTS 验货管理系统</Text>
-            <Text style={styles.logoSubtitle}>FERTS Inspection Management System</Text>
+        {/* 头部欢迎 */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>{t('qualityInspector')}</Text>
+            <Text style={styles.subGreeting}>Quality Inspector</Text>
+          </View>
+          <View style={styles.avatarContainer}>
+            <Feather name="user" size={24} color="#FFFFFF" />
           </View>
         </View>
 
@@ -329,34 +331,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 120,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingVertical: 16,
-    marginLeft: -20,
-  },
-  logo: {
-    width: 90,
-    height: 36,
-    resizeMode: 'contain',
-    backgroundColor: '#F0F0F3',
-    borderRadius: 8,
-  },
-  logoTextContainer: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  logoTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#333',
-  },
-  logoSubtitle: {
-    fontSize: 11,
-    color: '#666',
-    marginTop: 2,
   },
   header: {
     flexDirection: 'row',

@@ -421,10 +421,16 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
     // 构建更新对象，只包含实际存在的字段
     const updateData: any = {
       status: 'completed',
-      completed_date: new Date().toISOString(),
-      overall_result: result,
       notes
     };
+
+    // 如果表中有这些字段才添加
+    if (records && records.length !== undefined) {
+      updateData.total_items = records.length;
+    }
+    if (passedItems !== undefined) {
+      updateData.passed_items = passedItems;
+    }
 
     const { data, error } = await client
       .from('inspections')

@@ -9,7 +9,6 @@ import { createFormDataFile } from '@/utils';
 import CustomCamera from '@/components/CustomCamera';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -627,40 +626,6 @@ export default function InspectionDetailScreen() {
       { text: t('cancel'), style: 'cancel' },
       { text: t('confirm'), onPress: () => doSubmit('fail') },
     ]);
-  };
-
-  // 导出照片
-  const handleExportPhotos = async () => {
-    try {
-      if (!inspection) return;
-      
-      // 收集所有照片 - photos 是字符串数组，直接是 URI
-      const allPhotos: string[] = [];
-      inspection.checklist_items.forEach((item: any) => {
-        if (item.photos && Array.isArray(item.photos)) {
-          item.photos.forEach((photo: string) => {
-            if (photo) {
-              allPhotos.push(photo);
-            }
-          });
-        }
-      });
-
-      if (allPhotos.length === 0) {
-        Alert.alert(t('tip'), t('noPhotosToExport'));
-        return;
-      }
-
-      // 显示照片数量和提示
-      Alert.alert(
-        t('exportPhotos'),
-        `${t('exportingPhotos')}\n${allPhotos.length} ${t('photos')}`,
-        [{ text: t('ok') }]
-      );
-    } catch (error) {
-      console.error('Export photos error:', error);
-      Alert.alert(t('error'), t('exportFailed'));
-    }
   };
 
   const doSubmit = async (result: 'pass' | 'fail') => {
@@ -1552,14 +1517,6 @@ export default function InspectionDetailScreen() {
           </View>
         )}
 
-        {/* 导出照片按钮 */}
-        {inspection.status !== 'completed' && (
-          <TouchableOpacity style={styles.exportPhotosButton} onPress={handleExportPhotos}>
-            <Feather name="download" size={18} color="#FFFFFF" />
-            <Text style={styles.submitButtonText}>{t('exportPhotos')}</Text>
-          </TouchableOpacity>
-        )}
-
         {/* 提交按钮 */}
         {inspection.status !== 'completed' && (
           <View style={styles.flexRow}>
@@ -1638,7 +1595,7 @@ export default function InspectionDetailScreen() {
             )}
 
             <TouchableOpacity style={styles.submitButton} onPress={handleAddDefect}>
-              <Text style={styles.submitButtonTextAlt}>{t('confirmAdd')}</Text>
+              <Text style={styles.submitButtonText}>{t('confirmAdd')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -1731,7 +1688,7 @@ export default function InspectionDetailScreen() {
             </View>
 
             <TouchableOpacity style={styles.submitButton} onPress={() => setScannerVisible(false)}>
-              <Text style={styles.submitButtonTextAlt}>{t('complete')}</Text>
+              <Text style={styles.submitButtonText}>{t('complete')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -2503,20 +2460,6 @@ const styles = StyleSheet.create({
     color: '#2D3436',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
-  exportPhotosButton: {
-    marginTop: 20,
-    backgroundColor: '#8B7FF5',
-    borderRadius: 16,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#8B7FF5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    gap: 8,
-  },
   submitPassButton: {
     flex: 1,
     marginTop: 20,
@@ -2665,7 +2608,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
-  submitButtonTextAlt: {
+  submitButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
