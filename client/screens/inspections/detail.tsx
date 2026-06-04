@@ -1028,25 +1028,28 @@ export default function InspectionDetailScreen() {
                         </TouchableOpacity>
                       )}
                     </View>
-                    {item.status !== 'unchecked' && (
-                      <View style={[styles.statusIcon, {
-                        backgroundColor: item.status === 'pass' ? 'rgba(0,184,148,0.15)' : 'rgba(255,107,107,0.15)'
-                      }]}>
-                        <Feather name={item.status === 'pass' ? 'check' : 'x'} size={16}
-                          color={item.status === 'pass' ? '#00B894' : '#FF6B6B'} />
-                      </View>
-                    )}
-                    {/* 删除按钮 - 仅对新增的条码扫描项显示 */}
-                    {isExtraItem && (
-                      <TouchableOpacity 
-                        style={styles.removeIssueButton} 
-                        onPress={() => {
-                          setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
-                        }}
-                      >
-                        <Feather name="x" size={16} color="#FF6B6B" />
-                      </TouchableOpacity>
-                    )}
+                    {/* 状态图标和删除按钮换一行显示 */}
+                    <View style={styles.checklistActionsRow}>
+                      {item.status !== 'unchecked' && (
+                        <View style={[styles.statusIcon, {
+                          backgroundColor: item.status === 'pass' ? 'rgba(0,184,148,0.15)' : 'rgba(255,107,107,0.15)'
+                        }]}>
+                          <Feather name={item.status === 'pass' ? 'check' : 'x'} size={16}
+                            color={item.status === 'pass' ? '#00B894' : '#FF6B6B'} />
+                        </View>
+                      )}
+                      {/* 删除按钮 - 仅对新增的条码扫描项显示 */}
+                      {isExtraItem && (
+                        <TouchableOpacity 
+                          style={styles.removeIssueButton} 
+                          onPress={() => {
+                            setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
+                          }}
+                        >
+                          <Feather name="x" size={16} color="#FF6B6B" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                   
                   {item.description && (
@@ -1981,6 +1984,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     flex: 1,
+  },
+  checklistActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
   },
   checklistName: {
     fontSize: 15,
