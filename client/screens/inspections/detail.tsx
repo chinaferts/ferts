@@ -2134,6 +2134,8 @@ const styles = StyleSheet.create({
   },
   checklistInfo: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   checklistNameRow: {
     flexDirection: 'row',
