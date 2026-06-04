@@ -1995,7 +1995,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#2D3436',
-    flexShrink: 1,
+    flexWrap: 'wrap',
+    flex: 1,
   },
   headerCameraButton: {
     padding: 4,
