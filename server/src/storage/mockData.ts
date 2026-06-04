@@ -40,24 +40,31 @@ let universalTemplateData = {
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   categories: [
-    { id: 1, name: '仓库', items: [
-      { id: 'u1', name: '仓库照片', description: '拍摄大货仓库照片及码堆情况' }
+    { id: 1, name: '大货仓库照以及码堆照片', items: [
+      { id: 'u1', name: '大货仓库照以及码堆照片', description: '拍摄大货仓库照片及码堆情况' }
     ]},
-    { id: 2, name: '外箱', items: [
-      { id: 'u2', name: '外箱检查', description: '检查外箱箱唛及尺寸重量' }
+    { id: 2, name: '外箱箱唛以及尺寸重量拍照', items: [
+      { id: 'u2', name: '外箱箱唛以及尺寸重量拍照', description: '检查外箱箱唛及尺寸重量' }
     ]},
-    { id: 3, name: '内箱', items: [
-      { id: 'u3', name: '内箱检查', description: '检查内箱唛头及规格重量' }
+    { id: 3, name: '内箱箱唛以及尺寸重量拍照', items: [
+      { id: 'u3', name: '内箱箱唛以及尺寸重量拍照', description: '检查内箱唛头及规格重量' }
     ]},
-    { id: 4, name: '产品', items: [
-      { id: 'u4', name: '产品细节', description: '拍摄产品细节、尺寸和重量照' }
+    { id: 4, name: '产品细节拍照（包括产品尺寸和重量照）', items: [
+      { id: 'u4', name: '产品细节拍照（包括产品尺寸和重量照）', description: '拍摄产品细节、尺寸和重量照' }
     ]},
-    { id: 5, name: '彩盒', items: [
-      { id: 'u5', name: '彩盒检查', description: '检查彩盒信息及规格重量' }
+    { id: 5, name: '彩盒/彩卡信息以及其规格重量拍照', items: [
+      { id: 'u5', name: '彩盒/彩卡信息以及其规格重量拍照', description: '检查彩盒信息及规格重量' }
     ]},
-    { id: 6, name: '条码', items: [
-      { id: 'u6', name: '条码扫描', description: '扫描所有含有条码的地方' }
-    ]}
+    { id: 6, name: '条码扫描以及拍照', items: [
+      { id: 'u6', name: '条码扫描以及拍照', description: '扫描所有含有条码的地方' }
+    ]},
+    { id: 7, name: '与签样对比拍照', items: [
+      { id: 'u7', name: '与签样对比拍照', description: '与签样进行对比' }
+    ]},
+    { id: 8, name: '组装以及功能测试拍照', items: [
+      { id: 'u8', name: '组装以及功能测试拍照', description: '按说明书指示组装并拍照' }
+    ]},
+    { id: 9, name: '问题统计以及拍照并描述', items: [] }
   ]
 };
 
@@ -242,14 +249,15 @@ export function mockGetInspection(id: string) {
 
 // 通用验货模板清单项（硬编码）
 const UNIVERSAL_CHECKLIST_ITEMS = [
-  { id: 'u1', checklist_id: '0', name: '仓库照片', description: '拍摄大货仓库照片及码堆情况', category: '仓库', is_required: true, item_order: 1 },
-  { id: 'u2', checklist_id: '0', name: '外箱检查', description: '检查外箱箱唛及尺寸重量', category: '外箱', is_required: true, item_order: 2 },
-  { id: 'u3', checklist_id: '0', name: '内箱检查', description: '检查内箱唛头及规格重量', category: '内箱', is_required: true, item_order: 3 },
-  { id: 'u4', checklist_id: '0', name: '产品细节', description: '拍摄产品细节、尺寸和重量照', category: '产品', is_required: true, item_order: 4 },
-  { id: 'u5', checklist_id: '0', name: '彩盒检查', description: '检查彩盒信息及规格重量', category: '彩盒', is_required: true, item_order: 5 },
-  { id: 'u6', checklist_id: '0', name: '条码扫描', description: '扫描所有含有条码的地方', category: '条码', is_required: true, item_order: 6 },
-  { id: 'u7', checklist_id: '0', name: '签样对比', description: '与签样进行对比', category: '对比', is_required: true, item_order: 7 },
-  { id: 'u8', checklist_id: '0', name: '组装测试', description: '按说明书指示组装并拍照', category: '组装', is_required: false, item_order: 8 }
+  { id: 'u1', checklist_id: '0', name: '大货仓库照以及码堆照片', description: '拍摄大货仓库照片及码堆情况', category: '大货仓库照以及码堆照片', is_required: true, item_order: 1 },
+  { id: 'u2', checklist_id: '0', name: '外箱箱唛以及尺寸重量拍照', description: '检查外箱箱唛及尺寸重量', category: '外箱箱唛以及尺寸重量拍照', is_required: true, item_order: 2 },
+  { id: 'u3', checklist_id: '0', name: '内箱箱唛以及尺寸重量拍照', description: '检查内箱唛头及规格重量', category: '内箱箱唛以及尺寸重量拍照', is_required: true, item_order: 3 },
+  { id: 'u4', checklist_id: '0', name: '产品细节拍照（包括产品尺寸和重量照）', description: '拍摄产品细节、尺寸和重量照', category: '产品细节拍照（包括产品尺寸和重量照）', is_required: true, item_order: 4 },
+  { id: 'u5', checklist_id: '0', name: '彩盒/彩卡信息以及其规格重量拍照', description: '检查彩盒信息及规格重量', category: '彩盒/彩卡信息以及其规格重量拍照', is_required: true, item_order: 5 },
+  { id: 'u6', checklist_id: '0', name: '条码扫描以及拍照', description: '扫描所有含有条码的地方', category: '条码扫描以及拍照', is_required: true, item_order: 6 },
+  { id: 'u7', checklist_id: '0', name: '与签样对比拍照', description: '与签样进行对比', category: '与签样对比拍照', is_required: true, item_order: 7 },
+  { id: 'u8', checklist_id: '0', name: '组装以及功能测试拍照', description: '按说明书指示组装并拍照', category: '组装以及功能测试拍照', is_required: false, item_order: 8 },
+  { id: 'u9', checklist_id: '0', name: '问题统计以及拍照并描述', description: '问题统计以及拍照并描述', category: '问题统计以及拍照并描述', is_required: false, item_order: 9 }
 ];
 
 export function mockCreateInspection(data: any) {

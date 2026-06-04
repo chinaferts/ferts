@@ -108,7 +108,7 @@ export default function InspectionDetailScreen() {
   useEffect(() => {
     if (inspection?.checklist_items) {
       const originalBarcodeItems = inspection.checklist_items
-        .filter(item => item.category === '条码')
+        .filter(item => item.category === '条码扫描以及拍照')
         .map(item => ({ ...item, barcodeType: 'box' as const }));
       setBarcodeItems(originalBarcodeItems);
     }
@@ -153,7 +153,7 @@ export default function InspectionDetailScreen() {
       record_id: Date.now(),
       name: '条码扫描',
       description: '扫描条码',
-      category: '条码',
+      category: '条码扫描以及拍照',
       status: 'unchecked',
       photos: [],
       barcodeCodes: [],
@@ -560,7 +560,7 @@ export default function InspectionDetailScreen() {
     // 滚动到检查项目区域
     // 这里假设跳转到对应的分类检查项
     const categories = inspection?.checklist_items.map(item => item.category) || [];
-    const barcodeCategoryIndex = categories.indexOf('条码');
+    const barcodeCategoryIndex = categories.indexOf('条码扫描以及拍照');
     if (barcodeCategoryIndex > -1) {
       // 可以通过ref或者FlatList的scrollToIndex来滚动
     }
@@ -803,7 +803,7 @@ export default function InspectionDetailScreen() {
         </View>
 
         {/* 验货清单 */}
-        {categories.filter(c => c !== '条码').map((category, catIndex) => {
+        {categories.filter(c => c !== '条码扫描以及拍照').map((category, catIndex) => {
           return (
             <View key={category} style={styles.section}>
               <View style={styles.categoryHeader}>
@@ -930,7 +930,7 @@ export default function InspectionDetailScreen() {
                             <Text style={styles.naButtonText}>不适用</Text>
                           </TouchableOpacity>
                           {/* 条码分类显示扫码按钮 */}
-                          {item.category === '条码' && (
+                          {item.category === '条码扫描以及拍照' && (
                             <TouchableOpacity
                               style={[styles.actionButton, styles.scanButton]}
                               onPress={() => openBarcodeScanner(item)}
@@ -966,7 +966,7 @@ export default function InspectionDetailScreen() {
         })}
 
         {/* 条码扫描分类 - 问题描述格式 */}
-        {categories.includes('条码') && (
+        {categories.includes('条码扫描以及拍照') && (
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
               <Text style={styles.sectionTitle}> </Text>
@@ -1154,7 +1154,7 @@ export default function InspectionDetailScreen() {
         {issues.length > 0 && (
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
-              <Text style={styles.sectionTitle}>问题描述</Text>
+              <Text style={styles.sectionTitle}>问题统计以及拍照并描述</Text>
               <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
                 <Feather name="plus" size={18} color="#6C63FF" />
                 <Text style={styles.addIssueText}>添加问题</Text>
