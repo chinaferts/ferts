@@ -156,7 +156,7 @@ export default function InspectionsListScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchInspections();
-    }, [fetchInspections])
+    }, [activeTab])
   );
 
   const onRefresh = async () => {
