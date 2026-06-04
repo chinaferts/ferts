@@ -261,6 +261,11 @@ export const translations = {
     submitFailConfirm: '确认将此验货标记为不合格？',
     itemsUnchecked: '项未检查',
     confirmSubmit: '确认提交',
+    exportPhotos: '导出照片',
+    exportPhotosSuccess: '照片导出成功',
+    noPhotosToExport: '暂无照片可导出',
+    exportingPhotos: '正在导出照片...',
+    exportFailed: '导出失败',
     continueCheck: '继续检查',
     defectDescriptionPlaceholder: '请详细描述问题...',
 
@@ -655,6 +660,11 @@ export const translations = {
     submitFailConfirm: 'Confirm to mark this inspection as FAIL?',
     itemsUnchecked: 'items unchecked',
     confirmSubmit: 'Confirm Submit',
+    exportPhotos: 'Export Photos',
+    exportPhotosSuccess: 'Photos exported successfully',
+    noPhotosToExport: 'No photos to export',
+    exportingPhotos: 'Exporting photos...',
+    exportFailed: 'Export failed',
     continueCheck: 'Continue Check',
     defectDescriptionPlaceholder: 'Please describe the problem in detail...',
 
