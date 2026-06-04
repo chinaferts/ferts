@@ -867,7 +867,7 @@ export default function InspectionDetailScreen() {
                       {/* 已保存的照片预览 */}
                       {item.photos && item.photos.length > 0 && (
                         <View style={styles.photoPreviewSection}>
-                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoPreviewScroll}>
+                          <View style={styles.photoGridContainer}>
                             {item.photos.map((photo, idx) => (
                               <TouchableOpacity key={idx} onPress={() => {
                                 setEditingPhoto({ uri: photo, index: idx, item });
@@ -891,7 +891,7 @@ export default function InspectionDetailScreen() {
                                 </TouchableOpacity>
                               </TouchableOpacity>
                             ))}
-                          </ScrollView>
+                          </View>
                         </View>
                       )}
 
@@ -2142,6 +2142,11 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
   },
+  photoGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   photoPreviewLabel: {
     fontSize: 13,
     color: '#6C63FF',
@@ -2149,9 +2154,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   photoThumb: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
+    width: 80,
+    height: 80,
+    borderRadius: 10,
     borderWidth: 3,
     borderColor: '#FFFFFF',
     shadowColor: '#6C63FF',
