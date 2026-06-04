@@ -830,9 +830,6 @@ export default function InspectionDetailScreen() {
                         </View>
                       )}
                     </View>
-                    {item.description && (
-                      <Text style={styles.checklistDesc}>{item.description}</Text>
-                    )}
                     {item.status !== 'unchecked' && (
                       <View style={[styles.statusIcon, {
                         backgroundColor: item.status === 'pass' ? 'rgba(0,184,148,0.15)' : 'rgba(255,107,107,0.15)'
@@ -1055,10 +1052,6 @@ export default function InspectionDetailScreen() {
                       )}
                     </View>
                   </View>
-                  
-                  {item.description && (
-                    <Text style={styles.checklistDesc}>{item.description}</Text>
-                  )}
                   
                   {/* 已扫描的条码 */}
                   {item.barcodeCodes && item.barcodeCodes.length > 0 && (
