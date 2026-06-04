@@ -95,15 +95,9 @@ export default function NewInspectionScreen() {
       if (result.success && result.data) {
         const templates = Array.isArray(result.data) ? result.data : [];
         const otherTemplates = templates.map((t: any) => {
-          // 处理 category 可能是数组或字符串的情况
-          const categories = Array.isArray(t.category) 
-            ? t.category 
-            : (t.category ? [t.category] : []);
-          
-          const categoryCount = categories.length;
-          const itemCount = Array.isArray(t.category) 
-            ? t.category.reduce((sum: number, cat: any) => sum + (cat.items?.length || 0), 0)
-            : 0;
+          // API 直接返回 categories 和 items 数量
+          const categoryCount = typeof t.categories === 'number' ? t.categories : 0;
+          const itemCount = typeof t.items === 'number' ? t.items : 0;
           
           return {
             id: parseInt(t.id, 10),
