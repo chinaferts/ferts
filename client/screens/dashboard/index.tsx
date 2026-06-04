@@ -341,6 +341,8 @@ const styles = StyleSheet.create({
     width: 220,
     height: 88,
     resizeMode: 'contain',
+    backgroundColor: '#F0F0F3',
+    borderRadius: 8,
   },
   logoTextContainer: {
     marginLeft: 12,
