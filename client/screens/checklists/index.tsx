@@ -23,7 +23,7 @@ export default function ChecklistsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [creating, setCreating] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(true);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState<ChecklistTemplate | null>(null);
   const [deleting, setDeleting] = useState(false);
