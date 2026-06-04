@@ -1016,18 +1016,21 @@ export default function InspectionDetailScreen() {
                     </TouchableOpacity>
                     <View style={styles.checklistNameRow}>
                       {item.name && item.name !== '条码扫描' && (
-                        <Text style={styles.checklistName} numberOfLines={1}>{item.name}</Text>
+                        <Text style={styles.checklistName}>{item.name}</Text>
                       )}
-                      {/* 拍照按钮放在标题后面 */}
-                      {item.status === 'unchecked' && inspection.status !== 'completed' && (
+                    </View>
+                    {/* 拍照按钮单独一行，靠右显示 */}
+                    {item.status === 'unchecked' && inspection.status !== 'completed' && (
+                      <View style={styles.cameraButtonRow}>
+                        <View style={{ flex: 1 }} />
                         <TouchableOpacity
                           style={styles.headerCameraButton}
                           onPress={() => takePhoto(item)}
                         >
                           <Feather name="camera" size={16} color="#6C63FF" />
                         </TouchableOpacity>
-                      )}
-                    </View>
+                      </View>
+                    )}
                     {/* 状态图标和删除按钮换一行显示 */}
                     <View style={styles.checklistActionsRow}>
                       {item.status !== 'unchecked' && (
@@ -1981,9 +1984,12 @@ const styles = StyleSheet.create({
   },
   checklistNameRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     flex: 1,
+  },
+  cameraButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   checklistActionsRow: {
     flexDirection: 'row',
