@@ -1161,10 +1161,9 @@ export default function InspectionDetailScreen() {
                       <Feather name="chevron-down" size={16} color={item.barcodeType ? barcodeTypeOptions.find(o => o.value === item.barcodeType)?.color : '#666'} />
                     </TouchableOpacity>
 
-                    {/* 拍照按钮单独一行，靠右显示 */}
+                    {/* 拍照和导入按钮放在同一行 */}
                     {item.status === 'unchecked' && inspection.status !== 'completed' && (
                       <View style={styles.cameraButtonRow}>
-                        <View style={{ flex: 1 }} />
                         <TouchableOpacity
                           style={styles.headerCameraButton}
                           onPress={() => takePhoto(item)}
