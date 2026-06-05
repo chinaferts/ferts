@@ -14,45 +14,88 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // 分类中英文对照映射
 const categoryBilingualMap: Record<string, string> = {
-  '大货仓库照以及码堆照片': '大货仓库照以及码堆照片 / Warehouse & Stacking Photos',
-  '外箱箱唛以及尺寸重量拍照': '外箱箱唛以及尺寸重量拍照 / Carton Marking & Dimensions',
-  '内箱箱唛以及尺寸重量拍照': '内箱箱唛以及尺寸重量拍照 / Inner Carton Marking & Dimensions',
-  '产品细节拍照（包括产品尺寸和重量照）': '产品细节拍照 / Product Detail Photos',
-  '产品细节拍照': '产品细节拍照 / Product Detail Photos',
-  '彩盒/彩卡信息以及其规格重量拍照': '彩盒/彩卡信息以及其规格重量拍照 / Color Box/Manual & Specs',
-  '与签样对比拍照': '与签样对比拍照 / Sample Comparison',
-  '组装以及功能测试拍照': '组装以及功能测试拍照 / Assembly & Function Test',
-  '条码扫描以及拍照': '条码扫描以及拍照 / Barcode Scan & Photo',
-  '条码扫描': '条码扫描 / Barcode Scan',
-  '问题统计以及拍照并描述': '问题统计以及拍照并描述 / Problem Statistics & Description',
-  '问题描述': '问题统计 / Problem Statistics',
-  '仓库': '大货仓库照以及码堆照片 / Warehouse & Stacking Photos',
-  '外箱': '外箱箱唛以及尺寸重量拍照 / Carton Marking & Dimensions',
-  '内箱': '内箱箱唛以及尺寸重量拍照 / Inner Carton Marking & Dimensions',
-  '产品': '产品细节拍照 / Product Detail Photos',
-  '彩盒': '彩盒/彩卡信息以及其规格重量拍照 / Color Box/Manual & Specs',
-  '对比': '与签样对比拍照 / Sample Comparison',
-  '组装': '组装以及功能测试拍照 / Assembly & Function Test',
-  '条码': '条码扫描以及拍照 / Barcode Scan & Photo',
+  '大货仓库照以及码堆照片': '大货仓库照以及码堆照片',
+  '外箱箱唛以及尺寸重量拍照': '外箱箱唛以及尺寸重量拍照',
+  '内箱箱唛以及尺寸重量拍照': '内箱箱唛以及尺寸重量拍照',
+  '产品细节拍照（包括产品尺寸和重量照）': '产品细节拍照（包括产品尺寸和重量照）',
+  '产品细节拍照': '产品细节拍照',
+  '彩盒/彩卡信息以及其规格重量拍照': '彩盒/彩卡信息以及其规格重量拍照',
+  '与签样对比拍照': '与签样对比拍照',
+  '组装以及功能测试拍照': '组装以及功能测试拍照',
+  '条码扫描以及拍照': '条码扫描以及拍照',
+  '条码扫描': '条码扫描',
+  '问题统计以及拍照并描述': '问题统计以及拍照并描述',
+  '问题描述': '问题描述',
+  '仓库': '大货仓库照以及码堆照片',
+  '外箱': '外箱箱唛以及尺寸重量拍照',
+  '内箱': '内箱箱唛以及尺寸重量拍照',
+  '产品': '产品细节拍照',
+  '彩盒': '彩盒/彩卡信息以及其规格重量拍照',
+  '对比': '与签样对比拍照',
+  '组装': '组装以及功能测试拍照',
+  '条码': '条码扫描以及拍照',
+};
+
+// 分类英文标题映射
+const categoryEnglishMap: Record<string, string> = {
+  '大货仓库照以及码堆照片': 'Warehouse & Stacking Photos',
+  '外箱箱唛以及尺寸重量拍照': 'Carton Marking & Dimensions',
+  '内箱箱唛以及尺寸重量拍照': 'Inner Carton Marking & Dimensions',
+  '产品细节拍照（包括产品尺寸和重量照）': 'Product Detail Photos',
+  '产品细节拍照': 'Product Detail Photos',
+  '彩盒/彩卡信息以及其规格重量拍照': 'Color Box/Manual & Specs',
+  '与签样对比拍照': 'Sample Comparison',
+  '组装以及功能测试拍照': 'Assembly & Function Test',
+  '条码扫描以及拍照': 'Barcode Scan & Photo',
+  '条码扫描': 'Barcode Scan',
+  '问题统计以及拍照并描述': 'Problem Statistics & Description',
+  '问题描述': 'Problem Statistics',
+  '仓库': 'Warehouse & Stacking Photos',
+  '外箱': 'Carton Marking & Dimensions',
+  '内箱': 'Inner Carton Marking & Dimensions',
+  '产品': 'Product Detail Photos',
+  '彩盒': 'Color Box/Manual & Specs',
+  '对比': 'Sample Comparison',
+  '组装': 'Assembly & Function Test',
+  '条码': 'Barcode Scan & Photo',
 };
 
 // 检查项名称中英文对照映射
 const checklistItemBilingualMap: Record<string, string> = {
-  '检查外箱箱唛及尺寸重量': '检查外箱箱唛及尺寸重量 / Check Carton Marking & Dimensions',
-  '检查内箱箱唛及尺寸重量': '检查内箱箱唛及尺寸重量 / Check Inner Carton Marking & Dimensions',
-  '检查产品尺寸': '检查产品尺寸 / Check Product Dimensions',
-  '检查产品重量': '检查产品重量 / Check Product Weight',
-  '检查彩盒信息': '检查彩盒信息 / Check Color Box Info',
-  '检查组装': '检查组装 / Check Assembly',
-  '检查功能': '检查功能 / Check Function',
-  '扫描条码': '扫描条码 / Scan Barcode',
-  '拍照存档': '拍照存档 / Take Photo',
-  '检查外观': '检查外观 / Check Appearance',
-  '检查标签': '检查标签 / Check Label',
-  '功能测试': '功能测试 / Function Test',
-  '尺寸测量': '尺寸测量 / Dimension Measurement',
-  '重量测量': '重量测量 / Weight Measurement',
-  '包装检查': '包装检查 / Packaging Check',
+  '检查外箱箱唛及尺寸重量': '检查外箱箱唛及尺寸重量',
+  '检查内箱箱唛及尺寸重量': '检查内箱箱唛及尺寸重量',
+  '检查产品尺寸': '检查产品尺寸',
+  '检查产品重量': '检查产品重量',
+  '检查彩盒信息': '检查彩盒信息',
+  '检查组装': '检查组装',
+  '检查功能': '检查功能',
+  '扫描条码': '扫描条码',
+  '拍照存档': '拍照存档',
+  '检查外观': '检查外观',
+  '检查标签': '检查标签',
+  '功能测试': '功能测试',
+  '尺寸测量': '尺寸测量',
+  '重量测量': '重量测量',
+  '包装检查': '包装检查',
+};
+
+// 检查项英文标题映射
+const checklistItemEnglishMap: Record<string, string> = {
+  '检查外箱箱唛及尺寸重量': 'Check Carton Marking & Dimensions',
+  '检查内箱箱唛及尺寸重量': 'Check Inner Carton Marking & Dimensions',
+  '检查产品尺寸': 'Check Product Dimensions',
+  '检查产品重量': 'Check Product Weight',
+  '检查彩盒信息': 'Check Color Box Info',
+  '检查组装': 'Check Assembly',
+  '检查功能': 'Check Function',
+  '扫描条码': 'Scan Barcode',
+  '拍照存档': 'Take Photo',
+  '检查外观': 'Check Appearance',
+  '检查标签': 'Check Label',
+  '功能测试': 'Function Test',
+  '尺寸测量': 'Dimension Measurement',
+  '重量测量': 'Weight Measurement',
+  '包装检查': 'Packaging Check',
 };
 
 interface ChecklistItem {
@@ -982,12 +1025,20 @@ export default function InspectionDetailScreen() {
           return (
             <View key={category} style={styles.section}>
               <View style={styles.categoryHeader}>
-                <Text style={styles.sectionTitle}>{categoryBilingualMap[category] || category}</Text>
+                <View>
+                  <Text style={styles.sectionTitle}>{categoryBilingualMap[category] || category}</Text>
+                  <Text style={styles.sectionTitleEnglish}>{categoryEnglishMap[category] || ''}</Text>
+                </View>
               </View>
               {inspection.checklist_items
                 .filter(item => item.category === category)
               .map(item => (
                 <View key={item.record_id} style={styles.checklistItem}>
+                  {/* 检查项标题 */}
+                  <View style={styles.checklistTitleRow}>
+                    <Text style={styles.checklistItemName}>{checklistItemBilingualMap[item.name] || item.name}</Text>
+                    <Text style={styles.checklistItemNameEnglish}>{checklistItemEnglishMap[item.name] || ''}</Text>
+                  </View>
                   <View style={styles.checklistHeader}>
                     <View style={styles.checklistInfo}>
                       {/* 拍照按钮 */}
@@ -1152,7 +1203,10 @@ export default function InspectionDetailScreen() {
         {categories.includes('条码扫描以及拍照') && (
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
-              <Text style={styles.sectionTitle}>条码扫描（所有含有条码的地方均要扫描拍照） / Barcode Scan (Scan & Photo All Barcodes)</Text>
+              <View>
+                <Text style={styles.sectionTitle}>条码扫描以及拍照</Text>
+                <Text style={styles.sectionTitleEnglish}>Barcode Scan & Photo</Text>
+              </View>
               <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
                 <Feather name="plus" size={18} color="#6C63FF" />
                 <Text style={styles.addIssueText}>添加条码扫描</Text>
@@ -1342,7 +1396,10 @@ export default function InspectionDetailScreen() {
         {issues.length > 0 && (
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
-              <Text style={styles.sectionTitle}>问题统计以及拍照并描述 / Issues & Photos</Text>
+              <View>
+                <Text style={styles.sectionTitle}>问题统计以及拍照并描述</Text>
+                <Text style={styles.sectionTitleEnglish}>Issues & Photos</Text>
+              </View>
               <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
                 <Feather name="plus" size={18} color="#6C63FF" />
                 <Text style={styles.addIssueText}>{t('addProblem')}</Text>
@@ -2087,6 +2144,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#2D3436',
+    marginBottom: 4,
+  },
+  sectionTitleEnglish: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6C63FF',
     marginBottom: 12,
   },
   categoryHeader: {
@@ -2165,6 +2228,23 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
+  },
+  checklistTitleRow: {
+    marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  checklistItemName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2D3436',
+    marginBottom: 2,
+  },
+  checklistItemNameEnglish: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6C63FF',
   },
   checklistHeader: {
     flexDirection: 'row',
