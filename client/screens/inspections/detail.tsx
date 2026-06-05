@@ -435,17 +435,21 @@ export default function InspectionDetailScreen() {
       if (response.ok) {
         const result = await response.json();
         const data = result.data || result;
-        // 转换 inspection_records 为 checklist_items 格式
-        const checklistItems = (data.inspection_records || []).map((record: any, index: number) => ({
-          id: parseInt(record.checklist_item_id || record.id || index),
-          record_id: parseInt(record.id || index),
-          name: record.item_name || record.name || t('unnamed'),
-          description: record.item_description || record.description,
-          category: record.item_category || record.category || t('other'),
-          status: record.result || 'unchecked',
-          notes: record.notes,
-          photos: record.photos || [],
-        }));
+        // 优先使用 API 返回的 checklist_items 格式（已处理好的数据）
+        // 如果没有，则尝试转换 inspection_records（兼容旧格式）
+        const rawItems = data.checklist_items || data.inspection_records || [];
+        const checklistItems = Array.isArray(rawItems) && rawItems.length > 0
+          ? rawItems.map((record: any, index: number) => ({
+              id: parseInt(record.checklist_item_id || record.id || index),
+              record_id: parseInt(record.id || index),
+              name: record.name || t('unnamed'),
+              description: record.description || '',
+              category: record.category || t('other'),
+              status: record.status || 'unchecked',
+              notes: record.notes,
+              photos: record.photos || [],
+            }))
+          : [];
         
         const checkedCount = checklistItems.filter((i: ChecklistItem) => i.status !== 'unchecked').length;
         const defectCount = checklistItems.filter((i: ChecklistItem) => i.status === 'fail').length;
