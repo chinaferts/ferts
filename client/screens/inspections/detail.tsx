@@ -867,13 +867,6 @@ export default function InspectionDetailScreen() {
                 <Text style={styles.basicInfoValue}>{inspection.order_number}</Text>
               </View>
             )}
-            {/* 订单号 */}
-            {inspection.order_number && (
-              <View style={styles.basicInfoItem}>
-                <Text style={styles.basicInfoLabel}>订单号 / Order No.</Text>
-                <Text style={styles.basicInfoValue}>{inspection.order_number}</Text>
-              </View>
-            )}
             {/* 货号 */}
             {inspection.style_number && (
               <View style={styles.basicInfoItem}>
@@ -912,6 +905,15 @@ export default function InspectionDetailScreen() {
               <View style={styles.basicInfoItem}>
                 <Text style={styles.basicInfoLabel}>AQL 等级 / AQL Level</Text>
                 <Text style={styles.basicInfoValue}>{inspection.aql}</Text>
+              </View>
+            )}
+            {/* 允收数/拒收数 */}
+            {inspection.sample_size && inspection.aql && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>允收数(Ac) | 拒收数(Re)</Text>
+                <Text style={styles.basicInfoValue}>
+                  {Math.floor(Number(inspection.sample_size) * 0.06)} | {Math.ceil(Number(inspection.sample_size) * 0.08)}
+                </Text>
               </View>
             )}
             {/* 验货日期 */}
