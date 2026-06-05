@@ -313,6 +313,18 @@ export default function NewInspectionScreen() {
       Alert.alert(t('tip'), t('enterProductName'));
       return;
     }
+    if (!orderNo.trim()) {
+      Alert.alert(t('tip'), t('enterOrderNo'));
+      return;
+    }
+    if (!supplier.trim()) {
+      Alert.alert(t('tip'), t('enterSupplier'));
+      return;
+    }
+    if (!product.trim()) {
+      Alert.alert(t('tip'), t('enterProduct'));
+      return;
+    }
     if (!quantity.trim() || parseInt(quantity, 10) <= 0) {
       Alert.alert(t('tip'), t('enterValidQuantity'));
       return;
@@ -348,15 +360,18 @@ export default function NewInspectionScreen() {
         }),
       });
 
+      const data = await response.json();
+      console.log('Create inspection response:', response.status, data);
+      
       if (response.ok) {
         Alert.alert(t('success'), t('createInspectionSuccess'));
         router.replace('/inspections');
       } else {
-        Alert.alert(t('error'), t('createInspectionFailed'));
+        Alert.alert(t('error'), data.message || t('createInspectionFailed'));
       }
     } catch (error) {
       console.error('Failed to create inspection:', error);
-      Alert.alert(t('success'), t('createInspectionSuccess'));
+      Alert.alert(t('error'), 'Network error: ' + (error as Error).message);
       router.replace('/inspections');
     } finally {
       setLoading(false);

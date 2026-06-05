@@ -341,6 +341,10 @@ export const translations = {
     // Placeholders
     enterOrderNo: '请输入订单号',
     enterOrderNoEn: 'Enter order number',
+    enterSupplier: '请输入供应商名称',
+    enterSupplierEn: 'Please enter supplier name',
+    enterProduct: '请输入产品名称',
+    enterProductEn: 'Please enter product name',
     enterProductNoPlaceholder: '请输入货号',
     enterProductNoPlaceholderEn: 'Enter product number',
     enterProductNamePlaceholder: '请输入产品名称',
@@ -717,6 +721,10 @@ export const translations = {
     // Placeholders
     enterOrderNo: 'Enter order number',
     enterOrderNoEn: 'Enter order number',
+    enterSupplier: 'Please enter supplier name',
+    enterSupplierEn: 'Please enter supplier name',
+    enterProduct: 'Please enter product name',
+    enterProductEn: 'Please enter product name',
     enterProductNoPlaceholder: 'Enter product number',
     enterProductNoPlaceholderEn: 'Enter product number',
     enterProductNamePlaceholder: 'Enter product name',
