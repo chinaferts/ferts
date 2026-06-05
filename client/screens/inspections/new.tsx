@@ -317,10 +317,6 @@ export default function NewInspectionScreen() {
       Alert.alert(t('tip'), t('enterValidQuantity'));
       return;
     }
-    if (!sampleSize) {
-      Alert.alert(t('tip'), t('enterQuantityForSample'));
-      return;
-    }
     if (!selectedTemplate) {
       Alert.alert(t('tip'), t('selectTemplate'));
       return;
@@ -345,8 +341,8 @@ export default function NewInspectionScreen() {
           supplier,
           product,
           quantity: parseInt(quantity, 10),
-          aql,
-          sampleSize: Number(sampleSize),
+          aql: aql || '2.5',
+          sampleSize: sampleSize ? Number(sampleSize) : Math.ceil(parseInt(quantity, 10) * 0.1),
           // 通用模板使用 0，其他模板使用对应的 id
           templateId: selectedTemplate?.is_universal ? 0 : (selectedTemplate?.id === 'universal' ? 0 : selectedTemplate?.id),
         }),
