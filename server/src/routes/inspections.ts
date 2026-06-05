@@ -337,16 +337,17 @@ router.post('/', async (req: Request, res: Response) => {
 
     if (inspectionError) throw inspectionError;
 
-    // 2. 嵌入式模板不复制数据库清单项（使用 UNIVERSAL_CHECKLIST_ITEMS）
-    // 只有非嵌入式模板才从数据库复制清单项
-    if (!isEmbeddedTemplate && effectiveChecklistId !== undefined && effectiveChecklistId !== null) {
-      console.log('Copying checklist items for checklist_id:', effectiveChecklistId);
+    // 3. 复制清单项（包括嵌入式模板，使用数据库 checklist_id=11）
+    if (effectiveChecklistId !== undefined && effectiveChecklistId !== null) {
+      // 嵌入式模板使用 checklist_id=11
+      const sourceChecklistId = isEmbeddedTemplate ? 11 : effectiveChecklistId;
+      console.log('Copying checklist items for checklist_id:', sourceChecklistId, 'isEmbedded:', isEmbeddedTemplate);
       
       const { data: templateItems, error: itemsError } = await client
         .from('checklist_items')
         .select('*')
-        .eq('checklist_id', effectiveChecklistId)
-        .order('id', { ascending: true });
+        .eq('checklist_id', sourceChecklistId)
+        .order('item_order', { ascending: true });
 
       console.log('Found checklist items:', templateItems?.length || 0, 'items error:', itemsError);
 
