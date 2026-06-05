@@ -354,6 +354,7 @@ router.post('/', async (req: Request, res: Response) => {
       if (!itemsError && templateItems && templateItems.length > 0) {
         const records = templateItems.map((item: any) => ({
           inspection_id: inspection.id,
+          item_id: item.id,
           checklist_item_id: item.id,
           item_name: item.name,
           item_description: item.description,
