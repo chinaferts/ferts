@@ -1143,8 +1143,8 @@ export default function InspectionDetailScreen() {
                             style={[styles.actionButton, styles.passButton]}
                             onPress={() => updateChecklistItem(item, 'pass')}
                           >
-                            <Feather name="check" size={18} color="#00B894" />
-                            <Text style={styles.passButtonText}>合格 / Pass</Text>
+                            <Feather name="check" size={16} color="#00B894" />
+                            <Text style={styles.passButtonText}>合格</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.actionButton, styles.failButton]}
@@ -1153,15 +1153,15 @@ export default function InspectionDetailScreen() {
                               setDefectModalVisible(true);
                             }}
                           >
-                            <Feather name="x" size={18} color="#FF6B6B" />
-                            <Text style={styles.failButtonText}>不合格 / Fail</Text>
+                            <Feather name="x" size={16} color="#FF6B6B" />
+                            <Text style={styles.failButtonText}>不合格</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.actionButton, styles.naButton]}
                             onPress={() => updateChecklistItem(item, 'na')}
                           >
-                            <Feather name="slash" size={18} color="#808080" />
-                            <Text style={styles.naButtonText}>不适用 / N/A</Text>
+                            <Feather name="slash" size={16} color="#808080" />
+                            <Text style={styles.naButtonText}>不适用</Text>
                           </TouchableOpacity>
                           {/* 条码分类显示扫码按钮 */}
                           {item.category === '条码扫描以及拍照' && (
@@ -1347,14 +1347,14 @@ export default function InspectionDetailScreen() {
                         onPress={() => openBarcodeScanner(item)}
                       >
                         <Feather name="maximize-2" size={16} color="#6C63FF" />
-                        <Text style={styles.issueCameraText}>扫码 / Scan</Text>
+                        <Text style={styles.issueCameraText}>扫码</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.passButton]}
                         onPress={() => updateChecklistItem(item, 'pass')}
                       >
-                        <Feather name="check" size={16} color="#00B894" />
-                        <Text style={styles.passButtonText}>合格 / Pass</Text>
+                        <Feather name="check" size={14} color="#00B894" />
+                        <Text style={styles.passButtonText}>合格</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.failButton]}
@@ -1363,15 +1363,15 @@ export default function InspectionDetailScreen() {
                           setDefectModalVisible(true);
                         }}
                       >
-                        <Feather name="x" size={16} color="#FF6B6B" />
-                        <Text style={styles.failButtonText}>不合格 / Fail</Text>
+                        <Feather name="x" size={14} color="#FF6B6B" />
+                        <Text style={styles.failButtonText}>不合格</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.naButton]}
                         onPress={() => updateChecklistItem(item, 'na')}
                       >
-                        <Feather name="slash" size={16} color="#808080" />
-                        <Text style={styles.naButtonText}>不适用 / N/A</Text>
+                        <Feather name="slash" size={14} color="#808080" />
+                        <Text style={styles.naButtonText}>不适用</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -1382,7 +1382,7 @@ export default function InspectionDetailScreen() {
                         onPress={() => openBarcodeScanner(item)}
                       >
                         <Feather name="maximize-2" size={16} color="#6C63FF" />
-                        <Text style={styles.issueCameraText}>扫码 / Scan</Text>
+                        <Text style={styles.issueCameraText}>扫码</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -2392,16 +2392,17 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 4,
+    flexShrink: 1,
   },
   passButton: {
     backgroundColor: 'rgba(0,184,148,0.15)',
   },
   passButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#00B894',
   },
@@ -2409,7 +2410,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,107,107,0.15)',
   },
   failButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#FF6B6B',
   },
@@ -2417,7 +2418,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(128,128,128,0.15)',
   },
   naButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#808080',
   },
