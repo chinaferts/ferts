@@ -2608,11 +2608,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
   fullPhoto: {
     width: '100%',
     height: '80%',

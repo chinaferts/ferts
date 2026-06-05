@@ -8,18 +8,20 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTranslation } from '@/contexts/LanguageContext';
 
 interface ChecklistTemplate {
-  id: number;
+  id: string | number;
   name: string;
   categories: number;
   items: number;
+  is_universal?: boolean;
 }
 
-// 硬编码的通用验货模板（始终可用）
-const UNIVERSAL_TEMPLATE: ChecklistTemplate = {
-  id: 0,
-  name: 'Universal Template',
-  categories: 5,
-  items: 8
+// 默认模板（等待API加载后会被替换）
+const DEFAULT_TEMPLATE: ChecklistTemplate = {
+  id: 'universal',
+  name: '通用验货模板',
+  categories: 0,
+  items: 0,
+  is_universal: true
 };
 
 const STORAGE_KEYS = {
@@ -38,7 +40,7 @@ export default function NewInspectionScreen() {
   const [quantity, setQuantity] = useState('');
   const [aql, setAql] = useState('2.5');
   const [sampleSize, setSampleSize] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(UNIVERSAL_TEMPLATE);
+  const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(null);
   const [loading, setLoading] = useState(false);
 
   // 历史记录状态
@@ -82,41 +84,35 @@ export default function NewInspectionScreen() {
     }
   }, []);
 
-  // 模板列表状态 - 初始化包含通用模板
-  const [templateList, setTemplateList] = useState<ChecklistTemplate[]>([UNIVERSAL_TEMPLATE]);
+  // 模板列表状态 - 初始为空，等待API加载
+  const [templateList, setTemplateList] = useState<ChecklistTemplate[]>([]);
 
-  // 加载模板列表（从API加载其他模板，通用模板始终在第一位）
+  // 加载模板列表（从API加载）
   const loadTemplates = useCallback(async () => {
     try {
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/checklists`);
       const result = await response.json();
       if (result.success && result.data) {
         const templates = Array.isArray(result.data) ? result.data : [];
-        const otherTemplates = templates.map((t: any) => {
-          // 处理 category 可能是数组或字符串的情况
-          const categories = Array.isArray(t.category) 
-            ? t.category 
-            : (t.category ? [t.category] : []);
-          
-          const categoryCount = categories.length;
-          const itemCount = Array.isArray(t.category) 
-            ? t.category.reduce((sum: number, cat: any) => sum + (cat.items?.length || 0), 0)
-            : 0;
-          
-          return {
-            id: parseInt(t.id, 10),
-            name: t.name,
-            categories: categoryCount,
-            items: itemCount
-          };
-        });
-        // 通用模板始终在第一位，后面加上其他模板
-        setTemplateList([UNIVERSAL_TEMPLATE, ...otherTemplates]);
+        
+        const mappedTemplates: ChecklistTemplate[] = templates.map((t: any) => ({
+          id: String(t.id),
+          name: t.name,
+          categories: t.categories || t.category_count || 0,
+          items: t.items || t.item_count || 0,
+          is_universal: t.is_universal === true || t.is_universal === 'true' || t.id === 'universal'
+        }));
+        
+        setTemplateList(mappedTemplates);
+        
+        // 设置默认选中的模板（选择第一个或通用的）
+        const defaultSelected = mappedTemplates.find(t => t.is_universal) || mappedTemplates[0];
+        if (defaultSelected) {
+          setSelectedTemplate(defaultSelected);
+        }
       }
     } catch (error) {
       console.error('Failed to load templates:', error);
-      // 即使API失败，通用模板仍然可用
-      setTemplateList([UNIVERSAL_TEMPLATE]);
     }
   }, []);
 
@@ -351,7 +347,8 @@ export default function NewInspectionScreen() {
           quantity: parseInt(quantity, 10),
           aql,
           sampleSize: Number(sampleSize),
-          templateId: selectedTemplate.id,
+          // 通用模板使用 0，其他模板使用对应的 id
+          templateId: selectedTemplate?.is_universal ? 0 : (selectedTemplate?.id === 'universal' ? 0 : selectedTemplate?.id),
         }),
       });
 

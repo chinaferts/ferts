@@ -127,7 +127,7 @@ export default function RecordsScreen() {
       setRecords(mockData);
       applyFilters(mockData, searchQuery, filterStatus);
     }
-  }, [filterStatus]);
+  }, [filterStatus, searchQuery]);
 
   useFocusEffect(
     useCallback(() => {
