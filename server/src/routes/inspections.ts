@@ -325,7 +325,8 @@ router.post('/', async (req: Request, res: Response) => {
         supplier_name: supplier || supplier_name,
         product_name: product || product_name,
         product_sku: productNo || null,
-        order_number: orderNo || null,
+        // 如果订单号为空，自动生成
+        order_number: orderNo || `AUTO-${Date.now()}`,
         quantity: quantity || null,
         status: 'pending',
         inspector_name: inspector,

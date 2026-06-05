@@ -344,11 +344,15 @@ export default function NewInspectionScreen() {
     setLoading(true);
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      
+      // 自动生成订单号（如果用户没有输入）
+      const finalOrderNo = orderNo.trim() || `AUTO-${Date.now()}`;
+      
       const response = await fetch(`${baseUrl}/api/v1/inspections`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderNo,
+          orderNo: finalOrderNo,
           productNo,
           supplier,
           product,
@@ -364,15 +368,29 @@ export default function NewInspectionScreen() {
       console.log('Create inspection response:', response.status, data);
       
       if (response.ok) {
-        Alert.alert(t('success'), t('createInspectionSuccess'));
+        // 重置表单状态
+        setOrderNo('');
+        setProductNo('');
+        setSupplier('');
+        setProduct('');
+        setQuantity('');
+        setAql('');
+        setSampleSize('');
+        setSelectedTemplate(null);
+        
+        // 跳转到验货任务列表
         router.replace('/inspections');
       } else {
-        Alert.alert(t('error'), data.message || t('createInspectionFailed'));
+        // 显示具体错误信息
+        let errorMsg = data.message || t('createInspectionFailed');
+        if (data.message?.includes('unique') || data.message?.includes('duplicate')) {
+          errorMsg = t('createInspectionFailed') + ': 订单号已存在';
+        }
+        Alert.alert(t('error'), errorMsg);
       }
     } catch (error) {
       console.error('Failed to create inspection:', error);
-      Alert.alert(t('error'), 'Network error: ' + (error as Error).message);
-      router.replace('/inspections');
+      Alert.alert(t('error'), t('createInspectionFailed') + ': Network error');
     } finally {
       setLoading(false);
     }
