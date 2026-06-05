@@ -19,6 +19,9 @@ interface Inspection {
   sampleSize?: number;
   inspector?: string;
   batch_number?: string;
+  orderNo?: string;      // 订单号
+  productNo?: string;    // 货号
+  quantity?: number;     // 数量
 }
 
 const STATUS_CONFIG = {
@@ -54,6 +57,27 @@ function InspectionCard({ item }: { item: Inspection }) {
       
         <View style={styles.cardBody}>
           <Text style={styles.productName}>{item.product}</Text>
+          {/* 订单号、货号、数量 */}
+          <View style={styles.orderInfoRow}>
+            {item.orderNo && (
+              <View style={styles.orderInfoItem}>
+                <Text style={styles.orderInfoLabel}>订单号</Text>
+                <Text style={styles.orderInfoValue}>{item.orderNo}</Text>
+              </View>
+            )}
+            {item.productNo && (
+              <View style={styles.orderInfoItem}>
+                <Text style={styles.orderInfoLabel}>货号</Text>
+                <Text style={styles.orderInfoValue}>{item.productNo}</Text>
+              </View>
+            )}
+            {item.quantity > 0 && (
+              <View style={styles.orderInfoItem}>
+                <Text style={styles.orderInfoLabel}>数量</Text>
+                <Text style={styles.orderInfoValue}>{item.quantity}</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
               <Feather name="calendar" size={14} color="#636E72" />
@@ -136,6 +160,9 @@ export default function InspectionsListScreen() {
           progress: item.status === 'completed' ? 100 : item.status === 'in_progress' ? 50 : 0,
           inspector: item.inspector,
           batch_number: item.batch_number,
+          orderNo: item.order_no || item.order_number || '',
+          productNo: item.product_no || '',
+          quantity: item.quantity || item.qty || 0,
         }));
         setInspections(mapped);
       }
@@ -398,7 +425,32 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     color: '#636E72',
+    marginBottom: 6,
+  },
+  // 订单信息行样式
+  orderInfoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     marginBottom: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: '#F5F5F8',
+    borderRadius: 8,
+  },
+  orderInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  orderInfoLabel: {
+    fontSize: 11,
+    color: '#8E8E93',
+    marginRight: 4,
+  },
+  orderInfoValue: {
+    fontSize: 12,
+    color: '#2D3436',
+    fontWeight: '500',
   },
   metaRow: {
     flexDirection: 'row',
