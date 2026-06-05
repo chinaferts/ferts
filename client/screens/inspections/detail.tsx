@@ -38,26 +38,26 @@ const categoryBilingualMap: Record<string, string> = {
 
 // 分类英文标题映射
 const categoryEnglishMap: Record<string, string> = {
-  '大货仓库照以及码堆照片': 'Warehouse & Stacking Photos',
+  '大货仓库照以及码堆照片': 'Warehouse & Stacking',
   '外箱箱唛以及尺寸重量拍照': 'Carton Marking & Dimensions',
   '内箱箱唛以及尺寸重量拍照': 'Inner Carton Marking & Dimensions',
-  '产品细节拍照（包括产品尺寸和重量照）': 'Product Detail Photos',
-  '产品细节拍照': 'Product Detail Photos',
+  '产品细节拍照（包括产品尺寸和重量照）': 'Product Detail',
+  '产品细节拍照': 'Product Detail',
   '彩盒/彩卡信息以及其规格重量拍照': 'Color Box/Manual & Specs',
   '与签样对比拍照': 'Sample Comparison',
   '组装以及功能测试拍照': 'Assembly & Function Test',
-  '条码扫描以及拍照': 'Barcode Scan & Photo',
+  '条码扫描以及拍照': 'Barcode Scan',
   '条码扫描': 'Barcode Scan',
-  '问题统计以及拍照并描述': 'Problem Statistics & Description',
+  '问题统计以及拍照并描述': 'Problem Statistics',
   '问题描述': 'Problem Statistics',
-  '仓库': 'Warehouse & Stacking Photos',
+  '仓库': 'Warehouse & Stacking',
   '外箱': 'Carton Marking & Dimensions',
   '内箱': 'Inner Carton Marking & Dimensions',
-  '产品': 'Product Detail Photos',
+  '产品': 'Product Detail',
   '彩盒': 'Color Box/Manual & Specs',
   '对比': 'Sample Comparison',
   '组装': 'Assembly & Function Test',
-  '条码': 'Barcode Scan & Photo',
+  '条码': 'Barcode Scan',
 };
 
 // 检查项名称中英文对照映射
@@ -89,7 +89,7 @@ const checklistItemEnglishMap: Record<string, string> = {
   '检查组装': 'Check Assembly',
   '检查功能': 'Check Function',
   '扫描条码': 'Scan Barcode',
-  '拍照存档': 'Take Photo',
+  '拍照存档': 'Photo Record',
   '检查外观': 'Check Appearance',
   '检查标签': 'Check Label',
   '功能测试': 'Function Test',
@@ -1007,7 +1007,7 @@ export default function InspectionDetailScreen() {
                 <Text style={[styles.statValue, { color: '#FF6B6B' }]}>
                   {defectStats.critical + defectStats.serious + defectStats.minor}
                 </Text>
-                <Text style={styles.statLabel}>缺陷数 / Defects</Text>
+                <Text style={styles.statLabel}>缺陷数</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
@@ -1078,7 +1078,7 @@ export default function InspectionDetailScreen() {
                   {tempPhotoTarget && String(tempPhotoTarget.record_id) === String(item.record_id) ? (
                     <View style={styles.tempPhotoSection}>
                       <View style={styles.tempPhotoHeader}>
-                        <Text style={styles.tempPhotoTitle}>拍照中 - {item.name} / Taking Photo</Text>
+                        <Text style={styles.tempPhotoTitle}>拍照中 - {item.name}</Text>
                         <Text style={styles.tempPhotoCount}>已拍 {tempPhotos.length} 张</Text>
                       </View>
                       <View>
@@ -1094,7 +1094,7 @@ export default function InspectionDetailScreen() {
                           {/* 继续拍照按钮 */}
                           <TouchableOpacity style={styles.addPhotoButton} onPress={() => takePhoto(item)}>
                             <Feather name="camera" size={24} color="#FFFFFF" />
-                            <Text style={styles.addPhotoText}>继续拍 / Continue</Text>
+                            <Text style={styles.addPhotoText}>继续拍</Text>
                           </TouchableOpacity>
                         </ScrollView>
                       </View>
@@ -1205,7 +1205,7 @@ export default function InspectionDetailScreen() {
             <View style={styles.categoryHeader}>
               <View>
                 <Text style={styles.sectionTitle}>条码扫描以及拍照</Text>
-                <Text style={styles.sectionTitleEnglish}>Barcode Scan & Photo</Text>
+                <Text style={styles.sectionTitleEnglish}>Barcode Scan</Text>
               </View>
               <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
                 <Feather name="plus" size={18} color="#6C63FF" />
@@ -1398,7 +1398,7 @@ export default function InspectionDetailScreen() {
             <View style={styles.categoryHeader}>
               <View>
                 <Text style={styles.sectionTitle}>问题统计以及拍照并描述</Text>
-                <Text style={styles.sectionTitleEnglish}>Issues & Photos</Text>
+                <Text style={styles.sectionTitleEnglish}>Problem Statistics</Text>
               </View>
               <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
                 <Feather name="plus" size={18} color="#6C63FF" />
