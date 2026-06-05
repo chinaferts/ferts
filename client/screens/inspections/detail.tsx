@@ -99,6 +99,10 @@ interface InspectionDetail {
   inspector?: string;
   notes?: string;
   created_at?: string;
+  order_number?: string;
+  product_no?: string;
+  accept_count?: number;
+  reject_count?: number;
   checklist_items: ChecklistItem[];
   defects: Defect[];
 }
@@ -854,18 +858,34 @@ export default function InspectionDetailScreen() {
             </View>
           </View>
 
-          {/* 基本信息 - 两列布局 */}
+          {/* 基本信息 - 订单信息区域 */}
           <View style={styles.basicInfoGrid}>
-            {/* 产品名称 */}
-            <View style={styles.basicInfoItem}>
-              <Text style={styles.basicInfoLabel}>产品名称 / Product</Text>
-              <Text style={styles.basicInfoValue}>{inspection.product_name}</Text>
-            </View>
+            {/* 订单号 */}
+            {inspection.order_number && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>订单号 / Order No.</Text>
+                <Text style={styles.basicInfoValue}>{inspection.order_number}</Text>
+              </View>
+            )}
+            {/* 订单号 */}
+            {inspection.order_number && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>订单号 / Order No.</Text>
+                <Text style={styles.basicInfoValue}>{inspection.order_number}</Text>
+              </View>
+            )}
             {/* 货号 */}
             {inspection.style_number && (
               <View style={styles.basicInfoItem}>
                 <Text style={styles.basicInfoLabel}>货号 / Style No.</Text>
                 <Text style={styles.basicInfoValue}>{inspection.style_number}</Text>
+              </View>
+            )}
+            {/* 产品名称 */}
+            {inspection.product_name && (
+              <View style={styles.basicInfoItem}>
+                <Text style={styles.basicInfoLabel}>产品名称 / Product</Text>
+                <Text style={styles.basicInfoValue}>{inspection.product_name}</Text>
               </View>
             )}
             {/* 产品数量 */}
@@ -875,11 +895,16 @@ export default function InspectionDetailScreen() {
                 <Text style={styles.basicInfoValue}>{inspection.quantity}</Text>
               </View>
             )}
-            {/* 抽样数量 */}
+            {/* 抽样数量（包含允收数、拒收数） */}
             {inspection.sample_size && (
               <View style={styles.basicInfoItem}>
                 <Text style={styles.basicInfoLabel}>抽样数量 / Sample Qty</Text>
-                <Text style={styles.basicInfoValue}>{inspection.sample_size}</Text>
+                <Text style={styles.basicInfoValue}>
+                  {inspection.sample_size}
+                  {inspection.accept_count !== undefined && inspection.reject_count !== undefined && (
+                    <Text> (允收 {inspection.accept_count} / 拒收 {inspection.reject_count})</Text>
+                  )}
+                </Text>
               </View>
             )}
             {/* AQL质量等级 */}

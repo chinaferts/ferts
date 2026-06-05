@@ -253,6 +253,12 @@ router.get('/:id', async (req: Request, res: Response) => {
       // 字段映射：数据库字段名 -> 前端期望的字段名
       inspector: inspection.inspector_name || inspection.inspector,
       inspection_date: inspection.scheduled_date || inspection.inspection_date,
+      // 新增字段映射
+      orderNo: inspection.order_number,
+      productNo: inspection.style_number || inspection.product_sku,
+      quantity: inspection.quantity,
+      sampleSize: inspection.sample_size,
+      aql: inspection.aql,
       checklist_items,
       categories,
       defects: defects || [],
@@ -328,6 +334,9 @@ router.post('/', async (req: Request, res: Response) => {
         // 如果订单号为空，自动生成
         order_number: orderNo || `AUTO-${Date.now()}`,
         quantity: quantity || null,
+        sample_size: sampleSize || null,
+        aql: aql ? parseFloat(aql) : null,
+        style_number: productNo || null,
         status: 'pending',
         inspector_name: inspector,
         notes,
