@@ -1830,6 +1830,10 @@ export default function InspectionDetailScreen() {
                   <View style={styles.itemHeader}>
                     <Text style={styles.itemName}>{item.name}</Text>
                   </View>
+                  {/* DEBUG: 检查 photos 数据 */}
+                  <Text style={{fontSize: 10, color: 'red'}}>
+                    [{item.name}] photos: {JSON.stringify(item.photos)}
+                  </Text>
                   {/* 检查项照片显示 */}
                   {item.photos && item.photos.length > 0 && (
                     <View style={styles.photosContainer}>
