@@ -771,15 +771,25 @@ router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response)
     if (photos !== undefined) recordUpdateData.photos = photos;
 
     // 查找对应的 inspection_record（itemId 在这里是 record_id）
-    const { data: recordData, error: recordError } = await client
+    // 对于嵌入式模板，recordId 可能是 item.name 而不是数字 ID
+    const isValidNumericId = itemId && !isNaN(parseInt(itemId)) && parseInt(itemId) > 0;
+    
+    let query = client
       .from('inspection_records')
       .update({
         ...recordUpdateData,
         updated_at: new Date().toISOString()
       })
-      .eq('id', itemId)
-      .eq('inspection_id', id)
-      .select();
+      .eq('inspection_id', id);
+    
+    if (isValidNumericId) {
+      query = query.eq('id', parseInt(itemId));
+    } else {
+      // 如果不是有效的数字 ID，使用 item_name 匹配（嵌入式模板）
+      query = query.eq('item_name', itemId);
+    }
+    
+    const { data: recordData, error: recordError } = await query.select();
 
     const updatedRecord = Array.isArray(recordData) ? recordData[0] : recordData;
 
