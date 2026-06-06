@@ -613,13 +613,18 @@ export default function InspectionDetailScreen() {
         return;
       }
 
-      // 原有逻辑：直接更新状态
       // 对于嵌入式模板的检查项，使用 item.id（即 item.name）来更新
       const recordId = item.record_id && item.record_id > 0 ? String(item.record_id) : item.id;
+      
+      // 更新状态时，同时保存照片和条码数据
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${recordId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result: status }),
+        body: JSON.stringify({ 
+          result: status,
+          photos: item.photos || [],
+          barcode_codes: item.barcodeCodes || [],
+        }),
       });
 
       if (response.ok) {

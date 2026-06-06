@@ -641,10 +641,10 @@ router.get('/:id/records', async (req: Request, res: Response) => {
 router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
   try {
     const { id, recordId } = req.params;
-    const { result, notes } = req.body;
+    const { result, notes, photos, barcode_codes } = req.body;
 
     if (!isSupabaseConfigured()) {
-      return res.json({ success: true, data: { id: recordId, result, notes } });
+      return res.json({ success: true, data: { id: recordId, result, notes, photos, barcode_codes } });
     }
 
     const client = requireSupabaseClient();
@@ -653,13 +653,24 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
     const parsedId = parseInt(recordId);
     const isValidNumericId = !isNaN(parsedId) && parsedId > 0;
     
+    // 构建更新对象
+    const updateData: any = {
+      result: result,
+      notes: notes || null,
+      updated_at: new Date().toISOString()
+    };
+    
+    // 如果提供了 photos 或 barcode_codes，也更新它们
+    if (photos !== undefined) {
+      updateData.photos = photos;
+    }
+    if (barcode_codes !== undefined) {
+      updateData.barcode_codes = barcode_codes;
+    }
+    
     let query = client
       .from('inspection_records')
-      .update({
-        result: result,
-        notes: notes || null,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('inspection_id', id);
     
     // 根据 recordId 类型选择查询条件
