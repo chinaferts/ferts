@@ -262,11 +262,23 @@ export default function InspectionDetailScreen() {
         formData.append("category", item.category || item.name);
         formData.append("item_name", item.name);
         
-        await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
           method: "POST",
-          headers: { "Content-Type": "multipart/form-data" },
           body: formData,
         });
+        
+        if (response.ok) {
+          const result = await response.json();
+          const photoUrl = result.data?.photoUrl || result.photoUrl;
+          
+          // 更新 inspection_records 表中的 photos 字段
+          const currentPhotos = item.photos || [];
+          await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${targetRecordId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ photos: [...currentPhotos, photoUrl] }),
+          });
+        }
       } catch (error) {
         console.error("上传照片失败:", error);
       }
@@ -494,12 +506,13 @@ export default function InspectionDetailScreen() {
           ? rawItems.map((record: any, index: number) => ({
               id: parseInt(record.checklist_item_id || record.id || index),
               record_id: parseInt(record.id || index),
-              name: record.name || t('unnamed'),
+              name: record.name || record.item_name || t('unnamed'),
               description: record.description || '',
-              category: record.category || t('other'),
-              status: record.status || 'unchecked',
+              category: record.category || record.item_category || t('other'),
+              status: record.status || record.result || 'unchecked',
               notes: record.notes,
-              photos: record.photos || [],
+              photos: record.photos || record.photos || [],
+              barcodeCodes: record.barcodeCodes || record.barcode_codes || [],
             }))
           : [];
         
@@ -835,6 +848,31 @@ export default function InspectionDetailScreen() {
     // 关闭相机预览，只显示结果
     if (barcodeCameraRef.current) {
       barcodeCameraRef.current.pausePreview();
+    }
+
+    // 保存条码到数据库
+    saveBarcodeToBackend(targetRecordId, scannedCode);
+  };
+
+  // 保存条码到后端
+  const saveBarcodeToBackend = async (recordId: string, code: string) => {
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      // 获取当前条码列表
+      const item = inspection?.checklist_items?.find(i => String(i.record_id) === recordId);
+      const currentCodes = item?.barcodeCodes || [];
+      
+      const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items/${recordId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcodeCodes: [...currentCodes, code] }),
+      });
+      
+      if (!response.ok) {
+        console.error('[SaveBarcode] Failed to save barcode:', response.statusText);
+      }
+    } catch (error) {
+      console.error('[SaveBarcode] Error:', error);
     }
   };
 

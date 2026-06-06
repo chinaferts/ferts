@@ -241,7 +241,8 @@ router.get('/:id', async (req: Request, res: Response) => {
         notes: record.notes,
         score: record.score,
         record_id: record.id,
-        photos: photos?.filter((p: any) => p.record_id === record.id).map((p: any) => p.photo_url) || []
+        photos: record.photos || photos?.filter((p: any) => p.record_id === record.id).map((p: any) => p.photo_url) || [],
+        barcodeCodes: record.barcode_codes || []
       };
     });
 
@@ -661,30 +662,37 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
 router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response) => {
   try {
     const { id, itemId } = req.params;
-    const { barcodeCodes, codes } = req.body;
+    const { barcodeCodes, codes, photos } = req.body;
 
     if (!isSupabaseConfigured()) {
-      return res.json({ success: true, data: { id: itemId, barcodeCodes, codes } });
+      return res.json({ success: true, data: { id: itemId, barcodeCodes, codes, photos } });
     }
 
     const client = requireSupabaseClient();
-    const updateData: any = {};
-    if (barcodeCodes !== undefined) updateData.barcode_codes = barcodeCodes;
-    if (codes !== undefined) updateData.barcode_codes = codes;
+    
+    // 更新 inspection_records 表中的 barcode_codes 和 photos 字段
+    const recordUpdateData: any = {};
+    if (barcodeCodes !== undefined) recordUpdateData.barcode_codes = barcodeCodes;
+    if (codes !== undefined) recordUpdateData.barcode_codes = codes;
+    if (photos !== undefined) recordUpdateData.photos = photos;
 
-    const { data, error } = await client
-      .from('checklist_items')
+    // 查找对应的 inspection_record（itemId 在这里是 record_id）
+    const { data: recordData, error: recordError } = await client
+      .from('inspection_records')
       .update({
-        ...updateData,
+        ...recordUpdateData,
         updated_at: new Date().toISOString()
       })
       .eq('id', itemId)
       .eq('inspection_id', id)
       .select();
 
-    const updatedItem = Array.isArray(data) ? data[0] : data;
+    const updatedRecord = Array.isArray(recordData) ? recordData[0] : recordData;
 
-    if (error) throw error;
+    if (recordError && recordError.code !== 'PGRST116') {
+      console.error('更新检查项条码失败:', recordError);
+      return res.status(500).json({ success: false, error: 'Failed to update barcode codes' });
+    }
 
     // 更新验货状态为进行中
     await client
@@ -693,7 +701,7 @@ router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response)
       .eq('id', id)
       .eq('status', 'pending');
 
-    res.json({ success: true, data: updatedItem });
+    res.json({ success: true, data: updatedRecord });
   } catch (err: any) {
     console.error('更新检查项失败:', err);
     res.status(500).json({ success: false, error: err.message });
