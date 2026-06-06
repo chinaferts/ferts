@@ -731,11 +731,21 @@ export default function InspectionDetailScreen() {
     
     // 将扫描到的条码添加到对应检查项
     const targetRecordId = String(barcodeScanTarget.record_id);
+    const newBarcode = result.data;
+    
+    // 更新 barcodeItems 状态（显示用的数据）
+    setBarcodeItems(prevItems => prevItems.map(i =>
+      String(i.record_id) === targetRecordId
+        ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), newBarcode] }
+        : i
+    ));
+    
+    // 同时更新 inspection.checklist_items（保存用的数据）
     setInspection(prev => {
       if (!prev) return null;
       const updatedItems = prev.checklist_items.map(i =>
         String(i.record_id) === targetRecordId
-          ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), result.data] }
+          ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), newBarcode] }
           : i
       );
       // 同时更新检查状态为已检查
