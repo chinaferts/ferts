@@ -718,7 +718,6 @@ export default function InspectionDetailScreen() {
     
     // 立即标记为已扫描，防止重复触发
     isScanningRef.current = true;
-    setHasScannedBarcode(true);
     // 完全隐藏相机组件，停止扫描
     setShowBarcodeCamera(false);
     
@@ -1834,15 +1833,7 @@ export default function InspectionDetailScreen() {
                   </View>
                 </CameraView>
               </View>
-            ) : (
-              // 相机已隐藏，等待显示结果
-              <View style={styles.cameraContainer}>
-                <View style={styles.barcodeResultContainer}>
-                  <ActivityIndicator size="large" color="#3B82F6" />
-                  <Text style={styles.barcodeSuccessText}>处理中...</Text>
-                </View>
-              </View>
-            )
+            ) : null
           ) : (
             <View style={styles.barcodePermissionContainer}>
               <Text style={styles.barcodePermissionText}>需要相机权限来扫描条码</Text>
