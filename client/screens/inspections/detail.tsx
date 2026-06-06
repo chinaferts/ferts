@@ -2861,9 +2861,6 @@ const styles = StyleSheet.create({
     padding: 2,
     marginLeft: 4,
   },
-    fontWeight: '500',
-    flexShrink: 1,
-  },
   barcodeTypeSelector: {
     flex: 1,
     marginLeft: 12,
