@@ -1202,7 +1202,7 @@ export default function InspectionDetailScreen() {
                             {item.barcodeCodes.map((code, idx) => (
                               <View key={idx} style={styles.barcodeCodeItem}>
                                 <Feather name="code" size={14} color="#6C63FF" />
-                                <Text style={styles.barcodeCodeText} numberOfLines={1}>{code}</Text>
+                                <Text style={styles.barcodeCodeText}>{code}</Text>
                               </View>
                             ))}
                           </View>
@@ -1328,7 +1328,7 @@ export default function InspectionDetailScreen() {
                         {item.barcodeCodes.map((code, idx) => (
                           <View key={idx} style={styles.barcodeCodeItem}>
                             <Feather name="code" size={14} color="#6C63FF" />
-                            <Text style={styles.barcodeCodeText} numberOfLines={1}>{code}</Text>
+                            <Text style={styles.barcodeCodeText}>{code}</Text>
                           </View>
                         ))}
                       </View>
@@ -2809,7 +2809,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     gap: 6,
-    maxWidth: '45%',
   },
   barcodeCodeText: {
     fontSize: 12,
