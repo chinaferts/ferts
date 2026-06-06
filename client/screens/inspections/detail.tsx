@@ -724,11 +724,14 @@ export default function InspectionDetailScreen() {
     
     // 将扫描到的条码添加到对应检查项
     const targetRecordId = String(barcodeScanTarget.record_id);
+    const scannedCode = result.data;
+    
+    // 更新 inspection.checklist_items
     setInspection(prev => {
       if (!prev) return null;
       const updatedItems = prev.checklist_items.map(i =>
         String(i.record_id) === targetRecordId
-          ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), result.data] }
+          ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), scannedCode] }
           : i
       );
       // 同时更新检查状态为已检查
@@ -740,6 +743,22 @@ export default function InspectionDetailScreen() {
       const checkedCount = updatedItemsWithStatus.filter(i => i.status !== 'unchecked').length;
       const defectCount = updatedItemsWithStatus.filter(i => i.status === 'fail').length;
       return { ...prev, checklist_items: updatedItemsWithStatus, checkedCount, defectCount };
+    });
+    
+    // 同时更新 barcodeItems，确保预览区能显示
+    setBarcodeItems(prev => {
+      const targetIndex = prev.findIndex(item => String(item.record_id) === targetRecordId);
+      if (targetIndex === -1) {
+        // 如果在 barcodeItems 中没找到，创建新项
+        return [...prev, { ...barcodeScanTarget, barcodeCodes: [scannedCode], photos: [], status: 'pass' }];
+      }
+      const updated = [...prev];
+      updated[targetIndex] = {
+        ...updated[targetIndex],
+        barcodeCodes: [...(updated[targetIndex].barcodeCodes || []), scannedCode],
+        status: 'pass'
+      };
+      return updated;
     });
     
     // 关闭相机预览，只显示结果
