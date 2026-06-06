@@ -771,6 +771,36 @@ export default function InspectionDetailScreen() {
     }
   };
 
+  // 删除单个条码
+  const handleDeleteBarcodeCode = async (itemId: number, codeToDelete: string) => {
+    const item = inspection?.checklist_items?.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const newCodes = item.barcodeCodes?.filter(c => c !== codeToDelete) || [];
+    
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcodeCodes: newCodes }),
+      });
+      
+      if (response.ok) {
+        setInspection(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            checklist_items: prev.checklist_items?.map(i => 
+              i.id === itemId ? { ...i, barcodeCodes: newCodes } : i
+            ),
+          };
+        });
+      }
+    } catch (error) {
+      console.error('[BarcodeScan] Delete barcode error:', error);
+    }
+  };
+
   // 完成条码扫描，跳转到检查项目页面
   const finishBarcodeScan = () => {
     closeBarcodeScanner();
@@ -1203,6 +1233,9 @@ export default function InspectionDetailScreen() {
                               <View key={idx} style={styles.barcodeCodeItem}>
                                 <Feather name="code" size={14} color="#6C63FF" />
                                 <Text style={styles.barcodeCodeText}>{code}</Text>
+                                <TouchableOpacity onPress={() => handleDeleteBarcodeCode(item.id, code)}>
+                                  <Feather name="x-circle" size={16} color="#FF5252" />
+                                </TouchableOpacity>
                               </View>
                             ))}
                           </View>
@@ -1329,6 +1362,9 @@ export default function InspectionDetailScreen() {
                           <View key={idx} style={styles.barcodeCodeItem}>
                             <Feather name="code" size={14} color="#6C63FF" />
                             <Text style={styles.barcodeCodeText}>{code}</Text>
+                            <TouchableOpacity onPress={() => handleDeleteBarcodeCode(item.id, code)}>
+                              <Feather name="x-circle" size={16} color="#FF5252" />
+                            </TouchableOpacity>
                           </View>
                         ))}
                       </View>
