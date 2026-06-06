@@ -189,26 +189,105 @@ router.get('/:id', async (req: Request, res: Response) => {
                                 String(inspection.checklist_id) === '0' ||
                                 (inspection.checklist_id === 11 && (!records || records.length === 0));
     if (isEmbeddedTemplate || !records || records.length === 0) {
-      // 使用嵌入式 UNIVERSAL_CHECKLIST_ITEMS 生成验货详情和清单项
-      const universalItems = UNIVERSAL_CHECKLIST_ITEMS.map((item, index) => ({
-        id: `generated-${inspection.id}-${index}`,
-        checklist_item_id: item.id,
-        item_name: item.name,
-        item_description: item.description,
-        item_category: item.category,
-        result: 'unchecked',
-        score: null,
-        notes: null,
-        photos: [],
-        created_at: new Date().toISOString()
-      }));
+      // 先在数据库中创建 inspection_records 记录，确保后续更新操作正常
+      const universalItems = UNIVERSAL_CHECKLIST_ITEMS.map(async (item, index) => {
+        // 使用 item.name 作为唯一标识（因为数据库 item_id 是 integer 类型，不能存储 'u1' 这样的字符串）
+        const itemName = item.name;
+        
+        // 检查是否已存在对应的清单项
+        const { data: existingItem } = await client
+          .from('checklist_items')
+          .select('id')
+          .eq('checklist_id', 11)
+          .eq('name', item.name)
+          .single();
+        
+        let realChecklistItemId: number | null = null;
+        
+        if (existingItem) {
+          realChecklistItemId = existingItem.id;
+        } else {
+          // 创建新的清单项（注意：checklist_items 表没有 category 字段，is_required 是 NOT NULL）
+          const { data: newItem, error: insertError } = await client
+            .from('checklist_items')
+            .insert({
+              checklist_id: 11,
+              name: item.name,
+              description: item.description,
+              item_type: 'standard',
+              item_order: index,
+              is_required: item.is_required || false
+            })
+            .select()
+            .single();
+          realChecklistItemId = newItem?.id;
+        }
+        
+        if (!realChecklistItemId) {
+          // 如果无法获取有效的 ID，跳过此记录
+          return null;
+        }
+        
+        // 检查是否已存在检查记录（通过 item_name 匹配）
+        const { data: existingRecord } = await client
+          .from('inspection_records')
+          .select('id, photos, barcode_codes')
+          .eq('inspection_id', id)
+          .eq('item_name', itemName)
+          .single();
+        
+        if (!existingRecord) {
+          // 创建新的检查记录（使用 checklist_item_id 作为 item_id，因为 item_id 是 integer）
+          const { data: newRecord } = await client
+            .from('inspection_records')
+            .insert({
+              inspection_id: id,
+              item_id: realChecklistItemId,  // 使用数据库 ID 作为 item_id（integer）
+              checklist_item_id: realChecklistItemId,
+              item_name: item.name,
+              item_description: item.description,
+              item_category: item.category,
+              result: 'unchecked'
+            })
+            .select()
+            .single();
+          return {
+            id: item.name,  // 使用 item_name 作为 id
+            record_id: newRecord?.id || 0,
+            checklist_item_id: realChecklistItemId,
+            name: item.name,
+            description: item.description,
+            category: item.category,
+            result: 'unchecked',
+            photos: [],
+            barcodeCodes: [],
+            barcode_codes: []
+          };
+        }
+        
+        return {
+          id: itemName,  // 使用 item_name 作为 id
+          record_id: existingRecord.id,
+          checklist_item_id: realChecklistItemId,
+          name: item.name,
+          description: item.description,
+          category: item.category,
+          result: 'unchecked',
+          photos: existingRecord.photos || [],
+          barcodeCodes: existingRecord.barcode_codes || [],
+          barcode_codes: existingRecord.barcode_codes || []
+        };
+      });
+      
+      // 等待所有异步操作完成，并过滤掉 null 值
+      const resolvedItems = (await Promise.all(universalItems)).filter(Boolean);
       
       return res.json({
         success: true,
         data: {
           ...inspection,
-          checklist_items: universalItems,
-          categories: [...new Set(universalItems.map((item: any) => item.item_category))],
+          checklist_items: resolvedItems,
+          categories: [...new Set(resolvedItems.map((item: any) => item.category))],
           defects: [],
           photos: [],
           checkedCount: 0,
@@ -569,16 +648,31 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
     }
 
     const client = requireSupabaseClient();
-    const { data, error } = await client
+    
+    // 检查 recordId 是否是有效的数字 ID（大于0的整数）
+    const parsedId = parseInt(recordId);
+    const isValidNumericId = !isNaN(parsedId) && parsedId > 0;
+    
+    let query = client
       .from('inspection_records')
       .update({
         result: result,
         notes: notes || null,
         updated_at: new Date().toISOString()
       })
-      .eq('id', recordId)
-      .eq('inspection_id', id)
-      .select();
+      .eq('inspection_id', id);
+    
+    // 根据 recordId 类型选择查询条件
+    if (isValidNumericId) {
+      // 使用数据库 ID 更新
+      query = query.eq('id', parsedId);
+    } else {
+      // 如果不是有效的数字 ID（recordId=0 或 recordId 是 item.name），尝试使用 item_name 匹配
+      // 支持前端传递 item.name 来更新嵌入式模板的检查项
+      query = query.eq('item_name', recordId);
+    }
+    
+    const { data, error } = await query.select();
 
     // 如果 select() 返回多条记录，取第一条
     const updatedRecord = Array.isArray(data) ? data[0] : data;

@@ -614,17 +614,19 @@ export default function InspectionDetailScreen() {
       }
 
       // 原有逻辑：直接更新状态
-      const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${item.record_id}`, {
+      // 对于嵌入式模板的检查项，使用 item.id（即 item.name）来更新
+      const recordId = item.record_id && item.record_id > 0 ? String(item.record_id) : item.id;
+      const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${recordId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ result: status }),
       });
 
       if (response.ok) {
-        // 更新本地状态 - 使用 record_id 字符串比较确保类型一致
-        const targetRecordId = String(item.record_id);
+        // 更新本地状态 - 使用 id 字符串比较确保类型一致
+        const targetId = String(item.id);
         const updatedItems = inspection.checklist_items.map(i =>
-          String(i.record_id) === targetRecordId ? { ...i, status } : i
+          String(i.id) === targetId ? { ...i, status } : i
         );
         const checkedCount = updatedItems.filter(i => i.status !== 'unchecked').length;
         const defectCount = updatedItems.filter(i => i.status === 'fail').length;
