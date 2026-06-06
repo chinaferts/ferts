@@ -511,7 +511,7 @@ export default function InspectionDetailScreen() {
               category: record.category || record.item_category || t('other'),
               status: record.status || record.result || 'unchecked',
               notes: record.notes,
-              photos: record.photos || record.photos || [],
+              photos: record.photos || record.photo_urls || [],
               barcodeCodes: record.barcodeCodes || record.barcode_codes || [],
             }))
           : [];
@@ -1277,21 +1277,38 @@ export default function InspectionDetailScreen() {
                                 setCameraVisible(true);
                               }} style={styles.photoContainer}>
                                 <Image source={{ uri: photo }} style={styles.photoThumb} />
-                                <TouchableOpacity style={styles.photoDeleteButton}
-                                  onPress={() => {
-                                    if (!inspectionRef.current) return;
-                                    const updatedItems = (inspectionRef.current.checklist_items || []).map((i: ChecklistItem) => {
-                                      if (i.record_id === item.record_id) {
-                                        return { ...i, photos: (i.photos || []).filter((_: any, pi: number) => pi !== idx) };
-                                      }
-                                      return i;
-                                    });
-                                    const updated: InspectionDetail = { ...inspectionRef.current, checklist_items: updatedItems };
-                                    setInspection(updated);
-                                  }}>
-                                  <Text style={styles.photoDeleteText}>X</Text>
-                                </TouchableOpacity>
+                                {item.status !== 'pass' && (
+                                  <TouchableOpacity style={styles.photoDeleteButton}
+                                    onPress={() => {
+                                      if (!inspectionRef.current) return;
+                                      const updatedItems = (inspectionRef.current.checklist_items || []).map((i: ChecklistItem) => {
+                                        if (i.record_id === item.record_id) {
+                                          return { ...i, photos: (i.photos || []).filter((_: any, pi: number) => pi !== idx) };
+                                        }
+                                        return i;
+                                      });
+                                      const updated: InspectionDetail = { ...inspectionRef.current, checklist_items: updatedItems };
+                                      setInspection(updated);
+                                    }}>
+                                    <Text style={styles.photoDeleteText}>X</Text>
+                                  </TouchableOpacity>
+                                )}
                               </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+
+                      {/* 已扫描的条码 - 所有分类都显示 */}
+                      {item.barcodeCodes && item.barcodeCodes.length > 0 && (
+                        <View style={styles.barcodePreviewSection}>
+                          <Text style={styles.barcodePreviewLabel}>已扫描条码 ({item.barcodeCodes.length})</Text>
+                          <View style={styles.barcodeCodesRow}>
+                            {item.barcodeCodes.map((code, idx) => (
+                              <View key={idx} style={styles.barcodeCodeItem}>
+                                <Feather name="code" size={14} color="#6C63FF" />
+                                <Text style={styles.barcodeCodeText}>{code}</Text>
+                              </View>
                             ))}
                           </View>
                         </View>
@@ -1333,26 +1350,6 @@ export default function InspectionDetailScreen() {
                               <Text style={styles.scanButtonText}>扫码 / Scan</Text>
                             </TouchableOpacity>
                           )}
-                        </View>
-                      )}
-
-                      {/* 显示已扫描的条码 */}
-                      {item.barcodeCodes && item.barcodeCodes.length > 0 && (
-                        <View style={styles.barcodePreviewSection}>
-                          <Text style={styles.barcodePreviewLabel}>已扫描条码 ({item.barcodeCodes.length})</Text>
-                          <View style={styles.barcodeCodesRow}>
-                            {item.barcodeCodes.map((code, idx) => (
-                              <View key={idx} style={styles.barcodeCodeItem}>
-                                <Feather name="code" size={14} color="#6C63FF" />
-                                <Text style={styles.barcodeCodeText}>{code}</Text>
-                                {item.status !== 'pass' && (
-                                  <TouchableOpacity onPress={() => handleDeleteBarcodeCode(item.id, code)}>
-                                    <Feather name="x-circle" size={16} color="#FF5252" />
-                                  </TouchableOpacity>
-                                )}
-                              </View>
-                            ))}
-                          </View>
                         </View>
                       )}
                     </>
