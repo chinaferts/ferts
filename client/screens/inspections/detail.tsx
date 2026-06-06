@@ -1342,16 +1342,9 @@ export default function InspectionDetailScreen() {
                     </View>
                   )}
                   
-                  {/* 操作按钮行：扫码、合格、不合格、不适用 */}
+                  {/* 操作按钮行：合格、不合格、不适用 */}
                   {item.status === 'unchecked' && inspection.status !== 'completed' && (
                     <View style={styles.actionButtonsRow}>
-                      <TouchableOpacity 
-                        style={styles.issueCameraButton} 
-                        onPress={() => openBarcodeScanner(item)}
-                      >
-                        <Feather name="maximize-2" size={16} color="#6C63FF" />
-                        <Text style={styles.issueCameraText}>扫码</Text>
-                      </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.passButton]}
                         onPress={() => updateChecklistItem(item, 'pass')}
