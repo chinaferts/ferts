@@ -1343,6 +1343,7 @@ export default function InspectionDetailScreen() {
                   {/* 已扫描的条码 */}
                   {item.barcodeCodes && item.barcodeCodes.length > 0 && (
                     <View style={styles.barcodePreviewSection}>
+                      <Text style={{color: '#fff', fontSize: 10}}>DEBUG: {JSON.stringify(item.barcodeCodes)}</Text>
                       <View style={styles.barcodeCodesRow}>
                         {item.barcodeCodes.map((code, idx) => (
                           <View key={idx} style={styles.barcodeCodeItem}>
