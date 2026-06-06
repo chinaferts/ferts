@@ -515,12 +515,18 @@ export default function InspectionDetailScreen() {
       if (response.ok) {
         const result = await response.json();
         const data = result.data || result;
+        
+        // 打印API返回的原始数据，用于调试
+        console.log('[API_RESPONSE] Full response:', JSON.stringify(data).substring(0, 500));
+        
         // 优先使用 API 返回的 checklist_items 格式（已处理好的数据）
         // 如果没有，则尝试转换 inspection_records（兼容旧格式）
         const rawItems = data.checklist_items || data.inspection_records || [];
         console.log('[DEBUG] rawItems count:', rawItems.length);
         if (rawItems.length > 0) {
-          console.log('[DEBUG] First item:', JSON.stringify(rawItems[0]).substring(0, 200));
+          console.log('[DEBUG] First item keys:', Object.keys(rawItems[0]).join(', '));
+          console.log('[DEBUG] First item photos:', JSON.stringify(rawItems[0].photos || rawItems[0].photo_urls));
+          console.log('[DEBUG] First item barcodeCodes:', JSON.stringify(rawItems[0].barcodeCodes || rawItems[0].barcode_codes));
         }
         const checklistItems = Array.isArray(rawItems) && rawItems.length > 0
           ? rawItems.map((record: any, index: number) => {
@@ -642,6 +648,16 @@ export default function InspectionDetailScreen() {
       // 对于嵌入式模板的检查项，使用 item.id（即 item.name）来更新
       const recordId = item.record_id && item.record_id > 0 ? String(item.record_id) : item.id;
       
+      // 调试日志 - 显示要发送的数据
+      console.log('[PUT_REQUEST] Sending to API:', {
+        url: `${baseUrl}/api/v1/inspections/${id}/records/${recordId}`,
+        body: {
+          result: status,
+          photos: item.photos || [],
+          barcode_codes: item.barcodeCodes || [],
+        }
+      });
+      
       // 更新状态时，同时保存照片和条码数据
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${recordId}`, {
         method: 'PUT',
@@ -652,6 +668,14 @@ export default function InspectionDetailScreen() {
           barcode_codes: item.barcodeCodes || [],
         }),
       });
+      
+      // 调试日志 - 显示API响应
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('[PUT_RESPONSE] Success:', JSON.stringify(responseData).substring(0, 300));
+      } else {
+        console.log('[PUT_RESPONSE] Error:', response.status);
+      }
 
       if (response.ok) {
         // 更新本地状态 - 使用 id 字符串比较确保类型一致

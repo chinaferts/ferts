@@ -311,6 +311,16 @@ router.get('/:id', async (req: Request, res: Response) => {
     // 组合数据
     const checklist_items = (records || []).map((record: any) => {
       const item = record.checklist_items;
+      const recordPhotos = record.photos || photos?.filter((p: any) => p.record_id === record.id).map((p: any) => p.photo_url) || [];
+      const recordBarcodes = record.barcode_codes || [];
+      
+      console.log('[GET_INSPECTION] Record:', {
+        id: record.id,
+        item_name: record.item_name,
+        photos: recordPhotos,
+        barcode_codes: recordBarcodes
+      });
+      
       return {
         id: item.id,
         name: item.name,
@@ -320,8 +330,8 @@ router.get('/:id', async (req: Request, res: Response) => {
         notes: record.notes,
         score: record.score,
         record_id: record.id,
-        photos: record.photos || photos?.filter((p: any) => p.record_id === record.id).map((p: any) => p.photo_url) || [],
-        barcodeCodes: record.barcode_codes || []
+        photos: recordPhotos,
+        barcodeCodes: recordBarcodes
       };
     });
 
@@ -642,8 +652,18 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
   try {
     const { id, recordId } = req.params;
     const { result, notes, photos, barcode_codes } = req.body;
+    
+    console.log('[PUT_RECORDS] Received request:', {
+      id,
+      recordId,
+      result,
+      photosCount: photos?.length,
+      barcode_codesCount: barcode_codes?.length,
+      barcode_codes: barcode_codes
+    });
 
     if (!isSupabaseConfigured()) {
+      console.log('[PUT_RECORDS] Mock mode - returning success');
       return res.json({ success: true, data: { id: recordId, result, notes, photos, barcode_codes } });
     }
 
@@ -663,9 +683,11 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
     // 如果提供了 photos 或 barcode_codes，也更新它们
     if (photos !== undefined) {
       updateData.photos = photos;
+      console.log('[PUT_RECORDS] Updating photos:', photos);
     }
     if (barcode_codes !== undefined) {
       updateData.barcode_codes = barcode_codes;
+      console.log('[PUT_RECORDS] Updating barcode_codes:', barcode_codes);
     }
     
     let query = client
@@ -687,6 +709,8 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
 
     // 如果 select() 返回多条记录，取第一条
     const updatedRecord = Array.isArray(data) ? data[0] : data;
+    
+    console.log('[PUT_RECORDS] Update result:', { data: updatedRecord, error });
 
     if (error) throw error;
 
