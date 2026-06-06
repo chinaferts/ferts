@@ -1813,7 +1813,10 @@ export default function InspectionDetailScreen() {
 
         {/* 问题统计以及拍照并描述 - 检查项照片显示 */}
         {(() => {
-          const problemCategoryItems = checklistItems.filter(item => item.category === '问题统计以及拍照并描述');
+          const rawItems = inspection?.checklist_items || [];
+          const problemCategoryItems = rawItems.filter((item: any) => 
+            (item.category || item.item_category) === '问题统计以及拍照并描述'
+          );
           return problemCategoryItems.length > 0 && (
             <View style={styles.section}>
               <View style={styles.categoryHeader}>
