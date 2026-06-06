@@ -502,18 +502,28 @@ export default function InspectionDetailScreen() {
         // 优先使用 API 返回的 checklist_items 格式（已处理好的数据）
         // 如果没有，则尝试转换 inspection_records（兼容旧格式）
         const rawItems = data.checklist_items || data.inspection_records || [];
+        console.log('[DEBUG] rawItems count:', rawItems.length);
+        if (rawItems.length > 0) {
+          console.log('[DEBUG] First item:', JSON.stringify(rawItems[0]).substring(0, 200));
+        }
         const checklistItems = Array.isArray(rawItems) && rawItems.length > 0
-          ? rawItems.map((record: any, index: number) => ({
-              id: parseInt(record.checklist_item_id || record.id || index),
-              record_id: parseInt(record.id || index),
-              name: record.name || record.item_name || t('unnamed'),
-              description: record.description || '',
-              category: record.category || record.item_category || t('other'),
-              status: record.status || record.result || 'unchecked',
-              notes: record.notes,
-              photos: record.photos || record.photo_urls || [],
-              barcodeCodes: record.barcodeCodes || record.barcode_codes || [],
-            }))
+          ? rawItems.map((record: any, index: number) => {
+              const itemId = parseInt(record.checklist_item_id || record.id || index, 10);
+              const itemRecordId = parseInt(record.id || index, 10);
+              const item = {
+                id: isNaN(itemId) ? index : itemId,
+                record_id: isNaN(itemRecordId) ? index : itemRecordId,
+                name: record.name || record.item_name || t('unnamed'),
+                description: record.description || '',
+                category: record.category || record.item_category || t('other'),
+                status: record.status || record.result || 'unchecked',
+                notes: record.notes,
+                photos: record.photos || record.photo_urls || [],
+                barcodeCodes: record.barcodeCodes || record.barcode_codes || [],
+              };
+              console.log('[DEBUG] Mapped item:', item.name, 'barcodeCodes:', JSON.stringify(item.barcodeCodes));
+              return item;
+            })
           : [];
         
         const checkedCount = checklistItems.filter((i: ChecklistItem) => i.status !== 'unchecked').length;
@@ -1272,52 +1282,58 @@ export default function InspectionDetailScreen() {
                   ) : (
                     <>
                       {/* 已保存的照片预览 */}
-                      {item.photos && item.photos.length > 0 && (
-                        <View style={styles.photoPreviewSection}>
-                          <View style={styles.photoGridContainer}>
-                            {item.photos.map((photo, idx) => (
-                              <TouchableOpacity key={idx} onPress={() => {
-                                setEditingPhoto({ uri: photo, index: idx, item });
-                                setTempPhotos([]);
-                                setCameraVisible(true);
-                              }} style={styles.photoContainer}>
-                                <Image source={{ uri: photo }} style={styles.photoThumb} />
-                                {item.status !== 'pass' && (
-                                  <TouchableOpacity style={styles.photoDeleteButton}
-                                    onPress={() => {
-                                      if (!inspectionRef.current) return;
-                                      const updatedItems = (inspectionRef.current.checklist_items || []).map((i: ChecklistItem) => {
-                                        if (i.record_id === item.record_id) {
-                                          return { ...i, photos: (i.photos || []).filter((_: any, pi: number) => pi !== idx) };
-                                        }
-                                        return i;
-                                      });
-                                      const updated: InspectionDetail = { ...inspectionRef.current, checklist_items: updatedItems };
-                                      setInspection(updated);
-                                    }}>
-                                    <Text style={styles.photoDeleteText}>X</Text>
-                                  </TouchableOpacity>
-                                )}
-                              </TouchableOpacity>
-                            ))}
+                      {(() => {
+                        console.log('[RENDER] Item:', item.name, 'photos:', JSON.stringify(item.photos));
+                        return item.photos && item.photos.length > 0 ? (
+                          <View style={styles.photoPreviewSection}>
+                            <View style={styles.photoGridContainer}>
+                              {item.photos.map((photo, idx) => (
+                                <TouchableOpacity key={idx} onPress={() => {
+                                  setEditingPhoto({ uri: photo, index: idx, item });
+                                  setTempPhotos([]);
+                                  setCameraVisible(true);
+                                }} style={styles.photoContainer}>
+                                  <Image source={{ uri: photo }} style={styles.photoThumb} />
+                                  {item.status !== 'pass' && (
+                                    <TouchableOpacity style={styles.photoDeleteButton}
+                                      onPress={() => {
+                                        if (!inspectionRef.current) return;
+                                        const updatedItems = (inspectionRef.current.checklist_items || []).map((i: ChecklistItem) => {
+                                          if (i.record_id === item.record_id) {
+                                            return { ...i, photos: (i.photos || []).filter((_: any, pi: number) => pi !== idx) };
+                                          }
+                                          return i;
+                                        });
+                                        const updated: InspectionDetail = { ...inspectionRef.current, checklist_items: updatedItems };
+                                        setInspection(updated);
+                                      }}>
+                                      <Text style={styles.photoDeleteText}>X</Text>
+                                    </TouchableOpacity>
+                                  )}
+                                </TouchableOpacity>
+                              ))}
+                            </View>
                           </View>
-                        </View>
-                      )}
+                        ) : null;
+                      })()}
 
                       {/* 已扫描的条码 - 所有分类都显示 */}
-                      {item.barcodeCodes && item.barcodeCodes.length > 0 && (
-                        <View style={styles.barcodePreviewSection}>
-                          <Text style={styles.barcodePreviewLabel}>已扫描条码 ({item.barcodeCodes.length})</Text>
-                          <View style={styles.barcodeCodesRow}>
-                            {item.barcodeCodes.map((code, idx) => (
-                              <View key={idx} style={styles.barcodeCodeItem}>
-                                <Feather name="code" size={14} color="#6C63FF" />
-                                <Text style={styles.barcodeCodeText}>{code}</Text>
-                              </View>
-                            ))}
+                      {(() => {
+                        console.log('[RENDER] Item:', item.name, 'barcodeCodes:', JSON.stringify(item.barcodeCodes));
+                        return item.barcodeCodes && item.barcodeCodes.length > 0 ? (
+                          <View style={styles.barcodePreviewSection}>
+                            <Text style={styles.barcodePreviewLabel}>已扫描条码 ({item.barcodeCodes.length})</Text>
+                            <View style={styles.barcodeCodesRow}>
+                              {item.barcodeCodes.map((code, idx) => (
+                                <View key={idx} style={styles.barcodeCodeItem}>
+                                  <Feather name="code" size={14} color="#6C63FF" />
+                                  <Text style={styles.barcodeCodeText}>{code}</Text>
+                                </View>
+                              ))}
+                            </View>
                           </View>
-                        </View>
-                      )}
+                        ) : null;
+                      })()}
 
                       {item.status === 'unchecked' && inspection.status !== 'completed' && (
                         <View style={styles.actionButtons}>
