@@ -1188,6 +1188,12 @@ export default function InspectionDetailScreen() {
     );
   }
 
+  // 调试：显示所有有照片的检查项
+  const itemsWithPhotos = inspection.checklist_items.filter(item => item.photos && item.photos.length > 0);
+  if (itemsWithPhotos.length > 0) {
+    console.log('[DEBUG] Items with photos:', itemsWithPhotos.map(i => ({ name: i.name, photos: i.photos })));
+  }
+
   // 按分类分组
   const categories = [...new Set(inspection.checklist_items.map(item => item.category))];
   const progress = inspection.checklist_items.length > 0
