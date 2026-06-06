@@ -530,8 +530,10 @@ export default function InspectionDetailScreen() {
         }
         const checklistItems = Array.isArray(rawItems) && rawItems.length > 0
           ? rawItems.map((record: any, index: number) => {
+              // item.id 是检查项模板的ID（如151）
+              // item.record_id 是 inspection_records 表中的实际记录ID（如344）
               const itemId = parseInt(record.checklist_item_id || record.id || index, 10);
-              const itemRecordId = parseInt(record.id || index, 10);
+              const itemRecordId = parseInt(record.record_id || record.id || index, 10);
               const item = {
                 id: isNaN(itemId) ? index : itemId,
                 record_id: isNaN(itemRecordId) ? index : itemRecordId,
@@ -543,7 +545,7 @@ export default function InspectionDetailScreen() {
                 photos: record.photos || record.photo_urls || [],
                 barcodeCodes: record.barcodeCodes || record.barcode_codes || [],
               };
-              console.log('[DEBUG] Mapped item:', item.name, 'barcodeCodes:', JSON.stringify(item.barcodeCodes));
+              console.log('[DEBUG] Mapped item:', item.name, 'id:', item.id, 'record_id:', item.record_id);
               return item;
             })
           : [];
@@ -645,8 +647,12 @@ export default function InspectionDetailScreen() {
         return;
       }
 
-      // 对于嵌入式模板的检查项，使用 item.id（即 item.name）来更新
-      const recordId = item.record_id && item.record_id > 0 ? String(item.record_id) : item.id;
+      // 对于嵌入式模板的检查项，使用 record_id 来更新（不是 id）
+      // item.record_id 是数据库中的实际记录ID，如344、345等
+      // item.id 是检查项模板的ID，如151、146等
+      const recordId = item.record_id && item.record_id > 0 ? String(item.record_id) : String(item.id);
+      
+      console.log('[PUT_REQUEST] record_id:', recordId, 'item.id:', item.id, 'item.record_id:', item.record_id);
       
       // 调试日志 - 显示要发送的数据
       console.log('[PUT_REQUEST] Sending to API:', {
@@ -779,9 +785,12 @@ export default function InspectionDetailScreen() {
     // 同时更新inspection_records表的photos字段
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      // 必须使用record_id（数据库中的实际记录ID），而不是id（检查项模板ID）
       const recordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0 
         ? String(tempPhotoTarget.record_id) 
-        : tempPhotoTarget.id;
+        : String(tempPhotoTarget.id);
+      
+      console.log('[CompletePhotos] Saving with recordId:', recordId, 'tempPhotoTarget.record_id:', tempPhotoTarget.record_id);
       
       const saveResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${recordId}`, {
         method: 'PUT',
@@ -793,7 +802,8 @@ export default function InspectionDetailScreen() {
       });
       
       if (saveResponse.ok) {
-        console.log('[CompletePhotos] Saved photos to inspection_records');
+        const resultData = await saveResponse.json();
+        console.log('[CompletePhotos] Saved photos to inspection_records:', resultData);
       } else {
         console.log('[CompletePhotos] Save failed:', saveResponse.status);
       }
