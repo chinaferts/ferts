@@ -345,6 +345,13 @@ export default function InspectionDetailScreen() {
     ));
   };
 
+  // 更新条码扫描项的任意字段
+  const handleUpdateBarcodeItem = (item: any, updates: Partial<typeof item>) => {
+    setBarcodeItems(items => items.map(i => 
+      i.record_id === item.record_id ? { ...i, ...updates } : i
+    ));
+  };
+
   // 条码类型选择器函数
   const openBarcodeTypeSelector = (index: number) => {
     setSelectedBarcodeIndex(index);
@@ -1180,6 +1187,16 @@ export default function InspectionDetailScreen() {
                               <View key={idx} style={styles.barcodeCodeItem}>
                                 <Feather name="code" size={14} color="#6C63FF" />
                                 <Text style={styles.barcodeCodeText} numberOfLines={1}>{code}</Text>
+                                <TouchableOpacity 
+                                  style={styles.barcodeDeleteBtn}
+                                  onPress={() => {
+                                    const newCodes = [...item.barcodeCodes];
+                                    newCodes.splice(idx, 1);
+                                    handleUpdateBarcodeItem(item, { barcodeCodes: newCodes });
+                                  }}
+                                >
+                                  <Feather name="x" size={12} color="#FF6B6B" />
+                                </TouchableOpacity>
                               </View>
                             ))}
                           </View>
@@ -1596,6 +1613,16 @@ export default function InspectionDetailScreen() {
               <View key={idx} style={styles.scannedCodeItem}>
                 <Feather name="code" size={18} color="#6C63FF" />
                 <Text style={styles.scannedCodeText}>{code}</Text>
+                <TouchableOpacity 
+                  style={styles.barcodeDeleteBtn}
+                  onPress={() => {
+                    const newCodes = [...scannedCodes];
+                    newCodes.splice(idx, 1);
+                    setScannedCodes(newCodes);
+                  }}
+                >
+                  <Feather name="x" size={16} color="#FF6B6B" />
+                </TouchableOpacity>
               </View>
             ))}
           </View>
@@ -2570,6 +2597,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2D3436',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    flex: 1,
   },
   submitPassButton: {
     flex: 1,
@@ -2817,6 +2845,12 @@ const styles = StyleSheet.create({
   barcodeCodeText: {
     fontSize: 12,
     color: '#6C63FF',
+    flex: 1,
+  },
+  barcodeDeleteBtn: {
+    padding: 2,
+    marginLeft: 4,
+  },
     fontWeight: '500',
     flexShrink: 1,
   },
