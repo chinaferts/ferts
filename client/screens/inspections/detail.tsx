@@ -725,7 +725,6 @@ export default function InspectionDetailScreen() {
     
     // 立即标记为已扫描，防止重复触发
     isScanningRef.current = true;
-    setHasScannedBarcode(true);
     // 完全隐藏相机组件，停止扫描
     setShowBarcodeCamera(false);
     
@@ -759,10 +758,7 @@ export default function InspectionDetailScreen() {
       return { ...prev, checklist_items: updatedItemsWithStatus, checkedCount, defectCount };
     });
     
-    // 关闭相机预览，只显示结果
-    if (barcodeCameraRef.current) {
-      barcodeCameraRef.current.pausePreview();
-    }
+    closeBarcodeScanner();
   };
 
   // 完成条码扫描，跳转到检查项目页面
@@ -1333,6 +1329,16 @@ export default function InspectionDetailScreen() {
                           <View key={idx} style={styles.barcodeCodeItem}>
                             <Feather name="code" size={14} color="#6C63FF" />
                             <Text style={styles.barcodeCodeText} numberOfLines={1}>{code}</Text>
+                            <TouchableOpacity 
+                              style={styles.barcodeDeleteBtn}
+                              onPress={() => {
+                                const newCodes = [...item.barcodeCodes];
+                                newCodes.splice(idx, 1);
+                                handleUpdateBarcodeItem(item, { barcodeCodes: newCodes });
+                              }}
+                            >
+                              <Feather name="x" size={12} color="#FF6B6B" />
+                            </TouchableOpacity>
                           </View>
                         ))}
                       </View>
