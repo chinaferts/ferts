@@ -750,14 +750,17 @@ export default function InspectionDetailScreen() {
       const targetIndex = prev.findIndex(item => String(item.record_id) === targetRecordId);
       if (targetIndex === -1) {
         // 如果在 barcodeItems 中没找到，创建新项
-        return [...prev, { ...barcodeScanTarget, barcodeCodes: [scannedCode], photos: [], status: 'pass' }];
+        const newItem = { ...barcodeScanTarget, barcodeCodes: [scannedCode], photos: [], status: 'pass' as const };
+        console.log('[BarcodeScan] Creating new item:', newItem);
+        return [...prev, newItem];
       }
       const updated = [...prev];
       updated[targetIndex] = {
         ...updated[targetIndex],
         barcodeCodes: [...(updated[targetIndex].barcodeCodes || []), scannedCode],
-        status: 'pass'
+        status: 'pass' as const
       };
+      console.log('[BarcodeScan] Updated barcodeItems index:', targetIndex, 'codes:', updated[targetIndex].barcodeCodes);
       return updated;
     });
     
