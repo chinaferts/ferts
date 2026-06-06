@@ -461,33 +461,12 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
 
     const client = requireSupabaseClient();
     
-    // 获取记录数和缺陷数
-    const { data: records } = await client
-      .from('inspection_records')
-      .select('result')
-      .eq('inspection_id', id);
-
-    const { data: defects } = await client
-      .from('defects')
-      .select('id')
-      .eq('inspection_id', id);
-
-    const passedItems = records?.filter((r: any) => r.result === 'passed').length || 0;
-    const failedItems = defects?.length || 0;
-
-    // 构建更新对象，只包含实际存在的字段
+    // 构建更新对象
     const updateData: any = {
       status: 'completed',
+      overall_result: result,
       notes
     };
-
-    // 如果表中有这些字段才添加
-    if (records && records.length !== undefined) {
-      updateData.total_items = records.length;
-    }
-    if (passedItems !== undefined) {
-      updateData.passed_items = passedItems;
-    }
 
     const { data, error } = await client
       .from('inspections')
