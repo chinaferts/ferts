@@ -730,12 +730,12 @@ export default function InspectionDetailScreen() {
     setShowBarcodeCamera(false);
     
     // 将扫描到的条码添加到对应检查项
-    const targetRecordId = String(barcodeScanTarget.record_id);
+    const targetRecordId = barcodeScanTarget.record_id;
     const newBarcode = result.data;
     
-    // 更新 barcodeItems 状态（显示用的数据）
+    // 更新 barcodeItems 状态（显示用的数据）- 使用数字比较
     setBarcodeItems(prevItems => prevItems.map(i =>
-      String(i.record_id) === targetRecordId
+      i.record_id === targetRecordId
         ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), newBarcode] }
         : i
     ));
@@ -744,13 +744,13 @@ export default function InspectionDetailScreen() {
     setInspection(prev => {
       if (!prev) return null;
       const updatedItems = prev.checklist_items.map(i =>
-        String(i.record_id) === targetRecordId
+        i.record_id === targetRecordId
           ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), newBarcode] }
           : i
       );
       // 同时更新检查状态为已检查
       const updatedItemsWithStatus = updatedItems.map(i =>
-        String(i.record_id) === targetRecordId && i.status === 'unchecked'
+        i.record_id === targetRecordId && i.status === 'unchecked'
           ? { ...i, status: 'pass' as const }
           : i
       );
