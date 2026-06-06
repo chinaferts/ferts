@@ -735,23 +735,17 @@ export default function InspectionDetailScreen() {
           ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), scannedCode] }
           : i
       );
-      // 同时更新检查状态为已检查
-      const updatedItemsWithStatus = updatedItems.map(i =>
-        String(i.record_id) === targetRecordId && i.status === 'unchecked'
-          ? { ...i, status: 'pass' as const }
-          : i
-      );
-      const checkedCount = updatedItemsWithStatus.filter(i => i.status !== 'unchecked').length;
-      const defectCount = updatedItemsWithStatus.filter(i => i.status === 'fail').length;
-      return { ...prev, checklist_items: updatedItemsWithStatus, checkedCount, defectCount };
+      const checkedCount = updatedItems.filter(i => i.status !== 'unchecked').length;
+      const defectCount = updatedItems.filter(i => i.status === 'fail').length;
+      return { ...prev, checklist_items: updatedItems, checkedCount, defectCount };
     });
     
     // 同时更新 barcodeItems，确保预览区能显示
     setBarcodeItems(prev => {
       const targetIndex = prev.findIndex(item => String(item.record_id) === targetRecordId);
       if (targetIndex === -1) {
-        // 如果在 barcodeItems 中没找到，创建新项
-        const newItem = { ...barcodeScanTarget, barcodeCodes: [scannedCode], photos: [], status: 'pass' as const };
+        // 如果在 barcodeItems 中没找到，创建新项（不自动设置合格）
+        const newItem = { ...barcodeScanTarget, barcodeCodes: [scannedCode], photos: [], status: 'unchecked' as const };
         console.log('[BarcodeScan] Creating new item:', newItem);
         return [...prev, newItem];
       }
@@ -759,7 +753,7 @@ export default function InspectionDetailScreen() {
       updated[targetIndex] = {
         ...updated[targetIndex],
         barcodeCodes: [...(updated[targetIndex].barcodeCodes || []), scannedCode],
-        status: 'pass' as const
+        // 不自动设置合格，保持原状态
       };
       console.log('[BarcodeScan] Updated barcodeItems index:', targetIndex, 'codes:', updated[targetIndex].barcodeCodes);
       return updated;
