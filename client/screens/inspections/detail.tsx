@@ -1811,18 +1811,70 @@ export default function InspectionDetailScreen() {
           </View>
         )}
 
+        {/* 问题统计以及拍照并描述 - 检查项照片显示 */}
+        {(() => {
+          const problemCategoryItems = checklistItems.filter(item => item.category === '问题统计以及拍照并描述');
+          return problemCategoryItems.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.categoryHeader}>
+                <View>
+                  <Text style={styles.sectionTitle}>问题统计以及拍照并描述</Text>
+                  <Text style={styles.sectionTitleEnglish}>Problem Statistics</Text>
+                </View>
+              </View>
+              {problemCategoryItems.map((item, idx) => (
+                <View key={item.id || idx} style={styles.checklistItemCard}>
+                  <View style={styles.itemHeader}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                  </View>
+                  {/* 检查项照片显示 */}
+                  {item.photos && item.photos.length > 0 && (
+                    <View style={styles.photosContainer}>
+                      {item.photos.map((photo, photoIdx) => (
+                        <TouchableOpacity 
+                          key={photoIdx} 
+                          style={styles.photoItem}
+                          onPress={() => {
+                            setSelectedPhoto(photo);
+                            setPhotoModalVisible(true);
+                          }}
+                        >
+                          <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumbnail} />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                  {/* 检查项条码显示 */}
+                  {item.barcodeCodes && item.barcodeCodes.length > 0 && (
+                    <View style={styles.barcodeContainer}>
+                      {item.barcodeCodes.map((code, codeIdx) => (
+                        <View key={codeIdx} style={styles.barcodeItem}>
+                          <Feather name="code" size={16} color="#6C63FF" />
+                          <Text style={styles.barcodeText}>{code}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
+          );
+        })()}
+
         {/* 问题描述列表 */}
         {issues.length > 0 && (
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
               <View>
-                <Text style={styles.sectionTitle}>问题统计以及拍照并描述</Text>
-                <Text style={styles.sectionTitleEnglish}>Problem Statistics</Text>
+                <Text style={styles.sectionTitle}>问题描述列表</Text>
+                <Text style={styles.sectionTitleEnglish}>Problem Description List</Text>
               </View>
-              <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
-                <Feather name="plus" size={18} color="#6C63FF" />
-                <Text style={styles.addIssueText}>{t('addProblem')}</Text>
-              </TouchableOpacity>
+              {inspection.status !== 'completed' && (
+                <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
+                  <Feather name="plus" size={18} color="#6C63FF" />
+                  <Text style={styles.addIssueText}>{t('addProblem')}</Text>
+                </TouchableOpacity>
+              )}
             </View>
             
             {/* 缺陷统计表格 */}
@@ -1963,11 +2015,13 @@ export default function InspectionDetailScreen() {
                     ))}
                   </View>
                 )}
-                {/* 拍照按钮 */}
-                <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
-                  <Feather name="camera" size={18} color="#FFFFFF" />
-                  <Text style={styles.issueCameraText}>拍照 / Camera</Text>
-                </TouchableOpacity>
+                {/* 拍照按钮 - 仅在未完成时显示 */}
+                {inspection.status !== 'completed' && (
+                  <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
+                    <Feather name="camera" size={18} color="#FFFFFF" />
+                    <Text style={styles.issueCameraText}>拍照 / Camera</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
           </View>
