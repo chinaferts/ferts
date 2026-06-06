@@ -1043,6 +1043,9 @@ export default function InspectionDetailScreen() {
         <View style={styles.headerCard}>
           {/* 顶部行：供应商和状态 */}
           <View style={styles.headerTopRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Feather name="chevron-left" size={24} color="#2D3436" />
+            </TouchableOpacity>
             <View style={styles.headerMain}>
               {/* 订单号 */}
               {inspection.batch_number && (
@@ -2119,9 +2122,12 @@ const styles = StyleSheet.create({
   },
   headerTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 16,
+  },
+  backButton: {
+    padding: 4,
+    marginRight: 8,
   },
   headerMain: {
     flex: 1,
