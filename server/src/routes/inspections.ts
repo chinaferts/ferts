@@ -236,7 +236,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         id: item.id,
         name: item.name,
         description: item.description,
-        category: item.item_type || 'general',
+        category: record.item_category || item.name || item.item_type || 'general',
         status: record.result || 'unchecked',
         notes: record.notes,
         score: record.score,

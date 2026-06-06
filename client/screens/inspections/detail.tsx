@@ -1256,7 +1256,7 @@ export default function InspectionDetailScreen() {
                           style={styles.headerCameraButton}
                           onPress={() => takePhoto(item)}
                         >
-                          <Feather name="camera" size={16} color="#FFFFFF" />
+                          <Feather name="camera" size={14} color="#FFFFFF" />
                           <Text style={styles.headerCameraButtonText}>拍照</Text>
                         </TouchableOpacity>
                         {/* 导入本地照片按钮 - 仅管理员可见 */}
@@ -1265,7 +1265,7 @@ export default function InspectionDetailScreen() {
                             style={styles.headerCameraButton}
                             onPress={() => handleImportFromGallery(item)}
                           >
-                            <Feather name="image" size={16} color="#FFFFFF" />
+                            <Feather name="image" size={14} color="#FFFFFF" />
                             <Text style={styles.headerCameraButtonText}>导入</Text>
                           </TouchableOpacity>
                         )}
@@ -1274,7 +1274,7 @@ export default function InspectionDetailScreen() {
                           style={[styles.headerCameraButton, { backgroundColor: '#6C63FF' }]}
                           onPress={() => openBarcodeScanner(item)}
                         >
-                          <Feather name="maximize-2" size={16} color="#FFFFFF" />
+                          <Feather name="maximize-2" size={14} color="#FFFFFF" />
                           <Text style={styles.headerCameraButtonText}>扫码</Text>
                         </TouchableOpacity>
                       </View>
@@ -2272,6 +2272,9 @@ const styles = StyleSheet.create({
   cameraButtonRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
   },
   checklistActionsRow: {
     flexDirection: 'row',
@@ -2289,14 +2292,14 @@ const styles = StyleSheet.create({
   headerCameraButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: '#8B7FF5',
-    gap: 6,
+    gap: 4,
   },
   headerCameraButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#FFFFFF',
   },
