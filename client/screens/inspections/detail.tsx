@@ -721,7 +721,15 @@ export default function InspectionDetailScreen() {
   // 处理条码扫描结果
   const handleBarcodeScanned = (result: BarcodeScanningResult) => {
     // 使用 ref 检查，避免异步状态更新导致的问题
-    if (!result.data || !barcodeScanTarget || isScanningRef.current) return;
+    if (!result.data || !barcodeScanTarget || isScanningRef.current) {
+      console.log('[BarcodeScan] Early return:', { 
+        hasData: !!result.data, 
+        hasTarget: !!barcodeScanTarget, 
+        isScanning: isScanningRef.current,
+        targetId: barcodeScanTarget?.record_id 
+      });
+      return;
+    }
     
     // 立即标记为已扫描，防止重复触发
     isScanningRef.current = true;
@@ -731,13 +739,15 @@ export default function InspectionDetailScreen() {
     // 将扫描到的条码添加到对应检查项
     const targetRecordId = barcodeScanTarget.record_id;
     const newBarcode = result.data;
+    console.log('[BarcodeScan] Scanning barcode:', newBarcode, 'for item:', targetRecordId);
     
-    // 更新 barcodeItems 状态（显示用的数据）- 使用字符串比较确保类型一致
+    // 更新 barcodeItems 状态（显示用的数据）
     setBarcodeItems(prevItems => {
-      const targetIdStr = String(targetRecordId);
-      return prevItems.map(i => {
-        const itemIdStr = String(i.record_id);
-        if (itemIdStr === targetIdStr) {
+      console.log('[BarcodeScan] Updating barcodeItems, current items:', prevItems.length);
+      const updated = prevItems.map(i => {
+        // 使用宽松比较，自动处理类型不一致问题
+        if (i.record_id == targetRecordId) {  // eslint-disable-line eqeqeq
+          console.log('[BarcodeScan] Found matching item:', i.record_id);
           const existingCodes = i.barcodeCodes || [];
           if (!existingCodes.includes(newBarcode)) {
             return { ...i, barcodeCodes: [...existingCodes, newBarcode] };
@@ -745,15 +755,16 @@ export default function InspectionDetailScreen() {
         }
         return i;
       });
+      console.log('[BarcodeScan] Updated items:', updated.map(i => ({ id: i.record_id, codes: i.barcodeCodes })));
+      return updated;
     });
     
     // 同时更新 inspection.checklist_items（保存用的数据）
     setInspection(prev => {
       if (!prev) return null;
-      const targetIdStr = String(targetRecordId);
       const updatedItems = prev.checklist_items.map(i => {
-        const itemIdStr = String(i.record_id);
-        if (itemIdStr === targetIdStr) {
+        // 使用宽松比较
+        if (i.record_id == targetRecordId) {  // eslint-disable-line eqeqeq
           const existingCodes = i.barcodeCodes || [];
           if (!existingCodes.includes(newBarcode)) {
             return { ...i, barcodeCodes: [...existingCodes, newBarcode], status: i.status === 'unchecked' ? 'pass' : i.status };
