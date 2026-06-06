@@ -1400,8 +1400,8 @@ export default function InspectionDetailScreen() {
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
               <View>
-                <Text style={styles.sectionTitle}>问题统计以及拍照并描述</Text>
-                <Text style={styles.sectionTitleEnglish}>Problem Statistics</Text>
+                <Text style={styles.sectionTitle}>问题描述</Text>
+                <Text style={styles.sectionTitleEnglish}>Issue Description</Text>
               </View>
               <TouchableOpacity style={styles.addIssueButton} onPress={handleAddIssue}>
                 <Feather name="plus" size={18} color="#6C63FF" />
