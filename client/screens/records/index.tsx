@@ -84,13 +84,19 @@ export default function RecordsScreen() {
         const list = Array.isArray(result) ? result : (result.data || []);
         const filtered = list.filter((item: any) => item.supplier_name || item.product);
         const mapped: InspectionReport[] = filtered.map((item: any) => {
+          // 使用 overall_result 字段判断状态
+          const overallResult = item.overall_result || item.result;
           const failedItems = item.failed_items || 0;
           const totalItems = item.total_items || 0;
           const passedItems = totalItems - failedItems;
           const passRate = totalItems > 0 ? Math.round((passedItems / totalItems) * 100) : 0;
           
           let status: 'passed' | 'failed' | 'partial' = 'partial';
-          if (totalItems > 0) {
+          if (overallResult === 'pass') {
+            status = 'passed';
+          } else if (overallResult === 'fail') {
+            status = 'failed';
+          } else if (totalItems > 0) {
             if (failedItems === 0) status = 'passed';
             else if (passRate >= 80) status = 'partial';
             else status = 'failed';
@@ -100,8 +106,8 @@ export default function RecordsScreen() {
             id: parseInt(item.id),
             supplier: item.supplier_name || item.supplier || '',
             product: item.product_name || item.product || '',
-            batchNumber: item.batch_number || '',
-            date: item.inspection_date || item.completed_at || item.created_at || '',
+            batchNumber: item.batch_number || item.order_number || '',
+            date: item.completed_date || item.inspection_date || item.completed_at || item.created_at || '',
             inspector: item.inspector_name || item.inspector || '',
             status,
             passRate,

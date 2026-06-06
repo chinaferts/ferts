@@ -764,7 +764,7 @@ export default function InspectionDetailScreen() {
       const successMsg = result === 'pass' ? t('submitPassSuccess') : t('submitFailSuccess');
       if (response.ok) {
         Alert.alert(t('success'), successMsg, [
-          { text: t('ok'), onPress: () => router.navigate('/inspections') },
+          { text: t('ok'), onPress: () => router.navigate('/records') },
         ]);
       } else {
         Alert.alert(t('error'), t('submitFailed'));
