@@ -718,9 +718,10 @@ export default function InspectionDetailScreen() {
     
     // 立即标记为已扫描，防止重复触发
     isScanningRef.current = true;
-    // 完全隐藏相机组件，停止扫描
-    setShowBarcodeCamera(false);
-    setHasScannedBarcode(false);
+    
+    // 关闭扫码 Modal，直接返回预览区
+    setBarcodeScannerVisible(false);
+    setBarcodeScanTarget(null);
     
     // 将扫描到的条码添加到对应检查项
     const targetRecordId = String(barcodeScanTarget.record_id);
