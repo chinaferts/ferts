@@ -336,6 +336,11 @@ export default function InspectionDetailScreen() {
       barcodeType: 'box', // 默认外箱条码
     };
     setBarcodeItems([...barcodeItems, newItem]);
+    // 同时添加到 inspection.checklist_items，确保扫码时能找到
+    setInspection(prev => ({
+      ...prev,
+      checklist_items: [...(prev.checklist_items || []), { ...newItem }]
+    }));
   };
 
   // 更新条码扫描项的类型
