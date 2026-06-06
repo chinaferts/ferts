@@ -1263,6 +1263,9 @@ export default function InspectionDetailScreen() {
             });
             setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
             
+            // 同步更新 tempPhotos 状态，让预览区能显示照片
+            setTempPhotos(prev => [...prev, ...photoUris]);
+            
             // 上传照片到服务器
             try {
               for (let i = 0; i < photos.length; i++) {

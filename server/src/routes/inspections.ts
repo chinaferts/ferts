@@ -313,13 +313,15 @@ router.get('/:id', async (req: Request, res: Response) => {
     // 组合数据
     const checklist_items = (records || []).map((record: any) => {
       const item = record.checklist_items;
-      const recordPhotos = record.photos || photos?.filter((p: any) => p.record_id === record.id).map((p: any) => p.photo_url) || [];
+      // 从 inspection_photos 表获取该记录的照片
+      const recordPhotos = photos?.filter((p: any) => p.record_id === record.id).map((p: any) => p.photo_url) || [];
       const recordBarcodes = record.barcode_codes || [];
       
       console.log('[GET_INSPECTION] Record:', {
         id: record.id,
         item_name: record.item_name,
-        photos: recordPhotos,
+        record_photos_field: record.photos,
+        filtered_photos: recordPhotos,
         barcode_codes: recordBarcodes
       });
       
