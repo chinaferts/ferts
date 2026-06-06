@@ -1229,9 +1229,11 @@ export default function InspectionDetailScreen() {
                               <View key={idx} style={styles.barcodeCodeItem}>
                                 <Feather name="code" size={14} color="#6C63FF" />
                                 <Text style={styles.barcodeCodeText}>{code}</Text>
-                                <TouchableOpacity onPress={() => handleDeleteBarcodeCode(item.id, code)}>
-                                  <Feather name="x-circle" size={16} color="#FF5252" />
-                                </TouchableOpacity>
+                                {item.status !== 'pass' && (
+                                  <TouchableOpacity onPress={() => handleDeleteBarcodeCode(item.id, code)}>
+                                    <Feather name="x-circle" size={16} color="#FF5252" />
+                                  </TouchableOpacity>
+                                )}
                               </View>
                             ))}
                           </View>
