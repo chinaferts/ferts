@@ -782,6 +782,117 @@ export default function InspectionDetailScreen() {
     ]);
   };
 
+  // 导出验货照片
+  const handleExportPhotos = async () => {
+    if (!inspection) return;
+
+    try {
+      // 收集所有照片
+      const allPhotos: string[] = [];
+      (inspection.checklist_items || []).forEach(item => {
+        if (item.photos && item.photos.length > 0) {
+          allPhotos.push(...item.photos);
+        }
+      });
+
+      if (allPhotos.length === 0) {
+        Alert.alert('提示', '暂无照片可导出');
+        return;
+      }
+
+      Alert.alert('导出照片', `共 ${allPhotos.length} 张照片\n\n照片功能即将推出，您可以在相册中查看验货照片。`);
+    } catch (error) {
+      console.error('[Export] Export photos error:', error);
+      Alert.alert('错误', '导出照片失败');
+    }
+  };
+
+  // 导出验货报告
+  const handleExportReport = async () => {
+    if (!inspection) return;
+
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      
+      // 获取验货数据
+      const response = await fetch(`${baseUrl}/api/v1/inspections/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch inspection data');
+      }
+      const data = await response.json();
+      const inspectionData = data.data;
+
+      // 生成报告文本
+      const reportLines: string[] = [];
+      reportLines.push('='.repeat(50));
+      reportLines.push('验货报告 / Inspection Report');
+      reportLines.push('='.repeat(50));
+      reportLines.push('');
+      reportLines.push(`验货单号: ${inspectionData.inspection_number || inspectionData.id}`);
+      reportLines.push(`产品名称: ${inspectionData.product_name || 'N/A'}`);
+      reportLines.push(`验货日期: ${inspectionData.inspection_date || new Date().toLocaleDateString()}`);
+      reportLines.push(`检验结果: ${inspectionData.overall_result === 'pass' ? '合格' : inspectionData.overall_result === 'fail' ? '不合格' : 'N/A'}`);
+      reportLines.push('');
+      reportLines.push('-'.repeat(50));
+      reportLines.push('检查项明细 / Checklist Items');
+      reportLines.push('-'.repeat(50));
+
+      // 按分类组织检查项
+      const categories = (inspectionData.checklist_items || []).reduce((acc: Record<string, any[]>, item: any) => {
+        const cat = item.category || '未分类';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(item);
+        return acc;
+      }, {});
+
+      Object.entries(categories).forEach(([category, items]) => {
+        reportLines.push('');
+        reportLines.push(`【${category}】`);
+        (items as any[]).forEach((item, idx) => {
+          reportLines.push(`${idx + 1}. ${item.name}`);
+          reportLines.push(`   状态: ${item.status === 'pass' ? '合格' : item.status === 'fail' ? '不合格' : item.status === 'na' ? '不适用' : '未检查'}`);
+          if (item.barcodeCodes && item.barcodeCodes.length > 0) {
+            reportLines.push(`   条码: ${item.barcodeCodes.join(', ')}`);
+          }
+          if (item.photos && item.photos.length > 0) {
+            reportLines.push(`   照片: ${item.photos.length} 张`);
+          }
+          if (item.notes) {
+            reportLines.push(`   备注: ${item.notes}`);
+          }
+        });
+      });
+
+      reportLines.push('');
+      reportLines.push('='.repeat(50));
+      reportLines.push(`生成时间: ${new Date().toLocaleString()}`);
+      reportLines.push('='.repeat(50));
+
+      const reportText = reportLines.join('\n');
+
+      // 显示报告预览
+      Alert.alert(
+        '验货报告预览',
+        reportText.substring(0, 1000) + (reportText.length > 1000 ? '\n\n...(报告过长，已截断)' : ''),
+        [
+          { text: '关闭', style: 'cancel' },
+          { 
+            text: '复制报告', 
+            onPress: () => {
+              // 使用 Clipboard 复制报告
+              Alert.alert('提示', '报告已生成，请在控制台查看完整内容。\n\n功能即将完善，支持分享和保存为文件。');
+            }
+          }
+        ]
+      );
+
+      console.log('[Export] Inspection Report:\n', reportText);
+    } catch (error) {
+      console.error('[Export] Export report error:', error);
+      Alert.alert('错误', '导出报告失败');
+    }
+  };
+
   const doSubmit = async (result: 'pass' | 'fail') => {
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
@@ -1792,6 +1903,20 @@ export default function InspectionDetailScreen() {
           </View>
         )}
 
+        {/* 导出按钮区域 */}
+        {inspection.status === 'completed' && (
+          <View style={styles.exportButtonContainer}>
+            <TouchableOpacity style={styles.exportPhotosButton} onPress={handleExportPhotos}>
+              <Feather name="image" size={20} color="#FFFFFF" />
+              <Text style={styles.exportButtonText}>导出验货照片</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.exportReportButton} onPress={handleExportReport}>
+              <Feather name="file-text" size={20} color="#FFFFFF" />
+              <Text style={styles.exportButtonText}>导出验货报告</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* 提交按钮 */}
         {inspection.status !== 'completed' && (
           <View style={styles.flexRow}>
@@ -2738,6 +2863,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2D3436',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  // 导出按钮样式
+  exportButtonContainer: {
+    marginTop: 20,
+    marginBottom: 10,
+    gap: 12,
+  },
+  exportPhotosButton: {
+    flexDirection: 'row',
+    backgroundColor: '#0EA5E9',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#0EA5E9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+  },
+  exportReportButton: {
+    flexDirection: 'row',
+    backgroundColor: '#8B5CF6',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+  },
+  exportButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   submitPassButton: {
     flex: 1,
