@@ -619,6 +619,49 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
   }
 });
 
+// 更新检查项条码
+router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response) => {
+  try {
+    const { id, itemId } = req.params;
+    const { barcodeCodes, codes } = req.body;
+
+    if (!isSupabaseConfigured()) {
+      return res.json({ success: true, data: { id: itemId, barcodeCodes, codes } });
+    }
+
+    const client = requireSupabaseClient();
+    const updateData: any = {};
+    if (barcodeCodes !== undefined) updateData.barcode_codes = barcodeCodes;
+    if (codes !== undefined) updateData.barcode_codes = codes;
+
+    const { data, error } = await client
+      .from('inspection_checklist_items')
+      .update({
+        ...updateData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', itemId)
+      .eq('inspection_id', id)
+      .select();
+
+    const updatedItem = Array.isArray(data) ? data[0] : data;
+
+    if (error) throw error;
+
+    // 更新验货状态为进行中
+    await client
+      .from('inspections')
+      .update({ status: 'in_progress' })
+      .eq('id', id)
+      .eq('status', 'pending');
+
+    res.json({ success: true, data: updatedItem });
+  } catch (err: any) {
+    console.error('更新检查项失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 上传检查照片
 router.post('/:id/photos', async (req: Request, res: Response) => {
   try {

@@ -779,12 +779,14 @@ export default function InspectionDetailScreen() {
     const newCodes = item.barcodeCodes?.filter(c => c !== codeToDelete) || [];
     
     try {
+      console.log("[BarcodeDelete] Deleting barcode:", itemId, codeToDelete);
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${itemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcodeCodes: newCodes }),
       });
       
+        console.log("[BarcodeDelete] Response:", response.status);
       if (response.ok) {
         setInspection(prev => {
           if (!prev) return prev;
