@@ -531,8 +531,66 @@ export default function InspectionDetailScreen() {
   const updateChecklistItem = async (item: ChecklistItem, status: 'pass' | 'fail' | 'na') => {
     if (!inspection) return;
 
+    // 判断是否是新建的条码扫描项（record_id 是临时生成的 Date.now()）
+    const isNewBarcodeItem = item.record_id > 1000000000000;
+
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+
+      // 如果是新建的条码扫描项，先保存到数据库
+      if (isNewBarcodeItem) {
+        // 保存新建的检查项
+        const saveResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: item.name,
+            category: item.category,
+            item_category: item.category,
+            result: status,
+            photos: item.photos || [],
+            barcode_codes: item.barcodeCodes || [],
+            barcode_type: item.barcodeType,
+          }),
+        });
+
+        if (!saveResponse.ok) {
+          throw new Error('Failed to save new checklist item');
+        }
+
+        const saveData = await saveResponse.json();
+        const newRecordId = saveData.data?.record_id || saveData.record_id;
+
+        // 更新本地状态，使用真实的 record_id
+        const targetRecordId = String(newRecordId);
+        const updatedItems = inspection.checklist_items.map(i =>
+          String(i.record_id) === String(item.record_id)
+            ? { ...i, record_id: newRecordId, status }
+            : i
+        );
+
+        // 同时更新 barcodeItems
+        const updatedBarcodeItems = barcodeItems.map(i =>
+          String(i.record_id) === String(item.record_id)
+            ? { ...i, record_id: newRecordId, status }
+            : i
+        );
+        setBarcodeItems(updatedBarcodeItems);
+
+        const checkedCount = updatedItems.filter(i => i.status !== 'unchecked').length;
+        const defectCount = updatedItems.filter(i => i.status === 'fail').length;
+
+        setInspection({
+          ...inspection,
+          checklist_items: updatedItems,
+          checkedCount,
+          defectCount,
+        });
+
+        return;
+      }
+
+      // 原有逻辑：直接更新状态
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${item.record_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
