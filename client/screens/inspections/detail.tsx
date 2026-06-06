@@ -732,30 +732,38 @@ export default function InspectionDetailScreen() {
     const targetRecordId = barcodeScanTarget.record_id;
     const newBarcode = result.data;
     
-    // 更新 barcodeItems 状态（显示用的数据）- 使用数字比较
-    setBarcodeItems(prevItems => prevItems.map(i =>
-      i.record_id === targetRecordId
-        ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), newBarcode] }
-        : i
-    ));
+    // 更新 barcodeItems 状态（显示用的数据）- 使用字符串比较确保类型一致
+    setBarcodeItems(prevItems => {
+      const targetIdStr = String(targetRecordId);
+      return prevItems.map(i => {
+        const itemIdStr = String(i.record_id);
+        if (itemIdStr === targetIdStr) {
+          const existingCodes = i.barcodeCodes || [];
+          if (!existingCodes.includes(newBarcode)) {
+            return { ...i, barcodeCodes: [...existingCodes, newBarcode] };
+          }
+        }
+        return i;
+      });
+    });
     
     // 同时更新 inspection.checklist_items（保存用的数据）
     setInspection(prev => {
       if (!prev) return null;
-      const updatedItems = prev.checklist_items.map(i =>
-        i.record_id === targetRecordId
-          ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), newBarcode] }
-          : i
-      );
-      // 同时更新检查状态为已检查
-      const updatedItemsWithStatus = updatedItems.map(i =>
-        i.record_id === targetRecordId && i.status === 'unchecked'
-          ? { ...i, status: 'pass' as const }
-          : i
-      );
-      const checkedCount = updatedItemsWithStatus.filter(i => i.status !== 'unchecked').length;
-      const defectCount = updatedItemsWithStatus.filter(i => i.status === 'fail').length;
-      return { ...prev, checklist_items: updatedItemsWithStatus, checkedCount, defectCount };
+      const targetIdStr = String(targetRecordId);
+      const updatedItems = prev.checklist_items.map(i => {
+        const itemIdStr = String(i.record_id);
+        if (itemIdStr === targetIdStr) {
+          const existingCodes = i.barcodeCodes || [];
+          if (!existingCodes.includes(newBarcode)) {
+            return { ...i, barcodeCodes: [...existingCodes, newBarcode], status: i.status === 'unchecked' ? 'pass' : i.status };
+          }
+        }
+        return i;
+      });
+      const checkedCount = updatedItems.filter(i => i.status !== 'unchecked').length;
+      const defectCount = updatedItems.filter(i => i.status === 'fail').length;
+      return { ...prev, checklist_items: updatedItems, checkedCount, defectCount };
     });
     
     closeBarcodeScanner();
