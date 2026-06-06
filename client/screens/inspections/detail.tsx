@@ -345,13 +345,6 @@ export default function InspectionDetailScreen() {
     ));
   };
 
-  // 更新条码扫描项的任意字段
-  const handleUpdateBarcodeItem = (item: any, updates: Partial<typeof item>) => {
-    setBarcodeItems(items => items.map(i => 
-      i.record_id === item.record_id ? { ...i, ...updates } : i
-    ));
-  };
-
   // 条码类型选择器函数
   const openBarcodeTypeSelector = (index: number) => {
     setSelectedBarcodeIndex(index);
@@ -721,80 +714,38 @@ export default function InspectionDetailScreen() {
   // 处理条码扫描结果
   const handleBarcodeScanned = (result: BarcodeScanningResult) => {
     // 使用 ref 检查，避免异步状态更新导致的问题
-    if (!result.data || !barcodeScanTarget || isScanningRef.current) {
-      console.log('[BarcodeScan] Early return:', { 
-        hasData: !!result.data, 
-        hasTarget: !!barcodeScanTarget, 
-        isScanning: isScanningRef.current,
-        targetId: barcodeScanTarget?.record_id 
-      });
-      return;
-    }
+    if (!result.data || !barcodeScanTarget || isScanningRef.current) return;
     
     // 立即标记为已扫描，防止重复触发
     isScanningRef.current = true;
+    setHasScannedBarcode(true);
     // 完全隐藏相机组件，停止扫描
     setShowBarcodeCamera(false);
     
     // 将扫描到的条码添加到对应检查项
-    const targetRecordId = barcodeScanTarget.record_id;
-    const newBarcode = result.data;
-    console.log('[BarcodeScan] Scanning barcode:', newBarcode, 'for item:', targetRecordId);
-    
-    // 更新 barcodeItems 状态（显示用的数据）
-    setBarcodeItems(prevItems => {
-      console.log('[BarcodeScan] Updating barcodeItems, current items:', prevItems.length);
-      
-      // 如果没有现有项，先创建一个新项
-      if (prevItems.length === 0) {
-        console.log('[BarcodeScan] No existing items, creating new item with barcode');
-        const newItem = {
-          record_id: targetRecordId,
-          id: 0,
-          inspection_id: id,
-          category: '条码扫描以及拍照',
-          name: '条码扫描',
-          status: 'pass' as const,
-          barcodeCodes: [newBarcode],
-          barcodeType: 'box' as const,
-        };
-        return [newItem];
-      }
-      
-      const updated = prevItems.map(i => {
-        // 使用宽松比较，自动处理类型不一致问题
-        if (i.record_id == targetRecordId) {  // eslint-disable-line eqeqeq
-          console.log('[BarcodeScan] Found matching item:', i.record_id);
-          const existingCodes = i.barcodeCodes || [];
-          if (!existingCodes.includes(newBarcode)) {
-            return { ...i, barcodeCodes: [...existingCodes, newBarcode] };
-          }
-        }
-        return i;
-      });
-      console.log('[BarcodeScan] Updated items:', updated.map(i => ({ id: i.record_id, codes: i.barcodeCodes })));
-      return updated;
-    });
-    
-    // 同时更新 inspection.checklist_items（保存用的数据）
+    const targetRecordId = String(barcodeScanTarget.record_id);
     setInspection(prev => {
       if (!prev) return null;
-      const updatedItems = prev.checklist_items.map(i => {
-        // 使用宽松比较
-        if (i.record_id == targetRecordId) {  // eslint-disable-line eqeqeq
-          const existingCodes = i.barcodeCodes || [];
-          if (!existingCodes.includes(newBarcode)) {
-            return { ...i, barcodeCodes: [...existingCodes, newBarcode], status: i.status === 'unchecked' ? 'pass' : i.status };
-          }
-        }
-        return i;
-      });
-      const checkedCount = updatedItems.filter(i => i.status !== 'unchecked').length;
-      const defectCount = updatedItems.filter(i => i.status === 'fail').length;
-      return { ...prev, checklist_items: updatedItems, checkedCount, defectCount };
+      const updatedItems = prev.checklist_items.map(i =>
+        String(i.record_id) === targetRecordId
+          ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), result.data] }
+          : i
+      );
+      // 同时更新检查状态为已检查
+      const updatedItemsWithStatus = updatedItems.map(i =>
+        String(i.record_id) === targetRecordId && i.status === 'unchecked'
+          ? { ...i, status: 'pass' as const }
+          : i
+      );
+      const checkedCount = updatedItemsWithStatus.filter(i => i.status !== 'unchecked').length;
+      const defectCount = updatedItemsWithStatus.filter(i => i.status === 'fail').length;
+      return { ...prev, checklist_items: updatedItemsWithStatus, checkedCount, defectCount };
     });
     
-    closeBarcodeScanner();
+    // 关闭相机预览，只显示结果
+    if (barcodeCameraRef.current) {
+      barcodeCameraRef.current.pausePreview();
+    }
   };
 
   // 完成条码扫描，跳转到检查项目页面
@@ -1229,16 +1180,6 @@ export default function InspectionDetailScreen() {
                               <View key={idx} style={styles.barcodeCodeItem}>
                                 <Feather name="code" size={14} color="#6C63FF" />
                                 <Text style={styles.barcodeCodeText} numberOfLines={1}>{code}</Text>
-                                <TouchableOpacity 
-                                  style={styles.barcodeDeleteBtn}
-                                  onPress={() => {
-                                    const newCodes = [...item.barcodeCodes];
-                                    newCodes.splice(idx, 1);
-                                    handleUpdateBarcodeItem(item, { barcodeCodes: newCodes });
-                                  }}
-                                >
-                                  <Feather name="x" size={12} color="#FF6B6B" />
-                                </TouchableOpacity>
                               </View>
                             ))}
                           </View>
@@ -1365,16 +1306,6 @@ export default function InspectionDetailScreen() {
                           <View key={idx} style={styles.barcodeCodeItem}>
                             <Feather name="code" size={14} color="#6C63FF" />
                             <Text style={styles.barcodeCodeText} numberOfLines={1}>{code}</Text>
-                            <TouchableOpacity 
-                              style={styles.barcodeDeleteBtn}
-                              onPress={() => {
-                                const newCodes = [...item.barcodeCodes];
-                                newCodes.splice(idx, 1);
-                                handleUpdateBarcodeItem(item, { barcodeCodes: newCodes });
-                              }}
-                            >
-                              <Feather name="x" size={12} color="#FF6B6B" />
-                            </TouchableOpacity>
                           </View>
                         ))}
                       </View>
@@ -1665,16 +1596,6 @@ export default function InspectionDetailScreen() {
               <View key={idx} style={styles.scannedCodeItem}>
                 <Feather name="code" size={18} color="#6C63FF" />
                 <Text style={styles.scannedCodeText}>{code}</Text>
-                <TouchableOpacity 
-                  style={styles.barcodeDeleteBtn}
-                  onPress={() => {
-                    const newCodes = [...scannedCodes];
-                    newCodes.splice(idx, 1);
-                    setScannedCodes(newCodes);
-                  }}
-                >
-                  <Feather name="x" size={16} color="#FF6B6B" />
-                </TouchableOpacity>
               </View>
             ))}
           </View>
@@ -2649,7 +2570,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2D3436',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    flex: 1,
   },
   submitPassButton: {
     flex: 1,
@@ -2897,11 +2817,8 @@ const styles = StyleSheet.create({
   barcodeCodeText: {
     fontSize: 12,
     color: '#6C63FF',
-    flex: 1,
-  },
-  barcodeDeleteBtn: {
-    padding: 2,
-    marginLeft: 4,
+    fontWeight: '500',
+    flexShrink: 1,
   },
   barcodeTypeSelector: {
     flex: 1,
