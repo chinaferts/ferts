@@ -755,7 +755,8 @@ export default function InspectionDetailScreen() {
         
         if (uploadResponse.ok) {
           const result = await uploadResponse.json();
-          const photoUrl = result.data?.photoUrl || result.photoUrl;
+          // 后端返回的字段名是 photo_url
+          const photoUrl = result.data?.photo_url || result.data?.photoUrl || result.photoUrl;
           if (photoUrl) {
             uploadedUrls.push(photoUrl);
             console.log('[CompletePhotos] Uploaded:', photoUrl);

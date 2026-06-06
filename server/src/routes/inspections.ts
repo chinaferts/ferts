@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import multer from 'multer';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 import {
   mockGetInspections,
@@ -15,6 +16,7 @@ import {
 } from '../storage/mockData.js';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // 获取验货列表
 router.get('/', async (req: Request, res: Response) => {
@@ -848,21 +850,50 @@ router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response)
 });
 
 // 上传检查照片
-router.post('/:id/photos', async (req: Request, res: Response) => {
+router.post('/:id/photos', upload.single('file'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { record_id } = req.body; // 清单项记录ID
+    const { inspection_id, defect_id, category, record_id, item_name } = req.body;
     const file = req.file;
 
     if (!file) {
       return res.status(400).json({ success: false, error: '请上传图片文件' });
     }
 
-    const photoUrl = `/uploads/${file.filename}`;
-
     if (!isSupabaseConfigured()) {
-      // Mock 模式：返回成功响应
-      return res.json({ success: true, data: { photoUrl, inspection_id: id, record_id } });
+      // Mock模式下返回模拟URL
+      const mockUrl = `https://mock-storage.example.com/photos/${Date.now()}-${file.originalname}`;
+      return res.json({
+        success: true,
+        data: {
+          id: String(Date.now()),
+          inspection_id: id,
+          record_id,
+          photo_url: mockUrl,
+          photo_type: 'checklist'
+        }
+      });
+    }
+
+    // 尝试使用S3存储
+    let photoUrl = '';
+    try {
+      const { storage } = await import('../storage/s3.js');
+      const fileName = `${Date.now()}-${file.originalname}`;
+      // 上传到对象存储，获取 key
+      const key = await (storage as any).uploadFile({
+        fileContent: file.buffer,
+        fileName: fileName,
+        contentType: file.mimetype
+      });
+      // 生成可访问的预签名 URL
+      photoUrl = await (storage as any).generatePresignedUrl({ key });
+      console.log('[UPLOAD_PHOTO] S3 photo URL:', photoUrl);
+    } catch (storageError) {
+      console.error('S3存储失败:', storageError);
+      // 如果S3不可用，返回base64编码的数据
+      const base64 = file.buffer.toString('base64');
+      photoUrl = `data:${file.mimetype};base64,${base64}`;
     }
 
     const client = requireSupabaseClient();
