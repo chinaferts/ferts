@@ -623,11 +623,12 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
 router.post('/:id/checklist-items', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { itemName, itemCategory } = req.body;
+    // 接受前端发送的参数名称
+    const { name, category, result, photos, barcode_codes, barcode_type } = req.body;
 
     if (!isSupabaseConfigured()) {
       const mockId = Math.floor(Math.random() * 1000000);
-      return res.json({ success: true, data: { id: mockId, itemName, itemCategory } });
+      return res.json({ success: true, data: { id: mockId, name, category } });
     }
 
     const client = requireSupabaseClient();
@@ -637,8 +638,8 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
       .from('checklist_items')
       .insert({
         checklist_id: 11, // 使用通用模板ID
-        name: itemName,
-        item_type: 'barcode',
+        name: name || '条码扫描',
+        item_type: barcode_type || 'barcode',
         is_required: false,
         item_order: 999
       })
@@ -651,20 +652,26 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
     }
     
     // 再在 inspection_records 中创建记录
-    const { data, error } = await client
+    const { data: recordData, error: recordError } = await client
       .from('inspection_records')
       .insert({
         inspection_id: parseInt(id),
-        item_id: newChecklistItem.id,
-        result: null,
+        item_id: newChecklistItem.id,  // 兼容旧字段
+        checklist_item_id: newChecklistItem.id,
+        result: result,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
       .select();
 
-    if (error) throw error;
+    if (recordError) {
+      console.error('Failed to create inspection_record:', recordError);
+      return res.status(500).json({ success: false, error: 'Failed to create inspection record' });
+    }
 
-    res.json({ success: true, data: data[0] });
+    // 返回 inspection_records 的 id
+    const record = recordData[0];
+    res.json({ success: true, data: { id: record.id, checklist_item_id: newChecklistItem.id } });
   } catch (err: any) {
     console.error('创建检查项失败:', err);
     res.status(500).json({ success: false, error: err.message });

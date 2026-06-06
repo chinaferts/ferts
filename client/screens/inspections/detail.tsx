@@ -532,7 +532,9 @@ export default function InspectionDetailScreen() {
     if (!inspection) return;
 
     // 判断是否是新建的条码扫描项（record_id 是临时生成的 Date.now()）
-    const isNewBarcodeItem = item.record_id > 1000000000000;
+    const recordIdNum = Number(item.record_id);
+    const isNewBarcodeItem = recordIdNum > 1000000000000;
+    console.log('[UpdateStatus] record_id:', item.record_id, 'isNew:', isNewBarcodeItem);
 
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
@@ -562,7 +564,12 @@ export default function InspectionDetailScreen() {
 
         const saveData = await saveResponse.json();
         console.log('[SaveItem] Success response:', saveData);
-        const newRecordId = saveData.data?.id || saveData.record_id;
+        // API 返回格式: { data: { id: 125, ... } } 或 { id: 125, ... }
+        const newRecordId = saveData.data?.id || saveData.id;
+        if (!newRecordId) {
+          console.error('[SaveItem] No record_id in response:', saveData);
+          throw new Error('Invalid response: missing id');
+        }
 
         // 更新本地状态，使用真实的 record_id
         const targetRecordId = String(newRecordId);
