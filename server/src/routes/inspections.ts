@@ -619,6 +619,58 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
   }
 });
 
+// 创建新的检查项
+router.post('/:id/checklist-items', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { itemName, itemCategory } = req.body;
+
+    if (!isSupabaseConfigured()) {
+      const mockId = Math.floor(Math.random() * 1000000);
+      return res.json({ success: true, data: { id: mockId, itemName, itemCategory } });
+    }
+
+    const client = requireSupabaseClient();
+    
+    // 先在 checklist_items 中创建记录
+    const { data: newChecklistItem, error: checklistError } = await client
+      .from('checklist_items')
+      .insert({
+        checklist_id: 11, // 使用通用模板ID
+        name: itemName,
+        item_type: 'barcode',
+        is_required: false,
+        item_order: 999
+      })
+      .select()
+      .single();
+
+    if (checklistError) {
+      console.error('Failed to create checklist_item:', checklistError);
+      return res.status(500).json({ success: false, error: 'Failed to create checklist item' });
+    }
+    
+    // 再在 inspection_records 中创建记录
+    const { data, error } = await client
+      .from('inspection_records')
+      .insert({
+        inspection_id: parseInt(id),
+        item_id: newChecklistItem.id,
+        result: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select();
+
+    if (error) throw error;
+
+    res.json({ success: true, data: data[0] });
+  } catch (err: any) {
+    console.error('创建检查项失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 更新检查项条码
 router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response) => {
   try {
@@ -635,7 +687,7 @@ router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response)
     if (codes !== undefined) updateData.barcode_codes = codes;
 
     const { data, error } = await client
-      .from('inspection_checklist_items')
+      .from('checklist_items')
       .update({
         ...updateData,
         updated_at: new Date().toISOString()
