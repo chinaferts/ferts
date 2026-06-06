@@ -778,28 +778,28 @@ export default function InspectionDetailScreen() {
     
     const newCodes = item.barcodeCodes?.filter(c => c !== codeToDelete) || [];
     
+    // 乐观更新：先更新本地状态，立即显示效果
+    setInspection(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        checklist_items: prev.checklist_items?.map(i => 
+          i.id === itemId ? { ...i, barcodeCodes: newCodes } : i
+        ),
+      };
+    });
+    
     try {
-      console.log("[BarcodeDelete] Deleting barcode:", itemId, codeToDelete);
+      console.log("[BarcodeDelete] Deleting barcode:", itemId, codeToDelete, "newCodes:", newCodes);
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${itemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcodeCodes: newCodes }),
       });
       
-        console.log("[BarcodeDelete] Response:", response.status);
-      if (response.ok) {
-        setInspection(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            checklist_items: prev.checklist_items?.map(i => 
-              i.id === itemId ? { ...i, barcodeCodes: newCodes } : i
-            ),
-          };
-        });
-      }
+      console.log("[BarcodeDelete] Response:", response.status, response.statusText);
     } catch (error) {
-      console.error('[BarcodeScan] Delete barcode error:', error);
+      console.error('[BarcodeDelete] Delete barcode error:', error);
     }
   };
 
