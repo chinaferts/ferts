@@ -1021,7 +1021,7 @@ export default function InspectionDetailScreen() {
         </View>
 
         {/* 验货清单 */}
-        {categories.filter(c => c !== '条码扫描以及拍照').map((category, catIndex) => {
+        {categories.filter(c => c !== '条码扫描以及拍照' && c !== '问题统计以及拍照并描述').map((category, catIndex) => {
           return (
             <View key={category} style={styles.section}>
               <View style={styles.categoryHeader}>
