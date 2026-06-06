@@ -555,11 +555,14 @@ export default function InspectionDetailScreen() {
         });
 
         if (!saveResponse.ok) {
+          const errorText = await saveResponse.text();
+          console.log('[SaveItem] Error response:', errorText);
           throw new Error('Failed to save new checklist item');
         }
 
         const saveData = await saveResponse.json();
-        const newRecordId = saveData.data?.record_id || saveData.record_id;
+        console.log('[SaveItem] Success response:', saveData);
+        const newRecordId = saveData.data?.id || saveData.record_id;
 
         // 更新本地状态，使用真实的 record_id
         const targetRecordId = String(newRecordId);
