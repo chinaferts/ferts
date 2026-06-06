@@ -93,6 +93,7 @@ export default function NewInspectionScreen() {
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/checklists`);
       const result = await response.json();
       if (result.success && result.data) {
+        console.log("[NewInspection] Templates loaded:", result.data, "Count:", result.data?.length);
         const templates = Array.isArray(result.data) ? result.data : [];
         
         const mappedTemplates: ChecklistTemplate[] = templates.map((t: any) => ({
