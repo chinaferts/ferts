@@ -1034,11 +1034,6 @@ export default function InspectionDetailScreen() {
                 .filter(item => item.category === category)
               .map(item => (
                 <View key={item.record_id} style={styles.checklistItem}>
-                  {/* 检查项标题 */}
-                  <View style={styles.checklistTitleRow}>
-                    <Text style={styles.checklistItemName}>{checklistItemBilingualMap[item.name] || item.name}</Text>
-                    <Text style={styles.checklistItemNameEnglish}>{checklistItemEnglishMap[item.name] || ''}</Text>
-                  </View>
                   <View style={styles.checklistHeader}>
                     <View style={styles.checklistInfo}>
                       {/* 拍照按钮 */}
