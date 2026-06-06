@@ -713,8 +713,8 @@ export default function InspectionDetailScreen() {
     setCameraVisible(true);
   };
 
-  // 完成拍照 - 将临时照片保存到清单项
-  const handleCompletePhotos = () => {
+  // 完成拍照 - 将临时照片保存到清单项并上传到服务器
+  const handleCompletePhotos = async () => {
     if (!tempPhotoTarget || tempPhotos.length === 0) {
       // 如果没有照片，清除状态
       setTempPhotoTarget(null);
@@ -722,18 +722,89 @@ export default function InspectionDetailScreen() {
       return;
     }
     
-    // 将临时照片保存到对应的清单项
     const targetRecordId = String(tempPhotoTarget.record_id);
+    
+    // 先上传所有照片到服务器
+    const uploadedUrls: string[] = [];
+    for (const photoUri of tempPhotos) {
+      try {
+        const filename = photoUri.split("/").pop() || `photo_${Date.now()}.jpg`;
+        const match = /\.(\w+)$/.exec(filename);
+        const ext = match ? match[1] : "jpg";
+        const formData = new FormData();
+        formData.append("file", {
+          uri: photoUri,
+          name: filename,
+          type: `image/${ext}`,
+        } as any);
+        formData.append("inspection_id", String(id));
+        formData.append("record_id", targetRecordId);
+        formData.append("category", tempPhotoTarget.category || tempPhotoTarget.name);
+        formData.append("item_name", tempPhotoTarget.name);
+        
+        const uploadResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (uploadResponse.ok) {
+          const result = await uploadResponse.json();
+          const photoUrl = result.data?.photoUrl || result.photoUrl;
+          if (photoUrl) {
+            uploadedUrls.push(photoUrl);
+            console.log('[CompletePhotos] Uploaded:', photoUrl);
+          }
+        } else {
+          console.log('[CompletePhotos] Upload failed:', uploadResponse.status);
+        }
+      } catch (error) {
+        console.error('[CompletePhotos] Upload error:', error);
+      }
+    }
+    
+    console.log('[CompletePhotos] All uploaded URLs:', uploadedUrls);
+    
+    // 获取之前的照片（如果有的话）
+    const previousPhotos = tempPhotoTarget.photos || [];
+    // 合并之前的照片和刚上传的照片
+    const allPhotos = [...previousPhotos, ...uploadedUrls];
+    
+    // 将照片URL保存到清单项（用于前端显示）
     const updatedItems = inspection?.checklist_items.map(i =>
       String(i.record_id) === targetRecordId
-        ? { ...i, photos: [...(i.photos || []), ...tempPhotos] }
+        ? { ...i, photos: allPhotos }
         : i
     );
+    
+    // 同时更新inspection_records表的photos字段
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const recordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0 
+        ? String(tempPhotoTarget.record_id) 
+        : tempPhotoTarget.id;
+      
+      const saveResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${recordId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          result: 'pass',
+          photos: allPhotos,
+        }),
+      });
+      
+      if (saveResponse.ok) {
+        console.log('[CompletePhotos] Saved photos to inspection_records');
+      } else {
+        console.log('[CompletePhotos] Save failed:', saveResponse.status);
+      }
+    } catch (error) {
+      console.error('[CompletePhotos] Failed to save photos:', error);
+    }
     
     // 更新检查状态为已检查
     const updatedItemsWithStatus = updatedItems?.map(i =>
       String(i.record_id) === targetRecordId
-        ? { ...i, result: 'pass' }
+        ? { ...i, status: 'pass' as const }
         : i
     );
     
