@@ -12,6 +12,18 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 
+// 获取完整的图片 URL
+const getImageUrl = (photo: string): string => {
+  if (!photo) return '';
+  // 如果已经是完整 URL，直接返回
+  if (photo.startsWith('http://') || photo.startsWith('https://')) {
+    return photo;
+  }
+  // 如果是相对路径，拼接到服务器 URL
+  const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+  return photo.startsWith('/') ? `${baseUrl}${photo}` : `${baseUrl}/${photo}`;
+};
+
 // 分类中英文对照映射
 const categoryBilingualMap: Record<string, string> = {
   '大货仓库照以及码堆照片': '大货仓库照以及码堆照片',
@@ -1085,7 +1097,7 @@ export default function InspectionDetailScreen() {
             setCameraVisible(false);
             setEditingPhoto(null);
           }}
-          editingPhotoUri={editingPhoto?.uri}
+          editingPhotoUri={editingPhoto ? getImageUrl(editingPhoto.uri) : undefined}
           onUpdatePhoto={handleUpdatePhoto}
           onComplete={async (photos) => {
             // 如果是编辑模式且没有新拍的照片，只关闭相机
@@ -1404,7 +1416,7 @@ export default function InspectionDetailScreen() {
                                   setTempPhotos([]);
                                   setCameraVisible(true);
                                 }} style={styles.photoContainer}>
-                                  <Image source={{ uri: photo }} style={styles.photoThumb} />
+                                  <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
                                   {item.status !== 'pass' && (
                                     <TouchableOpacity style={styles.photoDeleteButton}
                                       onPress={() => {
@@ -1625,7 +1637,7 @@ export default function InspectionDetailScreen() {
                             setTempPhotoTarget(item);
                             setCameraVisible(true);
                           }}>
-                          <Image source={{ uri: photo }} style={styles.issuePhoto} />
+                          <Image source={{ uri: getImageUrl(photo) }} style={styles.issuePhoto} />
                           {/* 删除按钮 - 显示编号 */}
                           <TouchableOpacity style={styles.removeIssuePhotoButton}
                             onPress={() => {
