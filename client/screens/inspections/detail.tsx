@@ -1410,7 +1410,10 @@ export default function InspectionDetailScreen() {
                     <>
                       {/* 已保存的照片预览 */}
                       {(() => {
-                        console.log('[RENDER] Item:', item.name, 'photos:', JSON.stringify(item.photos));
+                        // 调试日志
+                        if (item.photos && item.photos.length > 0) {
+                          console.log(`[PHOTOS] ${item.name}:`, item.photos);
+                        }
                         return item.photos && item.photos.length > 0 ? (
                           <View style={styles.photoPreviewSection}>
                             <View style={styles.photoGridContainer}>
@@ -1446,7 +1449,10 @@ export default function InspectionDetailScreen() {
 
                       {/* 已扫描的条码 - 所有分类都显示 */}
                       {(() => {
-                        console.log('[RENDER] Item:', item.name, 'barcodeCodes:', JSON.stringify(item.barcodeCodes));
+                        // 调试日志
+                        if (item.barcodeCodes && item.barcodeCodes.length > 0) {
+                          console.log(`[BARCODES] ${item.name}:`, item.barcodeCodes);
+                        }
                         return item.barcodeCodes && item.barcodeCodes.length > 0 ? (
                           <View style={styles.barcodePreviewSection}>
                             <Text style={styles.barcodePreviewLabel}>已扫描条码 ({item.barcodeCodes.length})</Text>
