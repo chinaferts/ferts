@@ -720,6 +720,7 @@ export default function InspectionDetailScreen() {
     isScanningRef.current = true;
     // 完全隐藏相机组件，停止扫描
     setShowBarcodeCamera(false);
+    setHasScannedBarcode(false);
     
     // 将扫描到的条码添加到对应检查项
     const targetRecordId = String(barcodeScanTarget.record_id);
@@ -1792,27 +1793,9 @@ export default function InspectionDetailScreen() {
             <View style={{ width: 28 }} />
           </View>
 
-          {/* 相机预览 - 扫描前显示 */}
+          {/* 相机预览 */}
           {barcodePermission?.granted ? (
-            hasScannedBarcode ? (
-              // 扫描成功后的结果展示
-              <View style={styles.barcodeResultContainer}>
-                <View style={styles.barcodeSuccessIcon}>
-                  <Feather name="check" size={60} color="#10B981" />
-                </View>
-                <Text style={styles.barcodeSuccessText}>{t('scanSuccess')}</Text>
-                <Text style={styles.barcodeResultLabel}>{t('barcodeContent')}</Text>
-                <Text style={styles.barcodeResultValue}>
-                  {barcodeScanTarget?.barcodeCodes?.[barcodeScanTarget.barcodeCodes?.length - 1] || ''}
-                </Text>
-                <TouchableOpacity 
-                  style={styles.barcodeCompleteButton}
-                  onPress={finishBarcodeScan}
-                >
-                  <Text style={styles.barcodeCompleteButtonText}>{t('complete')}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : showBarcodeCamera ? (
+            showBarcodeCamera ? (
               // 扫描中显示相机
               <View style={styles.cameraContainer}>
                 <CameraView
