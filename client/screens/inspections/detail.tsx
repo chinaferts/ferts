@@ -1020,18 +1020,17 @@ export default function InspectionDetailScreen() {
           </View>
         </View>
 
-        {/* 验货清单 */}
-        {categories.filter(c => c !== '条码扫描以及拍照').map((category, catIndex) => {
-          return (
-            <View key={category} style={styles.section}>
-              <View style={styles.categoryHeader}>
-                <View>
-                  <Text style={styles.sectionTitle}>{categoryBilingualMap[category] || category}</Text>
-                  <Text style={styles.sectionTitleEnglish}>{categoryEnglishMap[category] || ''}</Text>
-                </View>
+        {/* 条码扫描分类 - 移至最前面 */}
+        {categories.includes('条码扫描以及拍照') && (
+          <View style={styles.section}>
+            <View style={styles.categoryHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>条码扫描以及拍照</Text>
+                <Text style={styles.sectionTitleEnglish}>Barcode Scan</Text>
               </View>
-              {inspection.checklist_items
-                .filter(item => item.category === category)
+            </View>
+            {inspection.checklist_items
+              .filter(item => item.category === '条码扫描以及拍照')
               .map(item => (
                 <View key={item.record_id} style={styles.checklistItem}>
                   {/* 检查项标题 */}
@@ -1196,209 +1195,8 @@ export default function InspectionDetailScreen() {
                 </View>
               ))}
             </View>
-          );
+          )}
         })}
-
-        {/* 条码扫描分类 - 问题描述格式 */}
-        {categories.includes('条码扫描以及拍照') && (
-          <View style={styles.section}>
-            <View style={styles.categoryHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>条码扫描以及拍照</Text>
-                <Text style={styles.sectionTitleEnglish}>Barcode Scan</Text>
-              </View>
-              <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
-                <Feather name="plus" size={18} color="#6C63FF" />
-                <Text style={styles.addIssueText}>添加条码扫描</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* 条码扫描列表（包括原始项和新增项） */}
-            {barcodeItems.map((item, index) => {
-              // 判断是否是新增的条码扫描项
-              const isExtraItem = item.record_id > 1000000000000;
-              return (
-                <View key={item.record_id} style={styles.issueItem}>
-                  <View style={styles.issueHeader}>
-                    <View style={styles.issueNumber}>
-                      <Text style={styles.issueNumberText}>{index + 1}</Text>
-                    </View>
-                    {/* 条码类型下拉选择 - 使用自定义弹窗 */}
-                    <TouchableOpacity 
-                      style={[
-                        styles.barcodeTypeSelector,
-                        item.barcodeType && {
-                          backgroundColor: barcodeTypeOptions.find(o => o.value === item.barcodeType)?.bgColor,
-                          borderColor: barcodeTypeOptions.find(o => o.value === item.barcodeType)?.color,
-                        }
-                      ]} 
-                      onPress={() => openBarcodeTypeSelector(index)}
-                    >
-                      <Text style={[
-                        styles.barcodeTypeSelectorText,
-                        item.barcodeType && {
-                          color: barcodeTypeOptions.find(o => o.value === item.barcodeType)?.color,
-                          fontWeight: '700',
-                        },
-                        !item.barcodeType && styles.barcodeTypeSelectorPlaceholder
-                      ]}>
-                        {item.barcodeType 
-                          ? barcodeTypeOptions.find(o => o.value === item.barcodeType)?.label 
-                          : t('selectType')}
-                      </Text>
-                      <Feather name="chevron-down" size={16} color={item.barcodeType ? barcodeTypeOptions.find(o => o.value === item.barcodeType)?.color : '#666'} />
-                    </TouchableOpacity>
-
-                    {/* 拍照和导入按钮放在同一行，扫码按钮在导入后面 */}
-                    {item.status === 'unchecked' && inspection.status !== 'completed' && (
-                      <View style={styles.cameraButtonRow}>
-                        <TouchableOpacity
-                          style={styles.headerCameraButton}
-                          onPress={() => takePhoto(item)}
-                        >
-                          <Feather name="camera" size={14} color="#FFFFFF" />
-                          <Text style={styles.headerCameraButtonText}>拍照</Text>
-                        </TouchableOpacity>
-                        {/* 导入本地照片按钮 - 仅管理员可见 */}
-                        {isAdmin && (
-                          <TouchableOpacity
-                            style={styles.headerCameraButton}
-                            onPress={() => handleImportFromGallery(item)}
-                          >
-                            <Feather name="image" size={14} color="#FFFFFF" />
-                            <Text style={styles.headerCameraButtonText}>导入</Text>
-                          </TouchableOpacity>
-                        )}
-                        {/* 扫码按钮 - 在导入后面 */}
-                        <TouchableOpacity
-                          style={[styles.headerCameraButton, { backgroundColor: '#6C63FF' }]}
-                          onPress={() => openBarcodeScanner(item)}
-                        >
-                          <Feather name="maximize-2" size={14} color="#FFFFFF" />
-                          <Text style={styles.headerCameraButtonText}>扫码</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                    {/* 状态图标和删除按钮换一行显示 */}
-                    <View style={styles.checklistActionsRow}>
-                      {item.status !== 'unchecked' && (
-                        <View style={[styles.statusIcon, {
-                          backgroundColor: item.status === 'pass' ? 'rgba(0,184,148,0.15)' : 'rgba(255,107,107,0.15)'
-                        }]}>
-                          <Feather name={item.status === 'pass' ? 'check' : 'x'} size={16}
-                            color={item.status === 'pass' ? '#00B894' : '#FF6B6B'} />
-                        </View>
-                      )}
-                      {/* 删除按钮 - 仅对新增的条码扫描项显示 */}
-                      {isExtraItem && (
-                        <TouchableOpacity 
-                          style={styles.removeIssueButton} 
-                          onPress={() => {
-                            setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
-                          }}
-                        >
-                          <Feather name="x" size={16} color="#FF6B6B" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                  
-                  {/* 已扫描的条码 */}
-                  {item.barcodeCodes && item.barcodeCodes.length > 0 && (
-                    <View style={styles.barcodePreviewSection}>
-                      <View style={styles.barcodeCodesRow}>
-                        {item.barcodeCodes.map((code, idx) => (
-                          <View key={idx} style={styles.barcodeCodeItem}>
-                            <Feather name="code" size={14} color="#6C63FF" />
-                            <Text style={styles.barcodeCodeText} numberOfLines={1}>{code}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-                  
-                  {/* 已保存的照片预览 */}
-                  {item.photos && item.photos.length > 0 && (
-                    <View style={styles.issuePhotosContainer}>
-                      {item.photos.map((photo, idx) => (
-                        <TouchableOpacity key={idx} style={styles.issuePhotoItem}
-                          onPress={() => {
-                            setEditingPhoto({ uri: photo, recordId: item.record_id, index: idx });
-                            setTempPhotos([]);
-                            setTempPhotoTarget(item);
-                            setCameraVisible(true);
-                          }}>
-                          <Image source={{ uri: photo }} style={styles.issuePhoto} />
-                          {/* 删除按钮 - 显示编号 */}
-                          <TouchableOpacity style={styles.removeIssuePhotoButton}
-                            onPress={() => {
-                              const updatedItems = barcodeItems.map(barcodeItem => {
-                                if (barcodeItem.record_id === item.record_id) {
-                                  return { ...barcodeItem, photos: (barcodeItem.photos || []).filter((_, i) => i !== idx) };
-                                }
-                                return barcodeItem;
-                              });
-                              setBarcodeItems(updatedItems);
-                            }}>
-                            <Text style={styles.removeIssuePhotoText}>{idx + 1}</Text>
-                          </TouchableOpacity>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                  
-                  {/* 操作按钮行：扫码、合格、不合格、不适用 */}
-                  {item.status === 'unchecked' && inspection.status !== 'completed' && (
-                    <View style={styles.actionButtonsRow}>
-                      <TouchableOpacity 
-                        style={styles.issueCameraButton} 
-                        onPress={() => openBarcodeScanner(item)}
-                      >
-                        <Feather name="maximize-2" size={16} color="#6C63FF" />
-                        <Text style={styles.issueCameraText}>扫码</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.passButton]}
-                        onPress={() => updateChecklistItem(item, 'pass')}
-                      >
-                        <Feather name="check" size={14} color="#00B894" />
-                        <Text style={styles.passButtonText}>合格</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.failButton]}
-                        onPress={() => {
-                          setSelectedItem(item);
-                          setDefectModalVisible(true);
-                        }}
-                      >
-                        <Feather name="x" size={14} color="#FF6B6B" />
-                        <Text style={styles.failButtonText}>不合格</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.naButton]}
-                        onPress={() => updateChecklistItem(item, 'na')}
-                      >
-                        <Feather name="slash" size={14} color="#808080" />
-                        <Text style={styles.naButtonText}>不适用</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                  {item.status === 'unchecked' && inspection.status === 'completed' && (
-                    <View style={styles.actionButtonsRow}>
-                      <TouchableOpacity 
-                        style={styles.issueCameraButton} 
-                        onPress={() => openBarcodeScanner(item)}
-                      >
-                        <Feather name="maximize-2" size={16} color="#6C63FF" />
-                        <Text style={styles.issueCameraText}>扫码</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        )}
 
         {/* 问题描述列表 */}
         {issues.length > 0 && (
