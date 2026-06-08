@@ -90,7 +90,12 @@ const streamProxy = createProxyMiddleware({
 
 const shouldProxyToBackend = (url) => {
   if (!url) return false;
+  // 代理 API 请求
   if (/^\/api\/v\d+\//.test(url)) {
+    return true;
+  }
+  // 代理静态文件（uploads 目录）
+  if (/^\/uploads\//.test(url)) {
     return true;
   }
   return false;
