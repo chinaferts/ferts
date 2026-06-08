@@ -9,6 +9,9 @@ import { createFormDataFile } from '@/utils';
 import CustomCamera from '@/components/CustomCamera';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -950,9 +953,15 @@ export default function InspectionDetailScreen() {
     try {
       // 收集所有照片
       const allPhotos: string[] = [];
+      const photoMap: { [key: string]: string } = {};
       (inspection.checklist_items || []).forEach(item => {
         if (item.photos && item.photos.length > 0) {
-          allPhotos.push(...item.photos);
+          item.photos.forEach((photo: string) => {
+            if (!photoMap[photo]) {
+              photoMap[photo] = item.name || item.category || '未知';
+              allPhotos.push(photo);
+            }
+          });
         }
       });
 
@@ -961,7 +970,59 @@ export default function InspectionDetailScreen() {
         return;
       }
 
-      Alert.alert('导出照片', `共 ${allPhotos.length} 张照片\n\n照片功能即将推出，您可以在相册中查看验货照片。`);
+      // 请求媒体库权限
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('提示', '需要相册权限才能保存照片');
+        return;
+      }
+
+      Alert.alert('导出照片', `正在导出 ${allPhotos.length} 张照片...`);
+
+      let successCount = 0;
+      let failCount = 0;
+
+      // 下载并保存每张照片
+      for (const photoUrl of allPhotos) {
+        try {
+          // 只处理 http/https 的远程照片
+          if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+            const filename = photoUrl.split('/').pop() || `photo_${Date.now()}.jpg`;
+            const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+            // 下载照片
+            const downloadResult = await FileSystem.downloadAsync(photoUrl, fileUri);
+            if (downloadResult.status === 200) {
+              // 保存到相册
+              const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
+              if (asset) {
+                successCount++;
+              } else {
+                failCount++;
+              }
+            } else {
+              failCount++;
+            }
+          } else if (photoUrl.startsWith('file:') || photoUrl.startsWith('content:')) {
+            // 本地照片直接保存
+            const asset = await MediaLibrary.createAssetAsync(photoUrl);
+            if (asset) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          }
+        } catch (err) {
+          console.error('[Export] 单张照片保存失败:', photoUrl, err);
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        Alert.alert('导出成功', `已保存 ${successCount} 张照片到相册`);
+      } else {
+        Alert.alert('导出失败', `无法保存照片，请检查网络连接`);
+      }
     } catch (error) {
       console.error('[Export] Export photos error:', error);
       Alert.alert('错误', '导出照片失败');
