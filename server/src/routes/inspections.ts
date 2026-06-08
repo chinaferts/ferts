@@ -317,12 +317,18 @@ router.get('/:id', async (req: Request, res: Response) => {
       const recordPhotos = photos?.filter((p: any) => p.record_id === record.id).map((p: any) => p.photo_url) || [];
       const recordBarcodes = record.barcode_codes || [];
       
+      // 合并两个来源的照片：inspection_records.photos 字段 + inspection_photos 表
+      const photosFromRecord = record.photos || [];
+      const photosFromTable = recordPhotos || [];
+      // 合并去重
+      const allPhotos = [...new Set([...photosFromRecord, ...photosFromTable])];
+      
       console.log('[GET_INSPECTION] Record:', {
         id: record.id,
         item_name: record.item_name,
-        record_photos_field: record.photos,
-        filtered_photos: recordPhotos,
-        barcode_codes: recordBarcodes
+        record_photos_field: photosFromRecord,
+        table_photos: photosFromTable,
+        merged_photos: allPhotos
       });
       
       return {
@@ -334,7 +340,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         notes: record.notes,
         score: record.score,
         record_id: record.id,
-        photos: recordPhotos,
+        photos: allPhotos,
         barcodeCodes: recordBarcodes
       };
     });
