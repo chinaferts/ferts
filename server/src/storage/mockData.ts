@@ -210,8 +210,8 @@ export function mockGetInspection(id: string) {
   if (inspection) {
     let records = mockGetInspectionRecords(id);
     
-    // 如果没有记录且使用了通用模板(id=0)，自动补充通用清单项
-    if (records.length === 0 && String(inspection.checklist_id) === '0') {
+    // 如果没有记录，自动补充通用清单项
+    if (records.length === 0) {
       records = UNIVERSAL_CHECKLIST_ITEMS.map(item => ({
         id: String(nextRecordId++),
         inspection_id: id,
@@ -222,6 +222,8 @@ export function mockGetInspection(id: string) {
         result: 'unchecked',
         score: null,
         notes: null,
+        photos: [],
+        barcode_codes: [],
         created_at: new Date().toISOString()
       }));
       // 添加到全局记录中

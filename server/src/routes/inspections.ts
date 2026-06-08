@@ -1,9 +1,17 @@
 import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
-import pdfMake from 'pdfmake';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const fontkit = require('fontkit');
+import { PDFDocument, rgb, StandardFonts } from '@pdfme/pdf-lib';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
+
+// ES Module 中获取 __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import {
   mockGetInspections,
   mockGetInspection,
@@ -933,7 +941,7 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
   }
 });
 
-// 生成Inspection Report PDF (使用 pdfmake 支持中文)
+// 生成Inspection Report PDF (使用 @pdfme/pdf-lib)
 router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -941,29 +949,83 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     const idStr = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const inspectionId = parseInt(idStr || '0');
 
-    const { data: inspection, error: inspectError } = await client
-      .from('inspections').select('*').eq('id', inspectionId).single();
-
-    if (inspectError || !inspection) {
-      res.status(404).json({ success: false, error: '验货记录不存在' });
-      return;
+    let inspection: any;
+    
+    // 尝试使用 mock 数据（mockGetInspection 返回完整的验货数据）
+    const mockInspection = mockGetInspection(idStr);
+    if (mockInspection) {
+      inspection = mockInspection;
+    } else {
+      const { data, error } = await client
+        .from('inspections').select('*').eq('id', inspectionId).single();
+      if (error || !data) {
+        res.status(404).json({ success: false, error: 'Inspection not found' });
+        return;
+      }
+      inspection = data;
+      
+      // 从数据库获取 inspection_records
+      const { data: recordsData } = await client
+        .from('inspection_records')
+        .select('*')
+        .eq('inspection_id', inspectionId);
+      inspection.inspection_records = recordsData || [];
+      
+      // 从数据库获取 defects
+      const { data: defectsData } = await client
+        .from('defects')
+        .select('*')
+        .eq('inspection_id', inspectionId);
+      inspection.defects = defectsData || [];
     }
 
-    const { data: records } = await client
-      .from('inspection_records').select('*').eq('inspection_id', inspectionId);
-    const { data: defects } = await client
-      .from('inspection_defects').select('*').eq('inspection_id', inspectionId);
+    // 获取照片记录
+    const { data: photos } = await client
+      .from('inspection_photos')
+      .select('*')
+      .eq('inspection_id', inspectionId);
+    
+    // 按 record_id 分组照片
+    const photosByRecordId = new Map<number, string[]>();
+    if (photos) {
+      for (const photo of photos) {
+        if (photo.record_id) {
+          if (!photosByRecordId.has(photo.record_id)) {
+            photosByRecordId.set(photo.record_id, []);
+          }
+          photosByRecordId.get(photo.record_id)!.push(photo.photo_url);
+        }
+      }
+    }
+    const defects = inspection.defects || [];
+    console.log('[EXPORT_PDF] Photos by record_id:', Array.from(photosByRecordId.entries()).slice(0, 3));
 
-    // 构建分类和检查项
+    const records = inspection.records || inspection.inspection_records || [];
+
+    console.log('[EXPORT_PDF] Inspection:', { id: inspection.id, hasRecords: !!inspection.records, hasInspectionRecords: !!inspection.inspection_records, recordsCount: records.length });
+
+    // 构建分类和检查项（从 records 转换）
+    const checklistItems = records.map((record: any) => ({
+      id: record.checklist_item_id || record.id,
+      name: record.item_name,
+      description: record.item_description,
+      category: record.item_category,
+      status: record.result,
+      notes: record.notes,
+      record_id: record.id,
+      photos: record.photos || [],
+      barcodeCodes: record.barcode_codes || []
+    }));
+    
     const categoriesMap = new Map<string, any[]>();
-    const checklistItems = inspection.checklist_items || [];
     for (const item of checklistItems) {
-      const category = item.category || '未分类';
+      const category = item.category || 'General';
       if (!categoriesMap.has(category)) categoriesMap.set(category, []);
       categoriesMap.get(category)!.push(item);
     }
     const recordsMap = new Map<number, any>();
-    if (records) for (const record of records) recordsMap.set(record.checklist_item_id, record);
+    for (const record of records) recordsMap.set(record.checklist_item_id, record);
+    console.log('[EXPORT_PDF] Records map:', Array.from(recordsMap.entries()).slice(0, 3));
 
     let passCount = 0, failCount = 0, naCount = 0, pendingCount = 0;
     for (const item of checklistItems) {
@@ -976,113 +1038,192 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       } else pendingCount++;
     }
 
-    // 使用 pdfmake 生成 PDF（纯英文内容确保兼容性）
+    // 使用 @pdfme/pdf-lib 直接生成 PDF
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
+    
+    // 加载 NotoSans 字体支持中文
+    const fontPath = path.join(__dirname, '..', 'fonts', 'NotoSans-Regular.ttf');
+    const fontBytes = fs.readFileSync(fontPath);
+    const notoFont = await pdfDoc.embedFont(fontBytes);
+    
+    const pageWidth = 595.28;
+    const pageHeight = 841.89;
+    const margin = 50;
+    let y = pageHeight - margin;
 
-    // 构建 PDF 内容
-    // Define fonts (using Helvetica built-in)
-pdfMake.fonts = {
-  Helvetica: {
-    normal: 'Helvetica',
-    bold: 'Helvetica-Bold',
-    italics: 'Helvetica-Oblique',
-    bolditalics: 'Helvetica-BoldOblique'
-  }
-};
-
-const docDefinition: any = {
-      pageSize: 'A4',
-      pageMargins: [50, 50, 50, 50],
-      content: [
-        { text: 'Inspection Report', style: 'title' },
-        { text: `Report No: ${inspection.inspection_number || 'N/A'}`, style: 'subtitle' },
-        { text: '\n' },
-        { text: 'Basic Information', style: 'header' },
-        {
-          table: {
-            widths: ['30%', '70%'],
-            body: [
-              ['Product Name', inspection.product_name || 'N/A'],
-              ['Supplier', inspection.supplier || 'N/A'],
-              ['Batch No', inspection.batch_number || 'N/A'],
-              ['Inspection Date', inspection.inspection_date || 'N/A'],
-              ['Inspector', inspection.inspector_name || inspection.created_by || 'N/A'],
-              ['Status', inspection.status === 'completed' ? 'Completed' : 'In Progress']
-            ]
-          },
-          layout: 'lightHorizontalLines'
-        },
-        { text: '\n' },
-        { text: 'Summary', style: 'header' },
-        {
-          table: {
-            widths: ['25%', '25%', '25%', '25%'],
-            body: [
-              [
-                { text: 'Pass', style: 'tableHeader', fillColor: '#f0f0f0' },
-                { text: '不Pass', style: 'tableHeader', fillColor: '#f0f0f0' },
-                { text: 'N/A', style: 'tableHeader', fillColor: '#f0f0f0' },
-                { text: 'Pending', style: 'tableHeader', fillColor: '#f0f0f0' }
-              ],
-              [
-                { text: passCount.toString(), color: 'green', },
-                { text: failCount.toString(), color: 'red', },
-                { text: naCount.toString(), color: 'gray', },
-                { text: pendingCount.toString(), color: 'orange', }
-              ]
-            ]
-          }
-        },
-        { text: '\n' },
-        { text: 'Checklist Items', style: 'header' }
-      ],
-      styles: {
-        title: { fontSize: 22, alignment: 'center', margin: [0, 0, 0, 10] },
-        subtitle: { fontSize: 12, alignment: 'center', margin: [0, 0, 0, 20] },
-        header: { fontSize: 14, margin: [0, 10, 0, 5] }
-      },
-      defaultStyle: { font: 'Helvetica', fontSize: 10 }
+    const addPage = () => {
+      pdfDoc.addPage([pageWidth, pageHeight]);
+      return { y: pageHeight - margin };
     };
 
-    // 添加检查项
+    const drawText = async (text: string, x: number, currentY: number, font: any, size: number, options: { bold?: boolean; color?: string } = {}) => {
+      let currentYPos = currentY;
+      
+      // Simple text wrapping
+      const maxWidth = pageWidth - margin * 2;
+      const words = text.split(' ');
+      let line = '';
+      const lines: string[] = [];
+      
+      for (const word of words) {
+        const testLine = line ? line + ' ' + word : word;
+        const width = font.widthOfTextAtSize(testLine, size);
+        if (width > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = testLine;
+        }
+      }
+      if (line) lines.push(line);
+      
+      for (const l of lines) {
+        if (currentYPos < margin + 20) {
+          const newPage = addPage();
+          currentYPos = newPage.y;
+        }
+        const hexColor = options.color === 'green' ? '00AA00' : options.color === 'red' ? 'CC0000' : options.color === 'gray' ? '666666' : options.color === 'orange' ? 'FF8800' : '000000';
+        const page = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
+        page.drawText(l, { x, y: currentYPos, size, font, color: rgb(parseInt(hexColor.slice(0,2), 16)/255, parseInt(hexColor.slice(2,4), 16)/255, parseInt(hexColor.slice(4), 16)/255) });
+        currentYPos -= size + 4;
+      }
+      return currentYPos;
+    };
+
+    let { y: startY } = addPage();
+    y = startY;
+
+    // Title (中文)
+    y = await drawText('验货报告', pageWidth / 2 - notoFont.widthOfTextAtSize('验货报告', 22) / 2, y, notoFont, 22);
+    y -= 10;
+    
+    // Report number (中英混合)
+    y = await drawText('报告编号: ' + (inspection.inspection_number || 'N/A'), pageWidth / 2 - notoFont.widthOfTextAtSize('报告编号: ' + (inspection.inspection_number || 'N/A'), 12) / 2, y, notoFont, 12);
+    y -= 25;
+
+    // Basic Information Header
+    y = await drawText('基本信息', margin, y, notoFont, 14);
+    y -= 15;
+    
+    const infoItems = [
+      ['产品名称', inspection.product_name || 'N/A'],
+      ['供应商', inspection.supplier || 'N/A'],
+      ['批次号', inspection.batch_number || 'N/A'],
+      ['验货日期', inspection.inspection_date || 'N/A'],
+      ['验货员', inspection.inspector_name || inspection.created_by || 'N/A'],
+      ['状态', inspection.status === 'completed' ? '已完成' : '进行中']
+    ];
+
+    for (const [label, value] of infoItems) {
+      y = await drawText(label + ': ' + value, margin + 10, y, notoFont, 10);
+    }
+    y -= 15;
+
+    // Summary
+    y = await drawText('汇总', margin, y, notoFont, 14);
+    y -= 15;
+
+    // Summary table header
+    const summaryStartX = margin + 10;
+    const colWidth = 100;
+    const headers = ['通过', '不通过', '不适用', '待检'];
+    const summaryValues = [passCount.toString(), failCount.toString(), naCount.toString(), pendingCount.toString()];
+    const summaryColors = ['green', 'red', 'gray', 'orange'];
+    
+    for (let i = 0; i < 4; i++) {
+      const xPos = summaryStartX + i * colWidth;
+      y = await drawText(headers[i], xPos, y, notoFont, 10);
+      y = await drawText(summaryValues[i], xPos, y, notoFont, 10, { color: summaryColors[i] });
+    }
+    y -= 15;
+
+    // Checklist Items
+    y = await drawText('检查项', margin, y, notoFont, 14);
+    y -= 10;
+
     for (const [category, items] of categoriesMap) {
-      docDefinition.content.push({ text: category, style: 'catHeader' });
+      if (y < margin + 50) {
+        const newPage = addPage();
+        y = newPage.y;
+      }
+      y = await drawText(category, margin + 5, y, notoFont, 11);
+      y -= 5;
+      
       for (const item of items) {
         const record = recordsMap.get(item.id);
-        let statusText = 'Pending', statusColor = 'gray';
+        let statusText = '待检', statusColor = 'gray';
         if (record) {
-          if (record.result === 'pass') { statusText = 'Pass'; statusColor = 'green'; }
-          else if (record.result === 'fail') { statusText = '不Pass'; statusColor = 'red'; }
-          else if (record.result === 'na') { statusText = 'N/A'; statusColor = 'gray'; }
+          if (record.result === 'pass') { statusText = '通过'; statusColor = 'green'; }
+          else if (record.result === 'fail') { statusText = '不通过'; statusColor = 'red'; }
+          else if (record.result === 'na') { statusText = '不适用'; statusColor = 'gray'; }
         }
-        docDefinition.content.push({
-          columns: [
-            { text: `${item.item_number || ''} ${item.item_name || item.name || 'N/A'}`, width: '70%' },
-            { text: statusText, color: statusColor, width: '30%', }
-          ]
-        });
+        const itemName = (item.item_number || '') + ' ' + (item.item_name || item.name || 'N/A');
+        y = await drawText(itemName + ' - ' + statusText, margin + 15, y, notoFont, 9, { color: statusColor });
+        
+        // 添加照片 - 使用 inspection_photos 表中的照片
+        const recordId = record?.id;
+        const recordPhotos = recordId ? (photosByRecordId.get(recordId) || []) : [];
+        if (recordPhotos.length > 0) {
+          y -= 5;
+          for (const photoUrl of recordPhotos.slice(0, 3)) { // 最多显示3张照片
+            if (y < margin + 80) {
+              const newPage = addPage();
+              y = newPage.y;
+            }
+            try {
+              // 读取本地照片文件
+              const fullPhotoPath = path.join(process.cwd(), photoUrl);
+              if (fs.existsSync(fullPhotoPath)) {
+                const photoBytes = fs.readFileSync(fullPhotoPath);
+                let img;
+                if (photoUrl.toLowerCase().endsWith('.png')) {
+                  img = await pdfDoc.embedPng(photoBytes);
+                } else {
+                  img = await pdfDoc.embedJpg(photoBytes);
+                }
+                const imgDims = img.scale(100 / Math.max(img.width, img.height));
+                const page = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
+                page.drawImage(img, { x: margin + 20, y: y - imgDims.height, width: imgDims.width, height: imgDims.height });
+                y -= imgDims.height + 5;
+              }
+            } catch (photoErr) {
+              console.log('Failed to embed photo:', photoUrl, photoErr);
+            }
+          }
+        }
       }
+      y -= 5;
     }
 
-    // 添加Defect Records
+    // Defect Records
     if (defects && defects.length > 0) {
-      docDefinition.content.push({ text: '\n' });
-      docDefinition.content.push({ text: 'Defect Records', style: 'header' });
+      if (y < margin + 100) {
+        const newPage = addPage();
+        y = newPage.y;
+      }
+      y -= 10;
+      y = await drawText('缺陷记录', margin, y, notoFont, 14);
+      y -= 5;
+      
       for (const defect of defects) {
-        const severityText = defect.severity === 'critical' ? 'Critical' : defect.severity === 'major' ? 'Major' : 'Minor';
-        docDefinition.content.push({ text: `- ${defect.description || 'N/A'} (${severityText})`, margin: [0, 2, 0, 2] });
+        const severityText = defect.severity === 'critical' ? '严重' : defect.severity === 'major' ? '主要' : '轻微';
+        y = await drawText('- ' + (defect.description || 'N/A') + ' (' + severityText + ')', margin + 10, y, notoFont, 9);
       }
     }
 
-    // 添加生成时间
-    docDefinition.content.push({ text: '\n\n' });
-    docDefinition.content.push({ text: `Generated: ${new Date().toLocaleString('en-US')}`, alignment: 'center', fontSize: 8, color: 'gray' });
+    // Generated time
+    y -= 15;
+    const genText = '生成时间: ' + new Date().toLocaleString('zh-CN');
+    y = await drawText(genText, pageWidth / 2 - notoFont.widthOfTextAtSize(genText, 8) / 2, y, notoFont, 8, { color: 'gray' });
 
-    // 生成 PDF
-    const pdfDoc = pdfMake.createPdf(docDefinition);
-    const pdfBuffer = await pdfDoc.getBuffer();
-    const filename = `Inspection_Report_${inspection.inspection_number}.pdf`;
+    // Save PDF
+    const pdfBytes = await pdfDoc.save();
+    const pdfBuffer = Buffer.from(pdfBytes);
+    const filename = 'Inspection_Report_' + (inspection.inspection_number || 'unknown') + '.pdf';
+    
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Content-Length', pdfBuffer.length);
     res.send(pdfBuffer);
