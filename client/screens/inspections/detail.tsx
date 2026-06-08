@@ -340,16 +340,33 @@ export default function InspectionDetailScreen() {
   
   // 问题描述框状态 (每个问题包含文本、照片和严重程度)
   const [issues, setIssues] = useState<Array<{ text: string; photos: string[]; severity: string }>>([{ text: '', photos: [], severity: '' }]);
-  // 条码扫描项状态 (存储所有条码扫描项，包括原始项和新增项)
+  // 条码扫描项状态 (默认显示一条，用户点击添加时才新增)
   const [barcodeItems, setBarcodeItems] = useState<ChecklistItem[]>([]);
   
-  // 初始化条码扫描项（从原始检查项加载）
+  // 初始化条码扫描项（默认只显示一条空项）
   useEffect(() => {
     if (inspection?.checklist_items) {
       const originalBarcodeItems = inspection.checklist_items
         .filter(item => item.category === '条码扫描以及拍照')
         .map(item => ({ ...item, barcodeType: 'box' as const }));
-      setBarcodeItems(originalBarcodeItems);
+      // 默认只显示一条，如果已有数据则显示第一条，否则创建一条空项
+      if (originalBarcodeItems.length > 0) {
+        setBarcodeItems([originalBarcodeItems[0]]);
+      } else {
+        // 创建一条默认的条码扫描项
+        const defaultItem: ChecklistItem = {
+          id: Date.now(),
+          record_id: 0, // 新增项还没有 record_id
+          name: t('barcodeScan'),
+          description: t('barcodeScan'),
+          category: '条码扫描以及拍照',
+          status: 'unchecked',
+          photos: [],
+          barcodeCodes: [],
+          barcodeType: 'box' as const,
+        };
+        setBarcodeItems([defaultItem]);
+      }
     }
   }, [inspection?.checklist_items]);
   // 严重程度选项
