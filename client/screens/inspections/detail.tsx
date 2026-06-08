@@ -1520,7 +1520,6 @@ export default function InspectionDetailScreen() {
   </div>
 
   ${defectsHTML}
-  ${photosHTML}
 
   <div class="footer">
     <div>报告生成时间: ${reportDate}</div>
@@ -1529,40 +1528,49 @@ export default function InspectionDetailScreen() {
 </body>
 </html>`;
 
+      console.log('[Export] HTML generated, length:', html.length);
+
       // 使用 expo-print 生成 PDF
-      const { uri } = await Print.printToFileAsync({
-        html,
-        base64: false
-      });
+      console.log('[Export] Starting PDF generation...');
+      try {
+        const { uri } = await Print.printToFileAsync({
+          html,
+          base64: false
+        });
+        console.log('[Export] PDF generated at:', uri);
 
-      // 检查文件是否存在
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      if (!fileInfo.exists) {
-        throw new Error('PDF file not generated');
+        // 检查文件是否存在
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (!fileInfo.exists) {
+          throw new Error('PDF file not generated');
+        }
+
+        // 使用 expo-sharing 分享 PDF
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: '导出验货报告',
+            UTI: 'com.adobe.pdf'
+          });
+          console.log('[Export] Share dialog opened');
+        } else {
+          // 如果分享不可用，复制到文档目录
+          const destDir = FileSystem.documentDirectory;
+          const destPath = `${destDir}验货报告_${inspectionData.inspection_number || id}.pdf`;
+          await FileSystem.copyAsync({ from: uri, to: destPath });
+          Alert.alert('导出成功', '报告已保存到文档目录');
+        }
+      } catch (printError: any) {
+        console.error('[Export] Print error:', printError);
+        Alert.alert('错误', `生成PDF失败: ${printError?.message || '请重试'}`);
+        setExportingReport(false);
+        return;
       }
 
-      // 使用 expo-sharing 分享 PDF
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: '导出验货报告',
-          UTI: 'com.adobe.pdf'
-        });
-      } else {
-        // 如果分享不可用，复制到相册
-        const destDir = FileSystem.documentDirectory;
-        const destPath = `${destDir}验货报告_${inspectionData.inspection_number || id}.pdf`;
-        await FileSystem.copyAsync({
-          from: uri,
-          to: destPath
-        });
-        Alert.alert('导出成功', `报告已保存到: ${destPath}`);
-      }
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Export] Export PDF report error:', error);
-      Alert.alert('错误', '导出报告失败，请重试');
+      Alert.alert('错误', `导出报告失败: ${error?.message || '请重试'}`);
     } finally {
       setExportingReport(false);
     }
