@@ -14,18 +14,26 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // 获取完整的图片 URL
 const getImageUrl = (photo: string): string => {
-  if (!photo) return '';
+  console.log('[getImageUrl] 输入:', photo, ', 类型:', typeof photo);
+  if (!photo) {
+    console.log('[getImageUrl] 照片为空');
+    return '';
+  }
   // 如果是本地文件 URI（如 file:///xxx 或 content://xxx），直接返回
   if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
+    console.log('[getImageUrl] 本地文件 URI:', photo);
     return photo;
   }
   // 如果已经是完整 URL，直接返回
   if (photo.startsWith('http://') || photo.startsWith('https://')) {
+    console.log('[getImageUrl] 完整 URL:', photo);
     return photo;
   }
   // 如果是相对路径，拼接到服务器 URL
   const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
-  return photo.startsWith('/') ? `${baseUrl}${photo}` : `${baseUrl}/${photo}`;
+  const result = photo.startsWith('/') ? `${baseUrl}${photo}` : `${baseUrl}/${photo}`;
+  console.log('[getImageUrl] 相对路径转换:', result);
+  return result;
 };
 
 // 分类中英文对照映射
@@ -230,6 +238,9 @@ export default function InspectionDetailScreen() {
     
     if (!result.canceled && result.assets[0]) {
       const photoUri = result.assets[0].uri;
+      console.log('[ImportPhoto] 导入的照片 URI:', photoUri);
+      console.log('[ImportPhoto] URI 类型:', typeof photoUri);
+      console.log('[ImportPhoto] 是否以 file: 开头:', photoUri.startsWith('file:'));
       
       // 同时添加到临时预览区和检查项的 photos 数组
       const currentInspection = inspectionRef.current;
@@ -237,14 +248,21 @@ export default function InspectionDetailScreen() {
       
       const updatedItems = currentInspection.checklist_items.map((checkItem) => {
         if (checkItem.record_id === item.record_id) {
-          return { ...checkItem, photos: [...(checkItem.photos || []), photoUri] };
+          const newPhotos = [...(checkItem.photos || []), photoUri];
+          console.log('[ImportPhoto] 更新后的 photos:', newPhotos);
+          return { ...checkItem, photos: newPhotos };
         }
         return checkItem;
       });
       setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
       
       // 也要添加到 tempPhotos 以便在预览区显示
-      setTempPhotos(prev => [...prev, photoUri]);
+      setTempPhotos(prev => {
+        console.log('[ImportPhoto] tempPhotos 之前:', prev);
+        const newTempPhotos = [...prev, photoUri];
+        console.log('[ImportPhoto] tempPhotos 之后:', newTempPhotos);
+        return newTempPhotos;
+      });
       
       console.log('[ImportPhoto] Added photo to preview:', photoUri);
     }
@@ -1548,6 +1566,9 @@ export default function InspectionDetailScreen() {
                       {(() => {
                         // 调试日志 - 无论是否有照片都打印
                         console.log(`[PAGE_LOAD] 检查项: ${item.name}, photos:`, item.photos, ', barcodeCodes:', item.barcodeCodes);
+                        if (item.photos && item.photos.length > 0) {
+                          console.log(`[PHOTO_DEBUG] 照片数量: ${item.photos.length}, 第一张:`, item.photos[0], ', getImageUrl:', getImageUrl(item.photos[0]));
+                        }
                         return item.photos && item.photos.length > 0 ? (
                           <View style={styles.photoPreviewSection}>
                             <View style={styles.photoGridContainer}>
