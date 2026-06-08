@@ -181,6 +181,7 @@ interface InspectionDetail {
   product_no?: string;
   accept_count?: number;
   reject_count?: number;
+  inspection_number?: string;
   checklist_items: ChecklistItem[];
   defects: Defect[];
 }
@@ -1128,10 +1129,11 @@ export default function InspectionDetailScreen() {
           // 只处理 http/https 的远程照片
           if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
             const filename = photoUrl.split('/').pop() || `photo_${Date.now()}.jpg`;
-            const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+            const FileSystemAny = FileSystem as any;
+            const fileUri = `${FileSystemAny.cacheDirectory}${filename}`;
 
             // 下载照片
-            const downloadResult = await FileSystem.downloadAsync(photoUrl, fileUri);
+            const downloadResult = await FileSystemAny.downloadAsync(photoUrl, fileUri);
             if (downloadResult.status === 200) {
               // 保存到相册
               const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
@@ -1209,7 +1211,8 @@ export default function InspectionDetailScreen() {
       }
 
       // 保存文件
-      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      const FileSystemAny = FileSystem as any;
+      const fileUri = `${FileSystemAny.documentDirectory}${filename}`;
 
       // 将 blob 转换为 base64
       const reader = new FileReader();
@@ -1224,8 +1227,8 @@ export default function InspectionDetailScreen() {
       const base64Data = await base64Promise;
 
       // 写入文件
-      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-        encoding: FileSystem.EncodingType.Base64
+      await FileSystemAny.writeAsStringAsync(fileUri, base64Data, {
+        encoding: FileSystemAny.EncodingType ? FileSystemAny.EncodingType.Base64 : 'base64'
       });
 
       console.log('[Export] PDF saved to:', fileUri);
@@ -2085,17 +2088,13 @@ export default function InspectionDetailScreen() {
                 </View>
               </View>
               {problemCategoryItems.map((item, idx) => (
-                <View key={item.id || idx} style={styles.checklistItemCard}>
-                  <View style={styles.itemHeader}>
-                    <Text style={styles.itemName}>{item.name}</Text>
+                <View key={item.id || idx} style={styles.checklistItem}>
+                  <View style={styles.checklistTitleRow}>
+                    <Text style={styles.checklistItemName}>{item.name}</Text>
                   </View>
-                  {/* DEBUG: 检查 photos 数据 */}
-                  <Text style={{fontSize: 10, color: 'red'}}>
-                    [{item.name}] photos: {JSON.stringify(item.photos)}
-                  </Text>
                   {/* 检查项照片显示 */}
                   {item.photos && item.photos.length > 0 && (
-                    <View style={styles.photosContainer}>
+                    <View style={styles.photoContainer}>
                       {item.photos.map((photo, photoIdx) => (
                         <TouchableOpacity 
                           key={photoIdx} 
@@ -2105,7 +2104,7 @@ export default function InspectionDetailScreen() {
                             setPhotoModalVisible(true);
                           }}
                         >
-                          <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumbnail} />
+                          <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -3254,6 +3253,33 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 3,
+  },
+  photoItem: {
+    width: 80,
+    height: 80,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  barcodeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 12,
+  },
+  barcodeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F0F3',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  barcodeText: {
+    fontSize: 12,
+    color: '#6C63FF',
+    marginLeft: 6,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   defectCard: {
     backgroundColor: '#FFFFFF',

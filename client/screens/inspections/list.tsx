@@ -71,7 +71,7 @@ function InspectionCard({ item }: { item: Inspection }) {
                 <Text style={styles.orderInfoValue}>{item.productNo}</Text>
               </View>
             )}
-            {item.quantity > 0 && (
+            {item.quantity != null && item.quantity > 0 && (
               <View style={styles.orderInfoItem}>
                 <Text style={styles.orderInfoLabel}>数量</Text>
                 <Text style={styles.orderInfoValue}>{item.quantity}</Text>
