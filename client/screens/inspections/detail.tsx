@@ -214,13 +214,17 @@ export default function InspectionDetailScreen() {
   // 相册权限
   const [mediaPermission, requestMediaPermission] = ImagePicker.useMediaLibraryPermissions();
   
-  // 从相册导入照片
+  // 从相册导入照片 - 逻辑和拍照一样：先添加到预览区，点"完成"再保存
   const handleImportPhoto = async (item: ChecklistItem) => {
     const { granted } = await requestMediaPermission();
     if (!granted) {
       Alert.alert(t('noPermission'), t('noPermission'));
       return;
     }
+    
+    // 设置临时目标并清空临时照片（和拍照逻辑一致）
+    setTempPhotoTarget(item);
+    setTempPhotos([]);
     
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -230,23 +234,13 @@ export default function InspectionDetailScreen() {
     
     if (!result.canceled && result.assets[0]) {
       const photoUri = result.assets[0].uri;
-      // 直接添加到临时照片预览区（追加，不覆盖原有照片）
-      setTempPhotoTarget(item);
+      // 追加到临时照片预览区（和拍照逻辑一致）
       setTempPhotos(prev => [...prev, photoUri]);
-      
-      // 同时更新检查项的 photos 数组（用于预览区显示已保存的照片）
-      const currentInspection = inspectionRef.current;
-      if (currentInspection) {
-        const updatedItems = currentInspection.checklist_items.map((checkItem) => {
-          if (checkItem.record_id === item.record_id) {
-            return { ...checkItem, photos: [...(checkItem.photos || []), photoUri] };
-          }
-          return checkItem;
-        });
-        setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
-      }
-      
-      console.log('[ImportPhoto] Imported photo URI:', photoUri);
+      console.log('[ImportPhoto] Added photo to preview:', photoUri);
+    } else {
+      // 如果用户取消了选择，清除临时状态
+      setTempPhotoTarget(null);
+      setTempPhotos([]);
     }
   };
 
