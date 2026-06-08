@@ -231,7 +231,7 @@ export default function InspectionDetailScreen() {
     if (!result.canceled && result.assets[0]) {
       const photoUri = result.assets[0].uri;
       
-      // 直接添加到检查项的 photos 数组（不需要点"完成"）
+      // 同时添加到临时预览区和检查项的 photos 数组
       const currentInspection = inspectionRef.current;
       if (!currentInspection) return;
       
@@ -243,7 +243,10 @@ export default function InspectionDetailScreen() {
       });
       setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
       
-      console.log('[ImportPhoto] Added photo to item directly:', photoUri);
+      // 也要添加到 tempPhotos 以便在预览区显示
+      setTempPhotos(prev => [...prev, photoUri]);
+      
+      console.log('[ImportPhoto] Added photo to preview:', photoUri);
     }
   };
 
