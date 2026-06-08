@@ -827,12 +827,34 @@ export default function InspectionDetailScreen() {
       return;
     }
     
-    const targetRecordId = String(tempPhotoTarget.record_id);
+    // 确保 record_id 正确（使用 record_id 而不是 id）
+    const targetRecordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0 
+      ? String(tempPhotoTarget.record_id) 
+      : String(tempPhotoTarget.id);
     
+    // 添加超时包装的 fetch
+    const fetchWithTimeout = async (url: string, options: any, timeout = 15000): Promise<Response> => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(timeoutId);
+        return response;
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          console.log('[CompletePhotos] Upload timeout');
+          throw new Error('Upload timeout');
+        }
+        throw error;
+      }
+    };
+
     // 先上传所有照片到服务器
     const uploadedUrls: string[] = [];
     for (const photoUri of tempPhotos) {
       try {
+        console.log('[CompletePhotos] Uploading photo:', photoUri);
         const filename = photoUri.split("/").pop() || `photo_${Date.now()}.jpg`;
         const match = /\.(\w+)$/.exec(filename);
         const ext = match ? match[1] : "jpg";
@@ -847,7 +869,7 @@ export default function InspectionDetailScreen() {
         formData.append("category", tempPhotoTarget.category || tempPhotoTarget.name);
         formData.append("item_name", tempPhotoTarget.name);
         
-        const uploadResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
+        const uploadResponse = await fetchWithTimeout(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
           method: "POST",
           body: formData,
         });
