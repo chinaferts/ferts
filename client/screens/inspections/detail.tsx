@@ -344,29 +344,30 @@ export default function InspectionDetailScreen() {
   const [barcodeItems, setBarcodeItems] = useState<ChecklistItem[]>([]);
   
   // 初始化条码扫描项（默认只显示一条空项）
+  // 只有当 barcodeItems 为空时才初始化，避免覆盖用户添加的项
   useEffect(() => {
-    if (inspection?.checklist_items) {
-      const originalBarcodeItems = inspection.checklist_items
-        .filter(item => item.category === '条码扫描以及拍照')
-        .map(item => ({ ...item, barcodeType: 'box' as const }));
-      // 默认只显示一条，如果已有数据则显示第一条，否则创建一条空项
-      if (originalBarcodeItems.length > 0) {
-        setBarcodeItems([originalBarcodeItems[0]]);
-      } else {
-        // 创建一条默认的条码扫描项
-        const defaultItem: ChecklistItem = {
-          id: Date.now(),
-          record_id: 0, // 新增项还没有 record_id
-          name: t('barcodeScan'),
-          description: t('barcodeScan'),
-          category: '条码扫描以及拍照',
-          status: 'unchecked',
-          photos: [],
-          barcodeCodes: [],
-          barcodeType: 'box' as const,
-        };
-        setBarcodeItems([defaultItem]);
-      }
+    if (!inspection?.checklist_items || barcodeItems.length > 0) return;
+    
+    const originalBarcodeItems = inspection.checklist_items
+      .filter(item => item.category === '条码扫描以及拍照')
+      .map(item => ({ ...item, barcodeType: 'box' as const }));
+    // 默认只显示一条，如果已有数据则显示第一条，否则创建一条空项
+    if (originalBarcodeItems.length > 0) {
+      setBarcodeItems([originalBarcodeItems[0]]);
+    } else {
+      // 创建一条默认的条码扫描项
+      const defaultItem: ChecklistItem = {
+        id: Date.now(),
+        record_id: Date.now(), // 使用 Date.now() 作为临时 ID，方便后续识别新增项
+        name: t('barcodeScan'),
+        description: t('barcodeScan'),
+        category: '条码扫描以及拍照',
+        status: 'unchecked',
+        photos: [],
+        barcodeCodes: [],
+        barcodeType: 'box' as const,
+      };
+      setBarcodeItems([defaultItem]);
     }
   }, [inspection?.checklist_items]);
   // 严重程度选项
@@ -417,10 +418,13 @@ export default function InspectionDetailScreen() {
     };
     setBarcodeItems([...barcodeItems, newItem]);
     // 同时添加到 inspection.checklist_items，确保扫码时能找到
-    setInspection(prev => ({
-      ...prev,
-      checklist_items: [...(prev.checklist_items || []), { ...newItem }]
-    }));
+    setInspection(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        checklist_items: [...(prev.checklist_items || []), { ...newItem }]
+      };
+    });
   };
 
   // 更新条码扫描项的类型
