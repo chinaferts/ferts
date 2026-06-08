@@ -2137,19 +2137,17 @@ export default function InspectionDetailScreen() {
           </View>
         )}
 
-        {/* 导出按钮区域 */}
-        {inspection.status === 'completed' && (
-          <View style={styles.exportButtonContainer}>
-            <TouchableOpacity style={styles.exportPhotosButton} onPress={handleExportPhotos}>
-              <Feather name="image" size={20} color="#FFFFFF" />
-              <Text style={styles.exportButtonText}>导出验货照片</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.exportReportButton} onPress={handleExportReport}>
-              <Feather name="file-text" size={20} color="#FFFFFF" />
-              <Text style={styles.exportButtonText}>导出验货报告</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* 导出按钮区域 - 所有状态都可导出 */}
+        <View style={styles.exportButtonContainer}>
+          <TouchableOpacity style={styles.exportPhotosButton} onPress={handleExportPhotos}>
+            <Feather name="image" size={20} color="#FFFFFF" />
+            <Text style={styles.exportButtonText}>导出验货照片</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.exportReportButton} onPress={handleExportReport}>
+            <Feather name="file-text" size={20} color="#FFFFFF" />
+            <Text style={styles.exportButtonText}>导出验货报告</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* 提交按钮 */}
         {inspection.status !== 'completed' && (
