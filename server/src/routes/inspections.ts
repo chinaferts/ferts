@@ -329,7 +329,11 @@ router.get('/:id', async (req: Request, res: Response) => {
       const recordBarcodes = record.barcode_codes || [];
       
       // 合并两个来源的照片：inspection_records.photos 字段 + inspection_photos 表
-      const photosFromRecord = record.photos || [];
+      // 注意：inspection_records.photos 存储的是本地路径（file:///...），需要过滤掉
+      // 只保留服务器路径（/uploads/photos/...）或有效的 HTTP URL
+      const photosFromRecord = (record.photos || []).filter((p: string) => 
+        p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://')
+      );
       const photosFromTable = recordPhotos || [];
       // 合并去重
       const allPhotos = [...new Set([...photosFromRecord, ...photosFromTable])];

@@ -29,16 +29,15 @@ const getImageUrl = (photo: string): string => {
   }
   
   // 如果是本地文件 URI，检查是否为有效的本地路径
+  // 注意：file:///data/user/0/... 这样的路径在其他设备上无法访问
+  // 如果不是当前应用的缓存路径，则返回空字符串
   if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
-    console.log('[getImageUrl] 本地文件 URI（未上传到服务器）:', photo.substring(0, 50));
+    console.log('[getImageUrl] 本地文件 URI:', photo.substring(0, 50));
     
-    // Web 环境下无法访问本地文件路径，返回占位图
-    if (Platform.OS === 'web') {
-      console.log('[getImageUrl] Web 环境，返回占位图');
-      return '';
-    }
-    
-    return photo;
+    // 在所有平台上，对于无法访问的本地路径都返回空字符串
+    // 这些照片可能是其他设备拍摄的本地路径，在当前设备上无法访问
+    console.log('[getImageUrl] 本地路径无法跨设备访问，返回空字符串');
+    return '';
   }
   
   // 如果是相对路径，拼接到服务器 URL
