@@ -28,9 +28,16 @@ const getImageUrl = (photo: string): string => {
     return photo;
   }
   
-  // 如果是本地文件 URI，直接返回（React Native 可以直接处理）
+  // 如果是本地文件 URI，检查是否为有效的本地路径
   if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
     console.log('[getImageUrl] 本地文件 URI:', photo);
+    
+    // Web 环境下无法访问本地文件路径，返回占位图
+    if (Platform.OS === 'web') {
+      console.log('[getImageUrl] Web 环境，返回占位图');
+      return 'https://via.placeholder.com/200x200.png?text=No+Preview';
+    }
+    
     return photo;
   }
   
@@ -325,14 +332,29 @@ export default function InspectionDetailScreen() {
           const result = await response.json();
           // 后端返回的字段名是 photo_url
           const photoUrl = result.data?.photo_url || result.photo_url;
+          console.log('[UploadPhoto] 服务器返回 URL:', photoUrl);
           
-          // 更新 inspection_records 表中的 photos 字段
-          const currentPhotos = item.photos || [];
-          await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${targetRecordId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ photos: [...currentPhotos, photoUrl] }),
-          });
+          if (photoUrl) {
+            // 替换本地路径为服务器 URL
+            const updatedItems = (inspectionRef.current?.checklist_items || []).map((checkItem) => {
+              if (checkItem.record_id === targetRecordId) {
+                // 过滤掉当前本地路径，用服务器 URL 替换
+                const filteredPhotos = (checkItem.photos || []).filter(p => p !== photoUri);
+                return { ...checkItem, photos: [...filteredPhotos, photoUrl] };
+              }
+              return checkItem;
+            });
+            setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
+            
+            // 同时更新数据库中的 photos 字段
+            await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${targetRecordId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ photos: [...(updatedItems.find(i => i.record_id === targetRecordId)?.photos || [])] }),
+            });
+          }
+        } else {
+          console.error('[UploadPhoto] 上传失败，状态码:', response.status);
         }
       } catch (error) {
         console.error("上传照片失败:", error);
