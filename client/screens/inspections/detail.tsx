@@ -233,6 +233,20 @@ export default function InspectionDetailScreen() {
       // 直接添加到临时照片预览区
       setTempPhotoTarget(item);
       setTempPhotos([photoUri]);
+      
+      // 同时更新检查项的 photos 数组（用于预览区显示已保存的照片）
+      const currentInspection = inspectionRef.current;
+      if (currentInspection) {
+        const updatedItems = currentInspection.checklist_items.map((checkItem) => {
+          if (checkItem.record_id === item.record_id) {
+            return { ...checkItem, photos: [...(checkItem.photos || []), photoUri] };
+          }
+          return checkItem;
+        });
+        setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
+      }
+      
+      console.log('[ImportPhoto] Imported photo URI:', photoUri);
     }
   };
 
@@ -771,10 +785,13 @@ export default function InspectionDetailScreen() {
     
     console.log('[CompletePhotos] All uploaded URLs:', uploadedUrls);
     
-    // 获取之前的照片（如果有的话）
-    const previousPhotos = tempPhotoTarget.photos || [];
-    // 合并之前的照片和刚上传的照片
+    // 获取之前的照片（从服务器加载的，http/https 开头的），过滤掉本地 URI
+    const previousPhotos = (tempPhotoTarget.photos || []).filter((p: string) => 
+      p && (p.startsWith('http://') || p.startsWith('https://'))
+    );
+    // 合并之前的照片和新上传的照片
     const allPhotos = [...previousPhotos, ...uploadedUrls];
+    console.log('[CompletePhotos] Previous photos:', previousPhotos, 'All photos:', allPhotos);
     
     // 将照片URL保存到清单项（用于前端显示）
     const updatedItems = inspection?.checklist_items.map(i =>
