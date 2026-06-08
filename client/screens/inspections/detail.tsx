@@ -1661,27 +1661,27 @@ export default function InspectionDetailScreen() {
                 <View key={item.record_id} style={styles.checklistItem}>
                   <View style={styles.checklistHeader}>
                     <View style={styles.checklistInfo}>
-                      {/* 拍照按钮 */}
+                      {/* 拍照和导入按钮，与下方操作按钮宽度对齐 */}
                       {item.status === 'unchecked' && inspection.status !== 'completed' && (
-                        <>
+                        <View style={styles.actionButtonsRow}>
                           <TouchableOpacity
-                            style={styles.headerCameraButton}
+                            style={[styles.actionButton, styles.photoButton]}
                             onPress={() => takePhoto(item)}
                           >
                             <Feather name="camera" size={16} color="#FFFFFF" />
-                            <Text style={styles.headerCameraButtonText}>拍照</Text>
+                            <Text style={styles.photoButtonText}>拍照</Text>
                           </TouchableOpacity>
                           {/* 导入本地照片按钮 - 仅管理员可见 */}
                           {isAdmin && (
                             <TouchableOpacity
-                              style={styles.headerCameraButton}
+                              style={[styles.actionButton, styles.photoButton]}
                               onPress={() => handleImportFromGallery(item)}
                             >
                               <Feather name="image" size={16} color="#FFFFFF" />
-                              <Text style={styles.headerCameraButtonText}>导入</Text>
+                              <Text style={styles.photoButtonText}>导入</Text>
                             </TouchableOpacity>
                           )}
-                        </>
+                        </View>
                       )}
                     </View>
                     {item.status !== 'unchecked' && (
