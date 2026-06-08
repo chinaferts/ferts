@@ -1773,7 +1773,7 @@ export default function InspectionDetailScreen() {
                               {item.photos.map((photo, idx) => (
                                 <TouchableOpacity key={idx} onPress={() => {
                                   // 已完成验货：点击照片跳转到预览页面
-                                  if (isCompleted) {
+                                  if (inspection.status === 'completed') {
                                     router.push('/photo-preview' as any, {
                                       photos: item.photos,
                                       initialIndex: idx,
