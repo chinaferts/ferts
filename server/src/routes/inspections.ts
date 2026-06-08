@@ -1019,9 +1019,10 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       }
     });
 
-    // 设置响应头
+    // 设置响应头 - 使用英文文件名避免编码问题
+    const filename = `Inspection_Report_${inspection.inspection_number}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=验货报告_${inspection.inspection_number}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     doc.pipe(res);
