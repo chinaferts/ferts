@@ -16,23 +16,25 @@ import * as MediaLibrary from 'expo-media-library';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 
-// 获取完整的图片 URL
+// 获取完整的图片 URL（同步版本，用于 Image source）
 const getImageUrl = (photo: string): string => {
   console.log('[getImageUrl] 输入:', photo, ', 类型:', typeof photo);
   if (!photo) {
     console.log('[getImageUrl] 照片为空');
     return '';
   }
-  // 如果是本地文件 URI（如 file:///xxx 或 content://xxx），直接返回
+  
+  // 如果是完整 URL 或 data URI（base64），直接返回
+  if (photo.startsWith('http://') || photo.startsWith('https://') || photo.startsWith('data:')) {
+    return photo;
+  }
+  
+  // 如果是本地文件 URI，直接返回（React Native 可以直接处理）
   if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
     console.log('[getImageUrl] 本地文件 URI:', photo);
     return photo;
   }
-  // 如果已经是完整 URL，直接返回
-  if (photo.startsWith('http://') || photo.startsWith('https://')) {
-    console.log('[getImageUrl] 完整 URL:', photo);
-    return photo;
-  }
+  
   // 如果是相对路径，拼接到服务器 URL
   const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
   const result = photo.startsWith('/') ? `${baseUrl}${photo}` : `${baseUrl}/${photo}`;
@@ -322,7 +324,8 @@ export default function InspectionDetailScreen() {
         
         if (response.ok) {
           const result = await response.json();
-          const photoUrl = result.data?.photoUrl || result.photoUrl;
+          // 后端返回的字段名是 photo_url
+          const photoUrl = result.data?.photo_url || result.photo_url;
           
           // 更新 inspection_records 表中的 photos 字段
           const currentPhotos = item.photos || [];
@@ -919,8 +922,20 @@ export default function InspectionDetailScreen() {
     const previousPhotos = (tempPhotoTarget.photos || []).filter((p: string) => 
       p && (p.startsWith('http://') || p.startsWith('https://'))
     );
-    // 合并之前的照片和新上传的照片
-    const allPhotos = [...previousPhotos, ...uploadedUrls];
+    
+    // 如果有新上传的照片，用服务器 URL 替换本地路径
+    let allPhotos: string[];
+    if (uploadedUrls.length > 0) {
+      // 有服务器 URL，使用服务器 URL
+      allPhotos = [...previousPhotos, ...uploadedUrls];
+      console.log('[CompletePhotos] Using server URLs:', allPhotos);
+    } else if (tempPhotos.length > 0) {
+      // 上传全部失败，保留本地路径（用于调试，但这些路径可能失效）
+      console.log('[CompletePhotos] Upload failed, keeping local paths');
+      allPhotos = tempPhotos;
+    } else {
+      allPhotos = previousPhotos;
+    }
     console.log('[CompletePhotos] Previous photos:', previousPhotos, 'All photos:', allPhotos);
     
     // 将照片URL保存到清单项（用于前端显示）
