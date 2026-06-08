@@ -8,6 +8,9 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createFormDataFile } from '@/utils';
 import CustomCamera from '@/components/CustomCamera';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
@@ -185,6 +188,7 @@ export default function InspectionDetailScreen() {
   const [inspection, setInspection] = useState<InspectionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [defectModalVisible, setDefectModalVisible] = useState(false);
+  const [exportingReport, setExportingReport] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ChecklistItem | null>(null);
   const [defectForm, setDefectForm] = useState({
     severity: 'minor' as 'critical' | 'major' | 'minor',
@@ -1132,35 +1136,22 @@ export default function InspectionDetailScreen() {
     }
   };
 
-  // 导出验货报告
+  // 导出验货报告为 PDF
   const handleExportReport = async () => {
     if (!inspection) return;
 
     try {
+      setExportingReport(true);
+
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-      
-      // 获取验货数据
+
+      // 获取最新验货数据
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch inspection data');
       }
       const data = await response.json();
       const inspectionData = data.data;
-
-      // 生成报告文本
-      const reportLines: string[] = [];
-      reportLines.push('='.repeat(50));
-      reportLines.push('验货报告 / Inspection Report');
-      reportLines.push('='.repeat(50));
-      reportLines.push('');
-      reportLines.push(`验货单号: ${inspectionData.inspection_number || inspectionData.id}`);
-      reportLines.push(`产品名称: ${inspectionData.product_name || 'N/A'}`);
-      reportLines.push(`验货日期: ${inspectionData.inspection_date || new Date().toLocaleDateString()}`);
-      reportLines.push(`检验结果: ${inspectionData.overall_result === 'pass' ? '合格' : inspectionData.overall_result === 'fail' ? '不合格' : 'N/A'}`);
-      reportLines.push('');
-      reportLines.push('-'.repeat(50));
-      reportLines.push('检查项明细 / Checklist Items');
-      reportLines.push('-'.repeat(50));
 
       // 按分类组织检查项
       const categories = (inspectionData.checklist_items || []).reduce((acc: Record<string, any[]>, item: any) => {
@@ -1170,51 +1161,397 @@ export default function InspectionDetailScreen() {
         return acc;
       }, {});
 
-      Object.entries(categories).forEach(([category, items]) => {
-        reportLines.push('');
-        reportLines.push(`【${category}】`);
-        (items as any[]).forEach((item, idx) => {
-          reportLines.push(`${idx + 1}. ${item.name}`);
-          reportLines.push(`   状态: ${item.status === 'pass' ? '合格' : item.status === 'fail' ? '不合格' : item.status === 'na' ? '不适用' : '未检查'}`);
-          if (item.barcodeCodes && item.barcodeCodes.length > 0) {
-            reportLines.push(`   条码: ${item.barcodeCodes.join(', ')}`);
-          }
-          if (item.photos && item.photos.length > 0) {
-            reportLines.push(`   照片: ${item.photos.length} 张`);
-          }
-          if (item.notes) {
-            reportLines.push(`   备注: ${item.notes}`);
-          }
-        });
+      // 统计
+      const allItems = inspectionData.checklist_items || [];
+      const passCount = allItems.filter((i: any) => i.status === 'pass').length;
+      const failCount = allItems.filter((i: any) => i.status === 'fail').length;
+      const naCount = allItems.filter((i: any) => i.status === 'na').length;
+      const uncheckedCount = allItems.filter((i: any) => i.status === 'unchecked' || !i.status).length;
+
+      // 生成 HTML 报告
+      const reportDate = new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
       });
 
-      reportLines.push('');
-      reportLines.push('='.repeat(50));
-      reportLines.push(`生成时间: ${new Date().toLocaleString()}`);
-      reportLines.push('='.repeat(50));
+      const resultText = inspectionData.overall_result === 'pass' ? '合格' :
+                         inspectionData.overall_result === 'fail' ? '不合格' : '待提交';
+      const resultColor = inspectionData.overall_result === 'pass' ? '#10B981' :
+                          inspectionData.overall_result === 'fail' ? '#EF4444' : '#6B7280';
 
-      const reportText = reportLines.join('\n');
+      // 构建检查项分类 HTML
+      let categoriesHTML = '';
+      Object.entries(categories).forEach(([category, items]) => {
+        categoriesHTML += `
+          <div class="category-section">
+            <div class="category-header">${category}</div>
+            <table class="checklist-table">
+              <thead>
+                <tr>
+                  <th>检查项</th>
+                  <th>状态</th>
+                  <th>条码</th>
+                  <th>备注</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(items as any[]).map((item, idx) => {
+                  const statusText = item.status === 'pass' ? '合格' :
+                                     item.status === 'fail' ? '不合格' :
+                                     item.status === 'na' ? '不适用' : '未检查';
+                  const statusClass = item.status === 'pass' ? 'status-pass' :
+                                     item.status === 'fail' ? 'status-fail' :
+                                     item.status === 'na' ? 'status-na' : 'status-unchecked';
+                  const barcodes = item.barcodeCodes ? item.barcodeCodes.join(', ') : '-';
+                  const notes = item.notes || '-';
+                  return `
+                    <tr>
+                      <td>${idx + 1}. ${item.name}</td>
+                      <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                      <td>${barcodes}</td>
+                      <td>${notes}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      });
 
-      // 显示报告预览
-      Alert.alert(
-        '验货报告预览',
-        reportText.substring(0, 1000) + (reportText.length > 1000 ? '\n\n...(报告过长，已截断)' : ''),
-        [
-          { text: '关闭', style: 'cancel' },
-          { 
-            text: '复制报告', 
-            onPress: () => {
-              // 使用 Clipboard 复制报告
-              Alert.alert('提示', '报告已生成，请在控制台查看完整内容。\n\n功能即将完善，支持分享和保存为文件。');
-            }
-          }
-        ]
-      );
+      // 构建缺陷记录 HTML
+      let defectsHTML = '';
+      if (inspectionData.defects && inspectionData.defects.length > 0) {
+        defectsHTML = `
+          <div class="section">
+            <div class="section-title">缺陷记录 / Defects</div>
+            <table class="defect-table">
+              <thead>
+                <tr>
+                  <th>严重程度</th>
+                  <th>描述</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${inspectionData.defects.map((defect: any, idx: number) => {
+                  const severityText = defect.severity === 'critical' ? '严重' :
+                                      defect.severity === 'major' ? '主要' : '轻微';
+                  const severityClass = defect.severity === 'critical' ? 'severity-critical' :
+                                       defect.severity === 'major' ? 'severity-major' : 'severity-minor';
+                  return `
+                    <tr>
+                      <td><span class="severity-badge ${severityClass}">${severityText}</span></td>
+                      <td>${defect.description || '-'}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
 
-      console.log('[Export] Inspection Report:\n', reportText);
+      // 构建照片 HTML
+      let photosHTML = '';
+      const allPhotos = inspectionData.photos || [];
+      if (allPhotos.length > 0) {
+        photosHTML = `
+          <div class="section">
+            <div class="section-title">验货照片 / Photos (${allPhotos.length}张)</div>
+            <div class="photos-grid">
+              ${allPhotos.map((photo: string, idx: number) => `
+                <div class="photo-item">
+                  <img src="${photo}" alt="Photo ${idx + 1}" />
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>验货报告 - ${inspectionData.inspection_number || inspectionData.id}</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      color: #333;
+      padding: 20px;
+      background: #fff;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #6C63FF;
+    }
+    .header h1 {
+      font-size: 24px;
+      color: #6C63FF;
+      margin-bottom: 8px;
+    }
+    .header .subtitle {
+      font-size: 12px;
+      color: #666;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: #f8f9fa;
+      padding: 16px;
+      border-radius: 8px;
+    }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .info-label {
+      font-size: 10px;
+      color: #888;
+      margin-bottom: 2px;
+    }
+    .info-value {
+      font-size: 13px;
+      font-weight: 500;
+      color: #333;
+    }
+    .result-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .summary-item {
+      text-align: center;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .summary-item.pass { background: #D1FAE5; }
+    .summary-item.fail { background: #FEE2E2; }
+    .summary-item.na { background: #E5E7EB; }
+    .summary-item.unchecked { background: #FEF3C7; }
+    .summary-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+    .summary-label {
+      font-size: 10px;
+      color: #666;
+      margin-top: 4px;
+    }
+    .section {
+      margin-bottom: 24px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #6C63FF;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #E5E7EB;
+    }
+    .category-section {
+      margin-bottom: 20px;
+    }
+    .category-header {
+      font-size: 14px;
+      font-weight: bold;
+      color: #444;
+      background: #f0f0f5;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .checklist-table, .defect-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+      font-size: 11px;
+    }
+    .checklist-table th, .defect-table th {
+      background: #f8f9fa;
+      padding: 8px;
+      text-align: left;
+      border-bottom: 2px solid #E5E7EB;
+      font-weight: 600;
+    }
+    .checklist-table td, .defect-table td {
+      padding: 8px;
+      border-bottom: 1px solid #E5E7EB;
+      vertical-align: top;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+    .status-pass { background: #D1FAE5; color: #059669; }
+    .status-fail { background: #FEE2E2; color: #DC2626; }
+    .status-na { background: #E5E7EB; color: #6B7280; }
+    .status-unchecked { background: #FEF3C7; color: #D97706; }
+    .severity-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+    .severity-critical { background: #FEE2E2; color: #DC2626; }
+    .severity-major { background: #FEF3C7; color: #D97706; }
+    .severity-minor { background: #DBEAFE; color: #2563EB; }
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .photo-item {
+      aspect-ratio: 1;
+      overflow: hidden;
+      border-radius: 4px;
+      border: 1px solid #E5E7EB;
+    }
+    .photo-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .footer {
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid #E5E7EB;
+      text-align: center;
+      font-size: 10px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>验货报告</h1>
+    <div class="subtitle">Inspection Report</div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-item">
+      <span class="info-label">验货单号</span>
+      <span class="info-value">${inspectionData.inspection_number || inspectionData.id}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">产品名称</span>
+      <span class="info-value">${inspectionData.product_name || '-'}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">验货日期</span>
+      <span class="info-value">${inspectionData.inspection_date || new Date().toLocaleDateString()}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">供应商</span>
+      <span class="info-value">${inspectionData.supplier_name || '-'}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">批次号</span>
+      <span class="info-value">${inspectionData.batch_number || '-'}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">检验结果</span>
+      <span class="info-value"><span class="result-badge" style="background: ${resultColor}20; color: ${resultColor}">${resultText}</span></span>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-item pass">
+      <div class="summary-value">${passCount}</div>
+      <div class="summary-label">合格</div>
+    </div>
+    <div class="summary-item fail">
+      <div class="summary-value">${failCount}</div>
+      <div class="summary-label">不合格</div>
+    </div>
+    <div class="summary-item na">
+      <div class="summary-value">${naCount}</div>
+      <div class="summary-label">不适用</div>
+    </div>
+    <div class="summary-item unchecked">
+      <div class="summary-value">${uncheckedCount}</div>
+      <div class="summary-label">未检查</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">检查项明细 / Checklist Items</div>
+    ${categoriesHTML}
+  </div>
+
+  ${defectsHTML}
+  ${photosHTML}
+
+  <div class="footer">
+    <div>报告生成时间: ${reportDate}</div>
+    <div>本报告由验货系统自动生成</div>
+  </div>
+</body>
+</html>`;
+
+      // 使用 expo-print 生成 PDF
+      const { uri } = await Print.printToFileAsync({
+        html,
+        base64: false
+      });
+
+      // 检查文件是否存在
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        throw new Error('PDF file not generated');
+      }
+
+      // 使用 expo-sharing 分享 PDF
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: '导出验货报告',
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        // 如果分享不可用，复制到相册
+        const destDir = FileSystem.documentDirectory;
+        const destPath = `${destDir}验货报告_${inspectionData.inspection_number || id}.pdf`;
+        await FileSystem.copyAsync({
+          from: uri,
+          to: destPath
+        });
+        Alert.alert('导出成功', `报告已保存到: ${destPath}`);
+      }
+
     } catch (error) {
-      console.error('[Export] Export report error:', error);
-      Alert.alert('错误', '导出报告失败');
+      console.error('[Export] Export PDF report error:', error);
+      Alert.alert('错误', '导出报告失败，请重试');
+    } finally {
+      setExportingReport(false);
     }
   };
 
@@ -2308,9 +2645,19 @@ export default function InspectionDetailScreen() {
             <Feather name="image" size={20} color="#FFFFFF" />
             <Text style={styles.exportButtonText}>导出验货照片</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.exportReportButton} onPress={handleExportReport}>
-            <Feather name="file-text" size={20} color="#FFFFFF" />
-            <Text style={styles.exportButtonText}>导出验货报告</Text>
+          <TouchableOpacity
+            style={[styles.exportReportButton, exportingReport && styles.exportButtonDisabled]}
+            onPress={handleExportReport}
+            disabled={exportingReport}
+          >
+            {exportingReport ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Feather name="file-text" size={20} color="#FFFFFF" />
+            )}
+            <Text style={styles.exportButtonText}>
+              {exportingReport ? '生成中...' : '导出验货报告'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -3292,6 +3639,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,
+  },
+  exportButtonDisabled: {
+    opacity: 0.6,
   },
   exportButtonText: {
     color: '#FFFFFF',
