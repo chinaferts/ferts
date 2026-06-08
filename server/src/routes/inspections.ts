@@ -331,10 +331,16 @@ router.get('/:id', async (req: Request, res: Response) => {
       // 合并两个来源的照片：inspection_records.photos 字段 + inspection_photos 表
       // 注意：inspection_records.photos 存储的是本地路径（file:///...），需要过滤掉
       // 只保留服务器路径（/uploads/photos/...）或有效的 HTTP URL
+      // 同时过滤掉非图片文件（如 .txt 测试文件）
+      const validImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+      const isValidImage = (p: string) => {
+        const lower = p.toLowerCase();
+        return validImageExtensions.some(ext => lower.endsWith(ext));
+      };
       const photosFromRecord = (record.photos || []).filter((p: string) => 
-        p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://')
+        (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://')) && isValidImage(p)
       );
-      const photosFromTable = recordPhotos || [];
+      const photosFromTable = recordPhotos.filter((p: string) => isValidImage(p));
       // 合并去重
       const allPhotos = [...new Set([...photosFromRecord, ...photosFromTable])];
       
