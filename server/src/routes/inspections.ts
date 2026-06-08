@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
+import PDFDocument from 'pdfkit';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 import {
   mockGetInspections,
@@ -679,8 +680,11 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
 
     const client = requireSupabaseClient();
     
+    // 确保 recordId 是字符串类型
+    const recordIdStr = Array.isArray(recordId) ? recordId[0] : recordId;
+    
     // 检查 recordId 是否是有效的数字 ID（大于0的整数）
-    const parsedId = parseInt(recordId);
+    const parsedId = parseInt(recordIdStr);
     const isValidNumericId = !isNaN(parsedId) && parsedId > 0;
     
     // 构建更新对象
@@ -770,11 +774,14 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
       return res.status(500).json({ success: false, error: 'Failed to create checklist item' });
     }
     
+    // 确保 id 是字符串类型
+    const idStr = Array.isArray(id) ? id[0] : id;
+    
     // 再在 inspection_records 中创建记录
     const { data: recordData, error: recordError } = await client
       .from('inspection_records')
       .insert({
-        inspection_id: parseInt(id),
+        inspection_id: parseInt(idStr),
         item_id: newChecklistItem.id,  // 兼容旧字段
         checklist_item_id: newChecklistItem.id,
         result: result,
@@ -817,7 +824,8 @@ router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response)
 
     // 查找对应的 inspection_record（itemId 在这里是 record_id）
     // 对于嵌入式模板，recordId 可能是 item.name 而不是数字 ID
-    const isValidNumericId = itemId && !isNaN(parseInt(itemId)) && parseInt(itemId) > 0;
+    const itemIdStr = Array.isArray(itemId) ? itemId[0] : itemId;
+    const isValidNumericId = itemIdStr && !isNaN(parseInt(itemIdStr)) && parseInt(itemIdStr) > 0;
     
     let query = client
       .from('inspection_records')
@@ -828,7 +836,7 @@ router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response)
       .eq('inspection_id', id);
     
     if (isValidNumericId) {
-      query = query.eq('id', parseInt(itemId));
+      query = query.eq('id', parseInt(itemIdStr));
     } else {
       // 如果不是有效的数字 ID，使用 item_name 匹配（嵌入式模板）
       query = query.eq('item_name', itemId);
@@ -922,6 +930,269 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
     res.json({ success: true, data: insertedPhoto });
   } catch (err: any) {
     console.error('上传照片失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 生成验货报告 PDF
+router.get('/:id/export-pdf', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const client = requireSupabaseClient();
+
+    // 解析 id 参数
+    const idStr = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const inspectionId = parseInt(idStr || '0');
+
+    // 获取验货详情
+    const { data: inspection, error: inspectError } = await client
+      .from('inspections')
+      .select('*')
+      .eq('id', inspectionId)
+      .single();
+
+    if (inspectError || !inspection) {
+      res.status(404).json({ success: false, error: '验货记录不存在' });
+      return;
+    }
+
+    // 获取检查项记录
+    const { data: records } = await client
+      .from('inspection_records')
+      .select('*')
+      .eq('inspection_id', inspectionId);
+
+    // 获取缺陷记录
+    const { data: defects } = await client
+      .from('inspection_defects')
+      .select('*')
+      .eq('inspection_id', inspectionId);
+
+    // 获取照片
+    const { data: photos } = await client
+      .from('inspection_photos')
+      .select('*')
+      .eq('inspection_id', inspectionId);
+
+    // 按分类分组检查项
+    const categoriesMap = new Map<string, any[]>();
+    const checklistItems = inspection.checklist_items || [];
+
+    for (const item of checklistItems) {
+      const category = item.category || '未分类';
+      if (!categoriesMap.has(category)) {
+        categoriesMap.set(category, []);
+      }
+      categoriesMap.get(category)!.push(item);
+    }
+
+    // 按检查项 ID 分组记录
+    const recordsMap = new Map<number, any>();
+    if (records) {
+      for (const record of records) {
+        recordsMap.set(record.checklist_item_id, record);
+      }
+    }
+
+    // 统计
+    let passCount = 0, failCount = 0, naCount = 0, pendingCount = 0;
+    for (const item of checklistItems) {
+      const record = recordsMap.get(item.id);
+      if (record) {
+        if (record.result === 'pass') passCount++;
+        else if (record.result === 'fail') failCount++;
+        else if (record.result === 'na') naCount++;
+        else pendingCount++;
+      } else {
+        pendingCount++;
+      }
+    }
+
+    // 生成 PDF
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      info: {
+        Title: `验货报告 - ${inspection.inspection_number}`,
+        Author: '验货系统',
+        Subject: 'QC Inspection Report'
+      }
+    });
+
+    // 设置响应头
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=验货报告_${inspection.inspection_number}.pdf`);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    doc.pipe(res);
+
+    // 标题
+    doc.fontSize(24).font('Helvetica-Bold').text('验货报告', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(12).font('Helvetica').text(`Inspection Report - ${inspection.inspection_number}`, { align: 'center' });
+    doc.moveDown(1);
+
+    // 基本信息
+    doc.fontSize(14).font('Helvetica-Bold').text('基本信息 / Basic Information');
+    doc.moveDown(0.3);
+    doc.fontSize(10).font('Helvetica');
+    doc.text(`验货单号: ${inspection.inspection_number || 'N/A'}`);
+    doc.text(`产品名称: ${inspection.product_name || 'N/A'}`);
+    doc.text(`供应商: ${inspection.supplier || 'N/A'}`);
+    doc.text(`批次号: ${inspection.batch_number || 'N/A'}`);
+    doc.text(`验货日期: ${inspection.inspection_date || 'N/A'}`);
+    doc.text(`验货员: ${inspection.inspector_name || inspection.created_by || 'N/A'}`);
+    doc.moveDown(1);
+
+    // 检验结果
+    const resultStatus = inspection.status === 'completed' ? '已完成' : '进行中';
+    const resultColor = inspection.status === 'completed' ? '#008000' : '#FFA500';
+    doc.fontSize(14).font('Helvetica-Bold').text('检验结果 / Inspection Result');
+    doc.moveDown(0.3);
+    doc.fontSize(12).fillColor(resultColor).text(`状态: ${resultStatus}`, { align: 'center' });
+    doc.fillColor('black');
+    doc.moveDown(1);
+
+    // 统计摘要
+    doc.fontSize(14).font('Helvetica-Bold').text('统计摘要 / Summary');
+    doc.moveDown(0.3);
+    doc.fontSize(10).font('Helvetica');
+
+    // 绘制统计表格
+    const tableTop = doc.y;
+    const colWidth = 100;
+    const rowHeight = 25;
+
+    // 表头
+    doc.rect(50, tableTop, colWidth * 4, rowHeight).stroke();
+    doc.fontSize(10).font('Helvetica-Bold');
+    const headers = ['合格', '不合格', '不适用', '未检查'];
+    const headerX = [50, 150, 250, 350];
+    for (let i = 0; i < headers.length; i++) {
+      doc.text(headers[i], headerX[i] + 5, tableTop + 8, { width: colWidth - 10 });
+    }
+
+    // 数据行
+    const dataY = tableTop + rowHeight;
+    doc.rect(50, dataY, colWidth * 4, rowHeight).stroke();
+    doc.font('Helvetica');
+    const values = [passCount.toString(), failCount.toString(), naCount.toString(), pendingCount.toString()];
+    const colors = ['#008000', '#DC143C', '#6C757D', '#FFA500'];
+    for (let i = 0; i < values.length; i++) {
+      doc.fillColor(colors[i] as any).text(values[i], headerX[i] + 5, dataY + 8, { width: colWidth - 10 });
+    }
+    doc.fillColor('black');
+
+    doc.y = dataY + rowHeight + 20;
+
+    // 检查项明细
+    doc.fontSize(14).font('Helvetica-Bold').text('检查项明细 / Checklist Details');
+    doc.moveDown(0.5);
+
+    for (const [category, items] of categoriesMap) {
+      // 检查是否需要换页
+      if (doc.y > 650) {
+        doc.addPage();
+      }
+
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#2563eb').text(category);
+      doc.fillColor('black');
+      doc.moveDown(0.2);
+
+      for (const item of items) {
+        if (doc.y > 700) {
+          doc.addPage();
+        }
+
+        const record = recordsMap.get(item.id);
+        let statusText = '未检查';
+        let statusColor = '#808080';
+
+        if (record) {
+          if (record.result === 'pass') {
+            statusText = '合格';
+            statusColor = '#008000';
+          } else if (record.result === 'fail') {
+            statusText = '不合格';
+            statusColor = '#DC143C';
+          } else if (record.result === 'na') {
+            statusText = '不适用';
+            statusColor = '#6C757D';
+          }
+        }
+
+        // 检查项名称
+        doc.fontSize(10).font('Helvetica-Bold').text(`${item.item_number || ''}. ${item.item_name || item.name || 'N/A'}`, { continued: true });
+
+        // 状态
+        doc.font('Helvetica').fillColor(statusColor).text(` [${statusText}]`, { continued: false });
+        doc.fillColor('black');
+
+        // 条码
+        const barcodes = record?.barcode_codes;
+        if (barcodes && barcodes.length > 0) {
+          doc.fontSize(9).font('Helvetica').text(`   条码: ${barcodes.join(', ')}`);
+        }
+
+        // 备注
+        if (record?.notes) {
+          doc.fontSize(9).fillColor('#666').text(`   备注: ${record.notes}`);
+          doc.fillColor('black');
+        }
+
+        doc.moveDown(0.2);
+      }
+      doc.moveDown(0.5);
+    }
+
+    // 缺陷记录
+    if (defects && defects.length > 0) {
+      if (doc.y > 600) {
+        doc.addPage();
+      }
+
+      doc.fontSize(14).font('Helvetica-Bold').text('缺陷记录 / Defect Records');
+      doc.moveDown(0.5);
+
+      for (const defect of defects) {
+        if (doc.y > 700) {
+          doc.addPage();
+        }
+
+        const severityColors: Record<string, string> = {
+          critical: '#DC143C',
+          major: '#FFA500',
+          minor: '#FFC107'
+        };
+
+        doc.fontSize(10).font('Helvetica-Bold');
+        doc.fillColor(severityColors[defect.severity] || '#808080');
+        doc.text(`[${defect.severity?.toUpperCase() || 'N/A'}] ${defect.description || 'N/A'}`);
+        doc.fillColor('black');
+        doc.fontSize(9).font('Helvetica');
+        if (defect.location) {
+          doc.text(`   位置: ${defect.location}`);
+        }
+        if (defect.quantity) {
+          doc.text(`   数量: ${defect.quantity}`);
+        }
+        doc.moveDown(0.3);
+      }
+    }
+
+    // 报告底部
+    if (doc.y > 720) {
+      doc.addPage();
+    }
+    doc.moveDown(2);
+    doc.fontSize(10).font('Helvetica').fillColor('#666');
+    doc.text(`报告生成时间: ${new Date().toLocaleString('zh-CN')}`, { align: 'center' });
+    doc.text('本报告由验货系统自动生成', { align: 'center' });
+    doc.fillColor('black');
+
+    doc.end();
+  } catch (err: any) {
+    console.error('生成 PDF 报告失败:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
