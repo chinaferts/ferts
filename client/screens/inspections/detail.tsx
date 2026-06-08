@@ -15,8 +15,8 @@ import { useAuth } from '@/contexts/AuthContext';
 // 获取完整的图片 URL
 const getImageUrl = (photo: string): string => {
   if (!photo) return '';
-  // 如果是本地文件 URI（如 file:///xxx），直接返回
-  if (photo.startsWith('file://') || photo.startsWith('content://') || photo.startsWith('ph://')) {
+  // 如果是本地文件 URI（如 file:///xxx 或 content://xxx），直接返回
+  if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
     return photo;
   }
   // 如果已经是完整 URL，直接返回
