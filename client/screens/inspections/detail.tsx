@@ -1809,18 +1809,6 @@ export default function InspectionDetailScreen() {
                             <Feather name="slash" size={16} color="#808080" />
                             <Text style={styles.naButtonText}>不适用</Text>
                           </TouchableOpacity>
-                          {/* 删除按钮 - 仅对新增的条码扫描项显示，放到不适用按钮后面 */}
-                          {isExtraItem && (
-                            <TouchableOpacity 
-                              style={[styles.actionButton, styles.removeIssueButton]}
-                              onPress={() => {
-                                setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
-                              }}
-                            >
-                              <Feather name="trash-2" size={16} color="#FF6B6B" />
-                              <Text style={styles.removeIssueText}>删除</Text>
-                            </TouchableOpacity>
-                          )}
                           {/* 条码分类显示扫码按钮 */}
                           {item.category === '条码扫描以及拍照' && (
                             <TouchableOpacity
@@ -2009,6 +1997,18 @@ export default function InspectionDetailScreen() {
                         <Feather name="slash" size={14} color="#808080" />
                         <Text style={styles.naButtonText}>不适用</Text>
                       </TouchableOpacity>
+                      {/* 删除按钮 - 仅对新增的条码扫描项显示 */}
+                      {isExtraItem && (
+                        <TouchableOpacity 
+                          style={[styles.actionButton, styles.removeIssueButton]}
+                          onPress={() => {
+                            setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
+                          }}
+                        >
+                          <Feather name="trash-2" size={14} color="#FF6B6B" />
+                          <Text style={styles.removeIssueText}>删除</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   )}
                   {item.status === 'unchecked' && inspection.status === 'completed' && (
