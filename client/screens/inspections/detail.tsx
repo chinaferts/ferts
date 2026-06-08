@@ -230,9 +230,9 @@ export default function InspectionDetailScreen() {
     
     if (!result.canceled && result.assets[0]) {
       const photoUri = result.assets[0].uri;
-      // 直接添加到临时照片预览区
+      // 直接添加到临时照片预览区（追加，不覆盖原有照片）
       setTempPhotoTarget(item);
-      setTempPhotos([photoUri]);
+      setTempPhotos(prev => [...prev, photoUri]);
       
       // 同时更新检查项的 photos 数组（用于预览区显示已保存的照片）
       const currentInspection = inspectionRef.current;
