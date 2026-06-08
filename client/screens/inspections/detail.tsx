@@ -1880,33 +1880,33 @@ export default function InspectionDetailScreen() {
                       <Feather name="chevron-down" size={16} color={item.barcodeType ? barcodeTypeOptions.find(o => o.value === item.barcodeType)?.color : '#666'} />
                     </TouchableOpacity>
 
-                    {/* 拍照和导入按钮放在同一行，扫码按钮在导入后面 */}
+                    {/* 拍照和导入按钮放在同一行，与下方操作按钮宽度对齐 */}
                     {item.status === 'unchecked' && inspection.status !== 'completed' && (
-                      <View style={styles.cameraButtonRow}>
+                      <View style={styles.actionButtonsRow}>
                         <TouchableOpacity
-                          style={styles.headerCameraButton}
+                          style={[styles.actionButton, styles.photoButton]}
                           onPress={() => takePhoto(item)}
                         >
                           <Feather name="camera" size={14} color="#FFFFFF" />
-                          <Text style={styles.headerCameraButtonText}>拍照</Text>
+                          <Text style={styles.photoButtonText}>拍照</Text>
                         </TouchableOpacity>
                         {/* 导入本地照片按钮 - 仅管理员可见 */}
                         {isAdmin && (
                           <TouchableOpacity
-                            style={styles.headerCameraButton}
+                            style={[styles.actionButton, styles.photoButton]}
                             onPress={() => handleImportFromGallery(item)}
                           >
                             <Feather name="image" size={14} color="#FFFFFF" />
-                            <Text style={styles.headerCameraButtonText}>导入</Text>
+                            <Text style={styles.photoButtonText}>导入</Text>
                           </TouchableOpacity>
                         )}
                         {/* 扫码按钮 - 在导入后面 */}
                         <TouchableOpacity
-                          style={[styles.headerCameraButton, { backgroundColor: '#6C63FF' }]}
+                          style={[styles.actionButton, { backgroundColor: '#6C63FF' }]}
                           onPress={() => openBarcodeScanner(item)}
                         >
                           <Feather name="maximize-2" size={14} color="#FFFFFF" />
-                          <Text style={styles.headerCameraButtonText}>扫码</Text>
+                          <Text style={[styles.photoButtonText, { color: '#FFFFFF' }]}>扫码</Text>
                         </TouchableOpacity>
                       </View>
                     )}
