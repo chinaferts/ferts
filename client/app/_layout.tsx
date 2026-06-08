@@ -58,6 +58,7 @@ export default function RootLayout() {
               <Stack.Screen name="defects/index" options={{ headerShown: true, title: "缺陷记录", headerStyle: { backgroundColor: '#4F46E5' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '600' } }} />
               <Stack.Screen name="profile" options={{ headerShown: true, title: "帐号设置", headerStyle: { backgroundColor: '#4F46E5' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '600' } }} />
               <Stack.Screen name="inspections/[id]" options={{ headerShown: true, title: "验货详情", headerStyle: { backgroundColor: '#4F46E6' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '600' } }} />
+              <Stack.Screen name="photo-preview" options={{ headerShown: false, presentation: 'modal', animation: 'fade' }} />
             </Stack>
             <Toast />
           </AuthGuard>

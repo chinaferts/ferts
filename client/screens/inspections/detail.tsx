@@ -1772,6 +1772,15 @@ export default function InspectionDetailScreen() {
                             <View style={styles.photoGridContainer}>
                               {item.photos.map((photo, idx) => (
                                 <TouchableOpacity key={idx} onPress={() => {
+                                  // 已完成验货：点击照片跳转到预览页面
+                                  if (isCompleted) {
+                                    router.push('/photo-preview' as any, {
+                                      photos: item.photos,
+                                      initialIndex: idx,
+                                    });
+                                    return;
+                                  }
+                                  // 进行中验货：点击照片打开相机
                                   setEditingPhoto({ uri: photo, index: idx, item });
                                   setTempPhotos([]);
                                   setCameraVisible(true);
