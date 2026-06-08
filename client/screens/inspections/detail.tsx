@@ -623,6 +623,14 @@ export default function InspectionDetailScreen() {
 
       // 如果是新建的条码扫描项，先保存到数据库
       if (isNewBarcodeItem) {
+        // 从当前状态中获取最新的检查项数据（包含最新添加的照片）
+        const currentInspection = inspectionRef.current;
+        const currentItem = currentInspection?.checklist_items.find(
+          (i: any) => String(i.record_id) === String(item.record_id)
+        );
+        const photosToSave = currentItem?.photos || item.photos || [];
+        const barcodeCodesToSave = currentItem?.barcodeCodes || item.barcodeCodes || [];
+        
         // 保存新建的检查项
         const saveResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items`, {
           method: 'POST',
@@ -632,8 +640,8 @@ export default function InspectionDetailScreen() {
             category: item.category,
             item_category: item.category,
             result: status,
-            photos: item.photos || [],
-            barcode_codes: item.barcodeCodes || [],
+            photos: photosToSave,
+            barcode_codes: barcodeCodesToSave,
             barcode_type: item.barcodeType,
           }),
         });
@@ -687,6 +695,14 @@ export default function InspectionDetailScreen() {
       // item.id 是检查项模板的ID，如151、146等
       const recordId = item.record_id && item.record_id > 0 ? String(item.record_id) : String(item.id);
       
+      // 从当前状态中获取最新的检查项数据（包含最新添加的照片）
+      const currentInspection = inspectionRef.current;
+      const currentItem = currentInspection?.checklist_items.find(
+        (i: any) => String(i.id) === String(item.id)
+      );
+      const photosToSave = currentItem?.photos || item.photos || [];
+      const barcodeCodesToSave = currentItem?.barcodeCodes || item.barcodeCodes || [];
+      
       console.log('[PUT_REQUEST] record_id:', recordId, 'item.id:', item.id, 'item.record_id:', item.record_id);
       
       // 调试日志 - 显示要发送的数据
@@ -694,8 +710,8 @@ export default function InspectionDetailScreen() {
         url: `${baseUrl}/api/v1/inspections/${id}/records/${recordId}`,
         body: {
           result: status,
-          photos: item.photos || [],
-          barcode_codes: item.barcodeCodes || [],
+          photos: photosToSave,
+          barcode_codes: barcodeCodesToSave,
         }
       });
       
@@ -705,8 +721,8 @@ export default function InspectionDetailScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           result: status,
-          photos: item.photos || [],
-          barcode_codes: item.barcodeCodes || [],
+          photos: photosToSave,
+          barcode_codes: barcodeCodesToSave,
         }),
       });
       
