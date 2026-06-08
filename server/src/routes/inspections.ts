@@ -1019,11 +1019,8 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       }
     });
 
-    // 注册中文字体（文泉驿微米黑）
-    const fontPath = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc';
-    doc.registerFont('Chinese', fontPath);
-    doc.registerFont('Chinese-Bold', fontPath);
-    doc.font('Chinese');
+    // PDF 生成器不支持 TTC 字体，改用内置 Helvetica 字体
+    // 中文内容采用中英双语格式
 
     // 设置响应头 - 使用英文文件名避免编码问题
     const filename = `Inspection_Report_${inspection.inspection_number}.pdf`;
@@ -1034,55 +1031,54 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     doc.pipe(res);
 
     // 标题
-    doc.fontSize(24).font('Chinese-Bold').text('验货报告', { align: 'center' });
+    doc.fontSize(24).font('Helvetica-Bold').text('Inspection Report / 验货报告', { align: 'center' });
     doc.moveDown(0.5);
-    doc.fontSize(12).font('Chinese').text(`Inspection Report - ${inspection.inspection_number}`, { align: 'center' });
+    doc.fontSize(12).font('Helvetica').text(`Report No. / 报告编号: ${inspection.inspection_number}`, { align: 'center' });
     doc.moveDown(1);
 
-    // 基本信息
-    doc.fontSize(14).font('Chinese-Bold').text('基本信息 / Basic Information');
+    // 基本信息 / Basic Information
+    doc.fontSize(14).font('Helvetica-Bold').text('Basic Information / 基本信息');
     doc.moveDown(0.3);
-    doc.fontSize(10).font('Chinese');
-    doc.text(`验货单号: ${inspection.inspection_number || 'N/A'}`);
-    doc.text(`产品名称: ${inspection.product_name || 'N/A'}`);
-    doc.text(`供应商: ${inspection.supplier || 'N/A'}`);
-    doc.text(`批次号: ${inspection.batch_number || 'N/A'}`);
-    doc.text(`验货日期: ${inspection.inspection_date || 'N/A'}`);
-    doc.text(`验货员: ${inspection.inspector_name || inspection.created_by || 'N/A'}`);
+    doc.fontSize(10).font('Helvetica');
+    doc.text(`Product Name / 产品名称: ${inspection.product_name || 'N/A'}`);
+    doc.text(`Supplier / 供应商: ${inspection.supplier || 'N/A'}`);
+    doc.text(`Batch No. / 批次号: ${inspection.batch_number || 'N/A'}`);
+    doc.text(`Inspection Date / 验货日期: ${inspection.inspection_date || 'N/A'}`);
+    doc.text(`Inspector / 验货员: ${inspection.inspector_name || inspection.created_by || 'N/A'}`);
     doc.moveDown(1);
 
-    // 检验结果
-    const resultStatus = inspection.status === 'completed' ? '已完成' : '进行中';
+    // 检验结果 / Inspection Result
+    const resultStatus = inspection.status === 'completed' ? 'Completed / 已完成' : 'In Progress / 进行中';
     const resultColor = inspection.status === 'completed' ? '#008000' : '#FFA500';
-    doc.fontSize(14).font('Chinese-Bold').text('检验结果 / Inspection Result');
+    doc.fontSize(14).font('Helvetica-Bold').text('Inspection Result / 检验结果');
     doc.moveDown(0.3);
-    doc.fontSize(12).fillColor(resultColor).text(`状态: ${resultStatus}`, { align: 'center' });
+    doc.fontSize(12).fillColor(resultColor).text(`Status / 状态: ${resultStatus}`, { align: 'center' });
     doc.fillColor('black');
     doc.moveDown(1);
 
-    // 统计摘要
-    doc.fontSize(14).font('Chinese-Bold').text('统计摘要 / Summary');
+    // 统计摘要 / Summary
+    doc.fontSize(14).font('Helvetica-Bold').text('Summary / 统计摘要');
     doc.moveDown(0.3);
-    doc.fontSize(10).font('Chinese');
+    doc.fontSize(10).font('Helvetica');
 
     // 绘制统计表格
     const tableTop = doc.y;
     const colWidth = 100;
     const rowHeight = 25;
 
-    // 表头
+    // 表头 / Headers
     doc.rect(50, tableTop, colWidth * 4, rowHeight).stroke();
-    doc.fontSize(10).font('Chinese-Bold');
-    const headers = ['合格', '不合格', '不适用', '未检查'];
+    doc.fontSize(10).font('Helvetica-Bold');
+    const headers = ['Pass\n合格', 'Fail\n不合格', 'N/A\n不适用', 'Pending\n未检查'];
     const headerX = [50, 150, 250, 350];
     for (let i = 0; i < headers.length; i++) {
-      doc.text(headers[i], headerX[i] + 5, tableTop + 8, { width: colWidth - 10 });
+      doc.text(headers[i], headerX[i] + 5, tableTop + 3, { width: colWidth - 10, align: 'center' });
     }
 
     // 数据行
     const dataY = tableTop + rowHeight;
     doc.rect(50, dataY, colWidth * 4, rowHeight).stroke();
-    doc.font('Chinese');
+    doc.font('Helvetica');
     const values = [passCount.toString(), failCount.toString(), naCount.toString(), pendingCount.toString()];
     const colors = ['#008000', '#DC143C', '#6C757D', '#FFA500'];
     for (let i = 0; i < values.length; i++) {
@@ -1092,8 +1088,8 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
 
     doc.y = dataY + rowHeight + 20;
 
-    // 检查项明细
-    doc.fontSize(14).font('Chinese-Bold').text('检查项明细 / Checklist Details');
+    // Checklist Details / 检查项明细
+    doc.fontSize(14).font('Helvetica-Bold').text('Checklist Details / 检查项明细');
     doc.moveDown(0.5);
 
     for (const [category, items] of categoriesMap) {
@@ -1102,7 +1098,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         doc.addPage();
       }
 
-      doc.fontSize(12).font('Chinese-Bold').fillColor('#2563eb').text(category);
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#2563eb').text(category);
       doc.fillColor('black');
       doc.moveDown(0.2);
 
@@ -1112,38 +1108,38 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         }
 
         const record = recordsMap.get(item.id);
-        let statusText = '未检查';
+        let statusText = 'Pending / 未检查';
         let statusColor = '#808080';
 
         if (record) {
           if (record.result === 'pass') {
-            statusText = '合格';
+            statusText = 'Pass / 合格';
             statusColor = '#008000';
           } else if (record.result === 'fail') {
-            statusText = '不合格';
+            statusText = 'Fail / 不合格';
             statusColor = '#DC143C';
           } else if (record.result === 'na') {
-            statusText = '不适用';
+            statusText = 'N/A / 不适用';
             statusColor = '#6C757D';
           }
         }
 
         // 检查项名称
-        doc.fontSize(10).font('Chinese-Bold').text(`${item.item_number || ''}. ${item.item_name || item.name || 'N/A'}`, { continued: true });
+        doc.fontSize(10).font('Helvetica-Bold').text(`${item.item_number || ''}. ${item.item_name || item.name || 'N/A'}`, { continued: true });
 
         // 状态
-        doc.font('Chinese').fillColor(statusColor).text(` [${statusText}]`, { continued: false });
+        doc.font('Helvetica').fillColor(statusColor).text(` [${statusText}]`, { continued: false });
         doc.fillColor('black');
 
-        // 条码
+        // 条码 / Barcode
         const barcodes = record?.barcode_codes;
         if (barcodes && barcodes.length > 0) {
-          doc.fontSize(9).font('Chinese').text(`   条码: ${barcodes.join(', ')}`);
+          doc.fontSize(9).font('Helvetica').text(`   Barcode / 条码: ${barcodes.join(', ')}`);
         }
 
-        // 备注
+        // 备注 / Notes
         if (record?.notes) {
-          doc.fontSize(9).fillColor('#666').text(`   备注: ${record.notes}`);
+          doc.fontSize(9).fillColor('#666').text(`   Notes / 备注: ${record.notes}`);
           doc.fillColor('black');
         }
 
@@ -1152,13 +1148,13 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       doc.moveDown(0.5);
     }
 
-    // 缺陷记录
+    // Defect Records / 缺陷记录
     if (defects && defects.length > 0) {
       if (doc.y > 600) {
         doc.addPage();
       }
 
-      doc.fontSize(14).font('Chinese-Bold').text('缺陷记录 / Defect Records');
+      doc.fontSize(14).font('Helvetica-Bold').text('Defect Records / 缺陷记录');
       doc.moveDown(0.5);
 
       for (const defect of defects) {
@@ -1172,34 +1168,34 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
           minor: '#FFC107'
         };
 
-        doc.fontSize(10).font('Chinese-Bold');
+        doc.fontSize(10).font('Helvetica-Bold');
         doc.fillColor(severityColors[defect.severity] || '#808080');
         doc.text(`[${defect.severity?.toUpperCase() || 'N/A'}] ${defect.description || 'N/A'}`);
         doc.fillColor('black');
-        doc.fontSize(9).font('Chinese');
+        doc.fontSize(9).font('Helvetica');
         if (defect.location) {
-          doc.text(`   位置: ${defect.location}`);
+          doc.text(`   Location / 位置: ${defect.location}`);
         }
         if (defect.quantity) {
-          doc.text(`   数量: ${defect.quantity}`);
+          doc.text(`   Quantity / 数量: ${defect.quantity}`);
         }
         doc.moveDown(0.3);
       }
     }
 
-    // 报告底部
+    // Report Footer / 报告底部
     if (doc.y > 720) {
       doc.addPage();
     }
     doc.moveDown(2);
-    doc.fontSize(10).font('Chinese').fillColor('#666');
-    doc.text(`报告生成时间: ${new Date().toLocaleString('zh-CN')}`, { align: 'center' });
-    doc.text('本报告由验货系统自动生成', { align: 'center' });
+    doc.fontSize(10).font('Helvetica').fillColor('#666');
+    doc.text(`Generated / 生成时间: ${new Date().toLocaleString('en-US')}`, { align: 'center' });
+    doc.text('This report is automatically generated by the Inspection System / 本报告由验货系统自动生成', { align: 'center' });
     doc.fillColor('black');
 
     doc.end();
   } catch (err: any) {
-    console.error('生成 PDF 报告失败:', err);
+    console.error('PDF report generation failed / PDF报告生成失败:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
