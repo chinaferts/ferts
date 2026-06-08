@@ -28,16 +28,11 @@ const getImageUrl = (photo: string): string => {
     return photo;
   }
   
-  // 如果是本地文件 URI，检查是否为有效的本地路径
-  // 注意：file:///data/user/0/... 这样的路径在其他设备上无法访问
-  // 如果不是当前应用的缓存路径，则返回空字符串
+  // 如果是本地文件 URI（包括 file://、content://、ph://），直接返回
+  // 这些是设备本地路径，可能是当前设备拍摄的 photo:// 或文件路径
   if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
-    console.log('[getImageUrl] 本地文件 URI:', photo.substring(0, 50));
-    
-    // 在所有平台上，对于无法访问的本地路径都返回空字符串
-    // 这些照片可能是其他设备拍摄的本地路径，在当前设备上无法访问
-    console.log('[getImageUrl] 本地路径无法跨设备访问，返回空字符串');
-    return '';
+    console.log('[getImageUrl] 本地文件 URI，直接返回:', photo.substring(0, 50));
+    return photo;
   }
   
   // 如果是相对路径，拼接到服务器 URL
@@ -1596,12 +1591,10 @@ export default function InspectionDetailScreen() {
             {inspection.sample_size && (
               <View style={styles.basicInfoItem}>
                 <Text style={styles.basicInfoLabel}>抽样数量 / Sample Qty</Text>
-                <Text style={styles.basicInfoValue}>
-                  {inspection.sample_size}
-                  {inspection.accept_count !== undefined && inspection.reject_count !== undefined && (
-                    <Text> (允收 {inspection.accept_count} / 拒收 {inspection.reject_count})</Text>
-                  )}
-                </Text>
+                <Text style={styles.basicInfoValue}>{inspection.sample_size}</Text>
+                {inspection.accept_count !== undefined && inspection.reject_count !== undefined && (
+                  <Text style={styles.basicInfoValue}> (允收 {inspection.accept_count} / 拒收 {inspection.reject_count})</Text>
+                )}
               </View>
             )}
             {/* AQL质量等级 */}
