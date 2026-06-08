@@ -214,7 +214,7 @@ export default function InspectionDetailScreen() {
   // 相册权限
   const [mediaPermission, requestMediaPermission] = ImagePicker.useMediaLibraryPermissions();
   
-  // 从相册导入照片 - 逻辑和拍照一样：先添加到预览区，点"完成"再保存
+  // 从相册导入照片 - 逻辑和拍照一样
   const handleImportPhoto = async (item: ChecklistItem) => {
     const { granted } = await requestMediaPermission();
     if (!granted) {
@@ -222,9 +222,13 @@ export default function InspectionDetailScreen() {
       return;
     }
     
-    // 设置临时目标并清空临时照片（和拍照逻辑一致）
+    // 设置临时目标（保留之前保存的照片到临时预览区）
     setTempPhotoTarget(item);
-    setTempPhotos([]);
+    // 将之前保存的照片（从服务器加载的）加载到临时预览区
+    const previousPhotos = (item.photos || []).filter((p: string) => 
+      p && (p.startsWith('http://') || p.startsWith('https://'))
+    );
+    setTempPhotos(previousPhotos);
     
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -722,7 +726,11 @@ export default function InspectionDetailScreen() {
     
     // 设置临时目标
     setTempPhotoTarget(targetItem);
-    setTempPhotos([]);
+    // 将之前保存的照片（从服务器加载的）加载到临时预览区
+    const previousPhotos = (targetItem.photos || []).filter((p: string) => 
+      p && (p.startsWith('http://') || p.startsWith('https://'))
+    );
+    setTempPhotos(previousPhotos);
     // 打开相机
     setCameraVisible(true);
   };
