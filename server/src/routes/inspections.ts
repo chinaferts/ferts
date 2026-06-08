@@ -893,27 +893,24 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
       });
     }
 
-    // 尝试使用S3存储
-    let photoUrl = '';
-    try {
-      const { storage } = await import('../storage/s3.js');
-      const fileName = `${Date.now()}-${file.originalname}`;
-      // 上传到对象存储，获取 key
-      const key = await (storage as any).uploadFile({
-        fileContent: file.buffer,
-        fileName: fileName,
-        contentType: file.mimetype
-      });
-      // 生成可访问的预签名 URL
-      photoUrl = await (storage as any).generatePresignedUrl({ key });
-      console.log('[UPLOAD_PHOTO] S3 photo URL:', photoUrl);
-    } catch (storageError) {
-      console.error('S3存储失败:', storageError);
-      // 如果S3不可用，返回base64编码的数据
-      const base64 = file.buffer.toString('base64');
-      photoUrl = `data:${file.mimetype};base64,${base64}`;
+    // 保存照片到本地文件系统
+    const uploadDir = path.join(process.cwd(), 'uploads', 'photos');
+    const fileName = `${Date.now()}-${file.originalname}`;
+    const filePath = path.join(uploadDir, fileName);
+    
+    // 确保目录存在
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
-
+    
+    // 保存文件
+    fs.writeFileSync(filePath, file.buffer);
+    console.log('[UPLOAD_PHOTO] 文件已保存到:', filePath);
+    
+    // 生成访问URL（相对于 uploads 目录）
+    const photoUrl = `/uploads/photos/${fileName}`;
+    
+    // 如果 Supabase 配置了，保存到数据库；否则只返回本地URL
     const client = requireSupabaseClient();
     const { data, error } = await client
       .from('inspection_photos')

@@ -30,12 +30,12 @@ const getImageUrl = (photo: string): string => {
   
   // 如果是本地文件 URI，检查是否为有效的本地路径
   if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
-    console.log('[getImageUrl] 本地文件 URI:', photo);
+    console.log('[getImageUrl] 本地文件 URI（未上传到服务器）:', photo.substring(0, 50));
     
     // Web 环境下无法访问本地文件路径，返回占位图
     if (Platform.OS === 'web') {
       console.log('[getImageUrl] Web 环境，返回占位图');
-      return 'https://via.placeholder.com/200x200.png?text=No+Preview';
+      return '';
     }
     
     return photo;

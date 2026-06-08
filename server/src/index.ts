@@ -1,10 +1,16 @@
 import express from "express";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 import cors from "cors";
+import path from "path";
 import checklistsRouter from "./routes/checklists.js";
 import inspectionsRouter from "./routes/inspections.js";
 import defectsRouter from "./routes/defects.js";
 import photosRouter from "./routes/photos.js";
 import usersRouter from "./routes/users.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -13,6 +19,9 @@ const port = process.env.PORT || 9091;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Serve uploaded files as static
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Health check
 app.get('/api/v1/health', (req, res) => {
