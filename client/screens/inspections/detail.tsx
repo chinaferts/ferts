@@ -1809,6 +1809,18 @@ export default function InspectionDetailScreen() {
                             <Feather name="slash" size={16} color="#808080" />
                             <Text style={styles.naButtonText}>不适用</Text>
                           </TouchableOpacity>
+                          {/* 删除按钮 - 仅对新增的条码扫描项显示，放到不适用按钮后面 */}
+                          {isExtraItem && (
+                            <TouchableOpacity 
+                              style={[styles.actionButton, styles.removeIssueButton]}
+                              onPress={() => {
+                                setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
+                              }}
+                            >
+                              <Feather name="trash-2" size={16} color="#FF6B6B" />
+                              <Text style={styles.removeIssueText}>删除</Text>
+                            </TouchableOpacity>
+                          )}
                           {/* 条码分类显示扫码按钮 */}
                           {item.category === '条码扫描以及拍照' && (
                             <TouchableOpacity
@@ -1910,7 +1922,7 @@ export default function InspectionDetailScreen() {
                         </TouchableOpacity>
                       </View>
                     )}
-                    {/* 状态图标和删除按钮换一行显示 */}
+                    {/* 状态图标 */}
                     <View style={styles.checklistActionsRow}>
                       {item.status !== 'unchecked' && (
                         <View style={[styles.statusIcon, {
@@ -1919,17 +1931,6 @@ export default function InspectionDetailScreen() {
                           <Feather name={item.status === 'pass' ? 'check' : 'x'} size={16}
                             color={item.status === 'pass' ? '#00B894' : '#FF6B6B'} />
                         </View>
-                      )}
-                      {/* 删除按钮 - 仅对新增的条码扫描项显示 */}
-                      {isExtraItem && (
-                        <TouchableOpacity 
-                          style={styles.removeIssueButton} 
-                          onPress={() => {
-                            setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
-                          }}
-                        >
-                          <Feather name="x" size={16} color="#FF6B6B" />
-                        </TouchableOpacity>
                       )}
                     </View>
                   </View>
@@ -3795,13 +3796,19 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   removeIssueButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
     backgroundColor: 'rgba(255,107,107,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+  },
+  removeIssueText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF6B6B',
+    marginLeft: 4,
   },
   issueContent: {
     flexDirection: 'row',
