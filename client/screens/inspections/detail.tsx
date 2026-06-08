@@ -700,10 +700,54 @@ export default function InspectionDetailScreen() {
       const currentItem = currentInspection?.checklist_items.find(
         (i: any) => String(i.id) === String(item.id)
       );
-      const photosToSave = currentItem?.photos || item.photos || [];
+      let photosToSave = currentItem?.photos || item.photos || [];
       const barcodeCodesToSave = currentItem?.barcodeCodes || item.barcodeCodes || [];
       
       console.log('[PUT_REQUEST] record_id:', recordId, 'item.id:', item.id, 'item.record_id:', item.record_id);
+      
+      // 如果有本地照片（file:// 开头），需要先上传到服务器获取URL
+      const localPhotos = photosToSave.filter((p: string) => typeof p === 'string' && (p.startsWith('file:') || p.startsWith('content:')));
+      const serverPhotos = photosToSave.filter((p: string) => typeof p === 'string' && (p.startsWith('http://') || p.startsWith('https://')));
+      
+      if (localPhotos.length > 0) {
+        console.log('[PUT_REQUEST] Uploading', localPhotos.length, 'local photos to server...');
+        const uploadedUrls: string[] = [];
+        
+        for (const localUri of localPhotos) {
+          try {
+            const formData = new FormData();
+            const filename = localUri.split('/').pop() || `photo_${Date.now()}.jpg`;
+            formData.append('file', {
+              uri: localUri,
+              type: 'image/jpeg',
+              name: filename,
+            } as any);
+            formData.append('inspection_id', String(id));
+            formData.append('record_id', recordId);
+            formData.append('category', item.category || '');
+            formData.append('item_name', item.name);
+            
+            const uploadResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
+              method: 'POST',
+              body: formData,
+            });
+            
+            if (uploadResponse.ok) {
+              const uploadData = await uploadResponse.json();
+              const photoUrl = uploadData.data?.photo_url || uploadData.photo_url;
+              if (photoUrl) {
+                uploadedUrls.push(photoUrl);
+                console.log('[PUT_REQUEST] Uploaded photo URL:', photoUrl);
+              }
+            }
+          } catch (uploadError) {
+            console.error('[PUT_REQUEST] Failed to upload photo:', uploadError);
+          }
+        }
+        
+        // 合并服务器照片和之前已有的照片URL
+        photosToSave = [...serverPhotos, ...uploadedUrls];
+      }
       
       // 调试日志 - 显示要发送的数据
       console.log('[PUT_REQUEST] Sending to API:', {
