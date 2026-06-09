@@ -577,7 +577,17 @@ router.post('/', async (req: Request, res: Response) => {
       .select()
       .single();
 
-    if (inspectionError) throw inspectionError;
+    // 处理唯一约束冲突（如订单号重复）
+    if (inspectionError) {
+      const errorMsg = inspectionError.message || '';
+      if (errorMsg.includes('duplicate key') || errorMsg.includes('unique') || errorMsg.includes('order_number')) {
+        return res.status(400).json({
+          success: false,
+          error: `订单号 "${orderNo || orderNo || `AUTO-${Date.now()}`}" 已存在，请使用不同的订单号`
+        });
+      }
+      throw inspectionError;
+    }
 
     // 3. 复制清单项（包括嵌入式模板，使用数据库 checklist_id=11）
     if (effectiveChecklistId !== undefined && effectiveChecklistId !== null) {

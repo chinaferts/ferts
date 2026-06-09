@@ -383,10 +383,7 @@ export default function NewInspectionScreen() {
         router.replace('/inspections');
       } else {
         // 显示具体错误信息
-        let errorMsg = data.message || t('createInspectionFailed');
-        if (data.message?.includes('unique') || data.message?.includes('duplicate')) {
-          errorMsg = t('createInspectionFailed') + ': 订单号已存在';
-        }
+        const errorMsg = data.error || data.message || t('createInspectionFailed');
         Alert.alert(t('error'), errorMsg);
       }
     } catch (error) {
