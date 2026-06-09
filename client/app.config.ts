@@ -67,6 +67,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           "microphonePermission": `Qarma验货App需要访问麦克风以录制视频声音。`,
           "recordAudioAndroid": true
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": `允许Qarma验货App访问您的相册，以便保存验货照片。`,
+          "savePhotosPermission": `允许Qarma验货App保存照片到您的相册。`,
+          "isAccessMediaLocationEnabled": true
+        }
       ]
     ],
     "experiments": {
