@@ -223,6 +223,15 @@ def draw_checklist(c, width, margin, y, height, data):
         caiba_item = checklist_items.pop(caiba_index)
         checklist_items.insert(4, caiba_item)
     
+    # 将"问题统计以及拍照并描述"移到末尾
+    for i, item in enumerate(checklist_items):
+        item_name = item.get('name', item.get('item_name', ''))
+        if '问题统计' in item_name:
+            problem_item = checklist_items.pop(i)
+            checklist_items.append(problem_item)
+            print(f"[PDF] 移动检查项: {item_name} 到末尾")
+            break
+    
     categories = data.get('categories', [])
     
     # 照片配置
