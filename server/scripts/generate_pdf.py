@@ -142,8 +142,8 @@ def draw_summary(c, width, margin, y, data):
     
     return y
 
-def draw_photo(c, x, y, photo_path, max_width=40*mm, max_height=35*mm):
-    """绘制单张照片（压缩后），返回实际占用高度"""
+def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=40*mm):
+    """绘制单张照片，保持1600x1200分辨率，96DPI"""
     try:
         import io
         import uuid
@@ -164,7 +164,7 @@ def draw_photo(c, x, y, photo_path, max_width=40*mm, max_height=35*mm):
             with open(full_path, 'rb') as f:
                 img_data = f.read()
         
-        # 使用Pillow处理图片（压缩）
+        # 使用Pillow处理图片
         from PIL import Image
         img = Image.open(io.BytesIO(img_data))
         
@@ -172,20 +172,17 @@ def draw_photo(c, x, y, photo_path, max_width=40*mm, max_height=35*mm):
         if img.mode in ('RGBA', 'P'):
             img = img.convert('RGB')
         
-        img_width, img_height = img.size
+        # 调整为1600x1200分辨率
+        target_width = 1600
+        target_height = 1200
+        img = img.resize((target_width, target_height), Image.LANCZOS)
         
-        # 计算缩放比例
-        ratio = min(max_width / img_width, max_height / img_height)
-        if ratio < 1:  # 只有当图片大于目标尺寸时才缩放
-            new_width = int(img_width * ratio)
-            new_height = int(img_height * ratio)
-            img = img.resize((new_width, new_height), Image.LANCZOS)
+        draw_width = max_display_width
+        draw_height = max_display_height
         
-        draw_width, draw_height = img.size
-        
-        # 保存到临时文件
+        # 保存到临时文件（高分辨率）
         tmp_path = f'/tmp/pdf_photo_{uuid.uuid4().hex[:8]}.jpg'
-        img.save(tmp_path, 'JPEG', quality=60, optimize=True)
+        img.save(tmp_path, 'JPEG', quality=90, optimize=True)
         
         # 绘制压缩后的图片
         c.drawImage(tmp_path, x, y - draw_height, width=draw_width, height=draw_height)
