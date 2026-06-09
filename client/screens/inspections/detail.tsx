@@ -1950,7 +1950,7 @@ export default function InspectionDetailScreen() {
                 
                 const formData = new FormData();
                 formData.append('record_id', String(targetRecordId));
-                formData.append('photo', fileObj as any);
+                formData.append('file', fileObj as any);
                 
                 await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
                   method: 'POST',
