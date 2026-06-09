@@ -1373,11 +1373,35 @@ export default function InspectionDetailScreen() {
 
     // 移动端：保存到相册
     try {
-      console.log('[Export] 请求媒体库权限...');
-      const result = await MediaLibrary.requestPermissionsAsync();
-      console.log('[Export] 权限请求结果:', JSON.stringify(result));
+      console.log('[Export] 开始导出照片到相册...');
+      let permissionResult;
       
-      if (!result.granted) {
+      // 首先检查当前权限状态
+      try {
+        const currentPermission = await MediaLibrary.getPermissionsAsync();
+        console.log('[Export] 当前权限状态:', JSON.stringify(currentPermission));
+        
+        if (!currentPermission.granted) {
+          // 请求写入相册的权限
+          permissionResult = await MediaLibrary.requestPermissionsAsync();
+          console.log('[Export] 请求后的权限状态:', JSON.stringify(permissionResult));
+        } else {
+          permissionResult = currentPermission;
+        }
+      } catch (permError) {
+        console.error('[Export] 权限检查出错:', permError);
+        // 尝试直接请求权限
+        try {
+          permissionResult = await MediaLibrary.requestPermissionsAsync();
+        } catch (reqError) {
+          console.error('[Export] 请求权限失败:', reqError);
+          Alert.alert('导出失败', '无法获取相册访问权限，请检查应用权限设置');
+          return;
+        }
+      }
+      
+      if (!permissionResult?.granted) {
+        console.log('[Export] 权限未授权:', permissionResult);
         Alert.alert('提示', '需要相册权限才能保存照片，请在手机设置中开启相册访问权限');
         return;
       }
@@ -1401,17 +1425,29 @@ export default function InspectionDetailScreen() {
           const localFileUri = `${FileSystemAny.cacheDirectory}${filename}`;
 
           const downloadResult = await FileSystemAny.downloadAsync(photoUrl, localFileUri);
-          console.log(`[Export] 下载状态: ${downloadResult.status}`);
+          console.log(`[Export] 下载状态: ${downloadResult.status}, URI: ${downloadResult.uri}`);
           
           if (downloadResult.status === 200) {
-            const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-            console.log(`[Export] (Mobile) 第 ${i+1} 张保存成功`);
-            successCount++;
-            
+            // 确保 URI 格式正确，MediaLibrary.createAssetAsync 需要 file:// 前缀
+            let assetUri = downloadResult.uri;
+            if (!assetUri.startsWith('file://')) {
+              assetUri = `file://${assetUri}`;
+            }
             try {
-              await FileSystemAny.deleteAsync(localFileUri);
-            } catch (cleanupError) {
-              console.log('[Export] 清理缓存失败:', cleanupError);
+              const asset = await MediaLibrary.createAssetAsync(assetUri);
+              console.log(`[Export] (Mobile) 第 ${i+1} 张保存成功, asset:`, asset);
+              successCount++;
+              
+              try {
+                await FileSystemAny.deleteAsync(localFileUri);
+              } catch (cleanupError) {
+                console.log('[Export] 清理缓存失败:', cleanupError);
+              }
+            } catch (assetError) {
+              console.error(`[Export] (Mobile) 保存到相册失败:`, assetError);
+              const errorMessage = assetError instanceof Error ? assetError.message : '未知错误';
+              Alert.alert('导出失败', `保存照片时出错: ${errorMessage}`);
+              return; // 发生错误时直接返回，不再继续
             }
           } else {
             console.error(`[Export] (Mobile) 第 ${i+1} 张下载失败: HTTP ${downloadResult.status}`);
