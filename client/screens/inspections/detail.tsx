@@ -1252,121 +1252,162 @@ export default function InspectionDetailScreen() {
     ]);
   };
 
-  // 导出验货照片
+  // 导出验货照片（支持Web和移动端）
   const handleExportPhotos = async () => {
-    if (!inspection) return;
+    if (!inspection) {
+      Alert.alert('错误', '验货数据不存在');
+      return;
+    }
 
-    try {
-      // 收集所有照片
-      const allPhotos: string[] = [];
-      const photoMap: { [key: string]: string } = {};
-      (inspection.checklist_items || []).forEach(item => {
-        if (item.photos && item.photos.length > 0) {
-          item.photos.forEach((photo: string) => {
+    // 获取服务器地址
+    const serverBaseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+    if (!serverBaseUrl) {
+      Alert.alert('错误', '服务器地址未配置');
+      return;
+    }
+
+    // 收集所有照片
+    const allPhotos: string[] = [];
+    const photoMap: { [key: string]: string } = {};
+    (inspection.checklist_items || []).forEach(item => {
+      if (item.photos && item.photos.length > 0) {
+        item.photos.forEach((photo: string) => {
+          if (!photoMap[photo]) {
+            photoMap[photo] = item.name || item.category || '未知';
+            allPhotos.push(photo);
+          }
+        });
+      }
+    });
+
+    // 也收集缺陷照片
+    if (inspection.defects && inspection.defects.length > 0) {
+      inspection.defects.forEach((defect: any) => {
+        if (defect.photos && defect.photos.length > 0) {
+          defect.photos.forEach((photo: string) => {
             if (!photoMap[photo]) {
-              photoMap[photo] = item.name || item.category || '未知';
+              photoMap[photo] = '缺陷记录';
               allPhotos.push(photo);
             }
           });
         }
       });
+    }
 
-      if (allPhotos.length === 0) {
-        Alert.alert('提示', '暂无照片可导出');
-        return;
-      }
+    if (allPhotos.length === 0) {
+      Alert.alert('提示', '暂无照片可导出');
+      return;
+    }
 
-      // 请求媒体库权限
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('提示', '需要相册权限才能保存照片');
-        return;
-      }
+    console.log(`[Export] 找到 ${allPhotos.length} 张照片待导出`);
 
-      Alert.alert('导出照片', `正在导出 ${allPhotos.length} 张照片...`);
-
+    // Web端：逐个下载并通过浏览器下载
+    if (Platform.OS === 'web') {
+      Alert.alert('导出照片', `正在导出 ${allPhotos.length} 张照片，请在浏览器中允许下载...`);
+      
       let successCount = 0;
-      let failCount = 0;
-
-      // 下载并保存每张照片
-      const FileSystemAny = FileSystem as any;
       for (let i = 0; i < allPhotos.length; i++) {
         const photo = allPhotos[i];
         try {
-          // 统一转换照片URL为完整路径
-          const photoUrl = getImageUrl(photo);
-          console.log(`[Export] 正在下载第 ${i+1}/${allPhotos.length} 张照片: ${photoUrl}`);
+          const photoUrl = photo.startsWith('/') 
+            ? `${serverBaseUrl}${photo}` 
+            : `${serverBaseUrl}/${photo}`;
           
-          // 处理远程照片 (http/https)
-          if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-            const filename = photo.split('/').pop() || `inspection_${Date.now()}_${i}.jpg`;
-            const fileUri = `${FileSystemAny.cacheDirectory}${filename}`;
-
-            // 下载照片
-            const downloadResult = await FileSystemAny.downloadAsync(photoUrl, fileUri);
-            console.log(`[Export] 下载结果: status=${downloadResult.status}, uri=${downloadResult.uri}`);
-            
-            if (downloadResult.status === 200) {
-              // 保存到相册
-              try {
-                const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-                console.log(`[Export] 保存到相册成功: ${asset.uri}`);
-                successCount++;
-              } catch (mediaErr) {
-                console.error('[Export] 保存到相册失败:', mediaErr);
-                // 如果MediaLibrary不可用，尝试使用Sharing分享
-                if (Platform.OS !== 'web' && await Sharing.isAvailableAsync()) {
-                  try {
-                    await Sharing.shareAsync(downloadResult.uri, {
-                      mimeType: 'image/jpeg',
-                      dialogTitle: '分享验货照片'
-                    });
-                    console.log('[Export] 已分享照片');
-                    successCount++;
-                  } catch {
-                    failCount++;
-                  }
-                } else {
-                  failCount++;
-                }
-              }
-            } else {
-              console.error('[Export] 下载失败, status:', downloadResult.status);
-              failCount++;
-            }
-          } else if (photoUrl.startsWith('file:') || photoUrl.startsWith('content:') || photoUrl.startsWith('ph://')) {
-            // 本地照片直接保存
-            try {
-              const asset = await MediaLibrary.createAssetAsync(photoUrl);
-              successCount++;
-            } catch (localErr) {
-              console.error('[Export] 保存本地照片失败:', localErr);
-              failCount++;
-            }
-          } else {
-            // 其他情况，尝试直接保存
-            try {
-              const asset = await MediaLibrary.createAssetAsync(photoUrl);
-              successCount++;
-            } catch {
-              console.error('[Export] 保存照片失败，无法识别的格式');
-              failCount++;
-            }
-          }
+          console.log(`[Export] (Web) 下载第 ${i+1}/${allPhotos.length}: ${photoUrl}`);
+          
+          // 使用fetch下载图片
+          const response = await fetch(photoUrl);
+          const blob = await response.blob();
+          
+          // 创建下载链接
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const filename = photo.split('/').pop() || `inspection_${Date.now()}_${i}.jpg`;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          
+          successCount++;
+          console.log(`[Export] (Web) 第 ${i+1} 张下载成功`);
         } catch (err) {
-          console.error('[Export] 单张照片保存失败:', photo, err);
-          failCount++;
+          console.error(`[Export] (Web) 第 ${i+1} 张下载失败:`, err);
         }
       }
 
       if (successCount > 0) {
-        Alert.alert('导出成功', `已保存 ${successCount} 张照片到相册`);
+        Alert.alert('导出完成', `已触发下载 ${successCount} 张照片`);
       } else {
-        Alert.alert('导出失败', `无法保存照片，请检查网络连接`);
+        Alert.alert('导出失败', '请检查网络连接后重试');
+      }
+      return;
+    }
+
+    // 移动端：保存到相册
+    try {
+      // 请求媒体库权限
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        const result = await MediaLibrary.requestPermissionsAsync();
+        if (result.status !== 'granted') {
+          Alert.alert('提示', '需要相册权限才能保存照片，请在设置中开启权限');
+          return;
+        }
+      }
+
+      Alert.alert('导出照片', `正在导出 ${allPhotos.length} 张照片，请稍候...`);
+
+      let successCount = 0;
+      let failCount = 0;
+      const FileSystemAny = FileSystem as any;
+
+      for (let i = 0; i < allPhotos.length; i++) {
+        const photo = allPhotos[i];
+        try {
+          const photoUrl = photo.startsWith('/') 
+            ? `${serverBaseUrl}${photo}` 
+            : `${serverBaseUrl}/${photo}`;
+          
+          console.log(`[Export] (Mobile) 下载第 ${i+1}/${allPhotos.length}: ${photoUrl}`);
+          
+          const filename = photo.split('/').pop() || `inspection_${Date.now()}_${i}.jpg`;
+          const localFileUri = `${FileSystemAny.cacheDirectory}${filename}`;
+
+          const downloadResult = await FileSystemAny.downloadAsync(photoUrl, localFileUri);
+          
+          if (downloadResult.status === 200) {
+            const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
+            console.log(`[Export] (Mobile) 第 ${i+1} 张保存成功`);
+            successCount++;
+            
+            // 清理缓存
+            try {
+              await FileSystemAny.deleteAsync(localFileUri);
+            } catch {}
+          } else {
+            console.error(`[Export] (Mobile) 第 ${i+1} 张下载失败: HTTP ${downloadResult.status}`);
+            failCount++;
+          }
+        } catch (err) {
+          console.error(`[Export] (Mobile) 第 ${i+1} 张失败:`, err);
+          failCount++;
+        }
+        
+        if (i < allPhotos.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+
+      if (successCount > 0) {
+        Alert.alert('导出完成', `成功保存 ${successCount} 张照片${failCount > 0 ? `，${failCount} 张失败` : ''}`);
+      } else {
+        Alert.alert('导出失败', '请检查网络连接后重试');
       }
     } catch (error) {
-      console.error('[Export] Export photos error:', error);
-      Alert.alert('错误', '导出照片失败');
+      console.error('[Export] 导出照片失败:', error);
+      Alert.alert('导出失败', '请重试');
     }
   };
 
