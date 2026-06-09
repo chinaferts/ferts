@@ -1169,6 +1169,18 @@ export default function InspectionDetailScreen() {
     
     setInspection(prev => prev ? { ...prev, checklist_items: updatedItemsWithStatus || [] } : null);
     
+    // 同时更新 barcodeItems 状态，确保条码检查项的照片能显示
+    if (tempPhotoTarget) {
+      const targetRecordId = String(tempPhotoTarget.record_id || tempPhotoTarget.id);
+      setBarcodeItems(prev => prev.map(item => {
+        const itemRecordId = String(item.record_id || item.id);
+        if (itemRecordId === targetRecordId) {
+          return { ...item, photos: allPhotos };
+        }
+        return item;
+      }));
+    }
+    
     // 清除临时状态
     setTempPhotoTarget(null);
     setTempPhotos([]);
