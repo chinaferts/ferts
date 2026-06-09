@@ -1340,6 +1340,99 @@ export default function InspectionDetailScreen() {
 
   const doSubmit = async (result: 'pass' | 'fail') => {
     try {
+      // 先上传所有本地照片到服务器
+      if (inspection?.checklist_items) {
+        const allLocalPhotos: { recordId: number; localPath: string }[] = [];
+        
+        // 收集所有本地路径照片
+        inspection.checklist_items.forEach(item => {
+          if (item.photos && item.photos.length > 0) {
+            item.photos.forEach((photo: string) => {
+              if (photo.startsWith('file:') || photo.startsWith('content:')) {
+                allLocalPhotos.push({ recordId: item.id, localPath: photo });
+              }
+            });
+          }
+        });
+
+        // 上传本地照片
+        if (allLocalPhotos.length > 0) {
+          Alert.alert(t('uploading'), `${t('uploadingPhotos')} ${allLocalPhotos.length} ${t('count')}`);
+          
+          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+          const uploadedPhotos: { [recordId: number]: string[] } = {};
+          
+          for (const { recordId, localPath } of allLocalPhotos) {
+            try {
+              // 读取本地文件
+              const FileSystemAny = FileSystem as any;
+              const fileInfo = await FileSystemAny.getInfoAsync(localPath);
+              if (!fileInfo.exists) continue;
+              
+              const fileData = await FileSystemAny.readAsStringAsync(localPath, {
+                encoding: FileSystemAny.EncodingType.Base64,
+              });
+              
+              // 创建 FormData
+              const filename = localPath.split('/').pop() || `photo_${Date.now()}.jpg`;
+              const formData = new FormData();
+              formData.append('file', {
+                uri: localPath,
+                name: filename,
+                type: 'image/jpeg',
+              } as any);
+              
+              // 上传到服务器
+              const uploadRes = await fetch(`${baseUrl}/api/v1/upload/photo`, {
+                method: 'POST',
+                body: formData,
+              });
+              
+              if (uploadRes.ok) {
+                const uploadData = await uploadRes.json();
+                const serverPath = uploadData.path || uploadData.url;
+                
+                // 收集上传成功的照片
+                if (!uploadedPhotos[recordId]) {
+                  uploadedPhotos[recordId] = [];
+                }
+                uploadedPhotos[recordId].push(serverPath);
+              }
+            } catch (uploadError) {
+              console.error('Upload photo failed:', uploadError);
+            }
+          }
+          
+          // 更新数据库中的照片路径
+          for (const [recordId, serverPaths] of Object.entries(uploadedPhotos)) {
+            if (serverPaths.length > 0) {
+              const item = inspection.checklist_items.find(i => i.id === Number(recordId));
+              if (item && item.photos) {
+                // 合并服务器路径和本地路径
+                const updatedPhotos = [...item.photos];
+                serverPaths.forEach(serverPath => {
+                  // 移除对应的本地路径，添加服务器路径
+                  const localIndex = updatedPhotos.findIndex(p => 
+                    p.startsWith('file:') || p.startsWith('content:')
+                  );
+                  if (localIndex !== -1) {
+                    updatedPhotos.splice(localIndex, 1, serverPath);
+                  }
+                });
+                
+                // 更新到服务器
+                await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items/${recordId}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ photos: updatedPhotos }),
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // 提交验货结果
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/submit`, {
         method: 'POST',

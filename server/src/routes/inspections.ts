@@ -76,10 +76,36 @@ router.get('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: mockData });
     }
     
+    // 获取所有验货的照片信息
+    const inspectionIds = data.map((item: any) => item.id);
+    const { data: recordsData } = await client!
+      .from('inspection_records')
+      .select('inspection_id, photos')
+      .in('inspection_id', inspectionIds);
+    
+    // 整理照片信息
+    const photosMap: { [key: number]: string[] } = {};
+    if (recordsData) {
+      for (const record of recordsData) {
+        if (record.photos && Array.isArray(record.photos)) {
+          if (!photosMap[record.inspection_id]) {
+            photosMap[record.inspection_id] = [];
+          }
+          photosMap[record.inspection_id].push(...record.photos);
+        }
+      }
+    }
+    
+    // 将照片信息添加到验货数据中
+    const dataWithPhotos = data.map((item: any) => ({
+      ...item,
+      photos: photosMap[item.id] || []
+    }));
+    
     // 合并 Supabase 数据和通用模板 mock 数据，避免重复
-    const supabaseIds = new Set(data.map((item: any) => item.id));
+    const supabaseIds = new Set(dataWithPhotos.map((item: any) => item.id));
     const mergedData = [
-      ...data,
+      ...dataWithPhotos,
       ...mockUniversalData.filter((item: any) => !supabaseIds.has(item.id))
     ];
     

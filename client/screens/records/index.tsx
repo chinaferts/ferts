@@ -1,11 +1,29 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, RefreshControl, Image } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect } from 'expo-router';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+
+// 获取图片完整URL
+const getImageUrl = (photoPath: string): string => {
+  if (!photoPath) return '';
+  // 如果是完整URL直接返回
+  if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+    return photoPath;
+  }
+  // 如果是服务器路径，拼接服务器地址
+  if (photoPath.startsWith('/uploads/')) {
+    return `https://6458c7a8-0b18-46c1-a294-8cd82523b342.dev.coze.site${photoPath}`;
+  }
+  // 本地路径直接返回
+  if (photoPath.startsWith('file://') || photoPath.startsWith('content://')) {
+    return photoPath;
+  }
+  return photoPath;
+};
 
 interface InspectionReport {
   id: number;
@@ -20,6 +38,7 @@ interface InspectionReport {
   passedItems: number;
   failedItems: number;
   notes?: string;
+  photos?: string[]; // 照片列表
 }
 
 interface FilterButtonProps {
@@ -115,6 +134,7 @@ export default function RecordsScreen() {
             passedItems,
             failedItems,
             notes: item.notes || item.submit_notes || '',
+            photos: item.photos || [], // 保存照片列表
           };
         });
         setRecords(mapped);
@@ -174,6 +194,9 @@ export default function RecordsScreen() {
 
   const renderRecord = ({ item }: { item: InspectionReport }) => {
     const statusConfig = getStatusConfig(item.status);
+    // 获取前3张照片用于预览
+    const previewPhotos = (item.photos || []).slice(0, 3);
+    const photoCount = (item.photos || []).length;
     
     return (
       <TouchableOpacity 
@@ -210,6 +233,28 @@ export default function RecordsScreen() {
               </View>
             </View>
           </View>
+          
+          {/* 照片预览 */}
+          {photoCount > 0 && (
+            <View style={styles.photoPreviewContainer}>
+              <View style={styles.photoPreviewRow}>
+                {previewPhotos.map((photo, index) => (
+                  <Image
+                    key={index}
+                    source={{ uri: getImageUrl(photo) }}
+                    style={styles.photoThumbnail}
+                    resizeMode="cover"
+                  />
+                ))}
+                {photoCount > 3 && (
+                  <View style={styles.morePhotosBadge}>
+                    <Text style={styles.morePhotosText}>+{photoCount - 3}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.photoCountText}>{photoCount} 张照片 / {photoCount} photos</Text>
+            </View>
+          )}
         
           <View style={styles.cardStats}>
             <View style={styles.statItem}>
@@ -482,6 +527,38 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     marginBottom: 12,
+  },
+  // 照片预览样式
+  photoPreviewContainer: {
+    marginBottom: 12,
+  },
+  photoPreviewRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 6,
+  },
+  photoThumbnail: {
+    width: 80,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#E8E8E8',
+  },
+  morePhotosBadge: {
+    width: 80,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  morePhotosText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  photoCountText: {
+    fontSize: 12,
+    color: '#636E72',
   },
   productName: {
     fontSize: 15,

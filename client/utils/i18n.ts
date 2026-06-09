@@ -263,6 +263,9 @@ export const translations = {
     confirmSubmit: '确认提交',
     continueCheck: '继续检查',
     defectDescriptionPlaceholder: '请详细描述问题...',
+    uploading: '正在上传',
+    uploadingPhotos: '正在上传照片',
+    count: '张',
 
     // Other
     featureComingSoon: '功能即将上线',
@@ -660,6 +663,9 @@ export const translations = {
     confirmSubmit: 'Confirm Submit',
     continueCheck: 'Continue Check',
     defectDescriptionPlaceholder: 'Please describe the problem in detail...',
+    uploading: 'Uploading',
+    uploadingPhotos: 'Uploading photos',
+    count: '',
 
     // Inspection List
     inspectionTasks: 'Inspection Tasks',
