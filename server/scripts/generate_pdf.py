@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 验货报告PDF生成脚本 - 使用reportlab支持中文
-优化版本：包含完整表头信息和检验标准
+包含照片显示功能
 """
 import sys
 import json
@@ -16,6 +16,23 @@ from reportlab.lib import colors
 # 注册中文字体
 FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'
 pdfmetrics.registerFont(TTFont('ChineseFont', FONT_PATH))
+
+# 服务器uploads目录基础路径
+UPLOADS_BASE_PATH = '/workspace/projects/server/uploads'
+
+def get_full_photo_path(photo_path):
+    """将相对路径转换为完整路径"""
+    if not photo_path:
+        return None
+    
+    # 如果是完整路径，直接返回
+    if photo_path.startswith('/workspace') or photo_path.startswith('http'):
+        return photo_path
+    
+    # 相对路径，拼接基础路径
+    clean_path = photo_path.lstrip('/')
+    full_path = os.path.join(UPLOADS_BASE_PATH, clean_path)
+    return full_path
 
 def draw_header(c, width, margin, data):
     """绘制报告头部区域"""
@@ -94,7 +111,6 @@ def draw_summary(c, width, margin, y, data):
     fail_count = summary.get('fail', 0)
     na_count = summary.get('na', 0)
     pending_count = summary.get('pending', 0)
-    total = pass_count + fail_count + na_count + pending_count
     
     # 汇总统计框
     box_y = y - 15 * mm
@@ -126,24 +142,67 @@ def draw_summary(c, width, margin, y, data):
     
     return y
 
+def draw_photo(c, x, y, photo_path, max_width=40*mm, max_height=35*mm):
+    """绘制单张照片，返回实际占用高度"""
+    try:
+        # 获取完整路径
+        full_path = get_full_photo_path(photo_path)
+        if not full_path:
+            return 0
+        
+        # 检查文件是否存在
+        if not os.path.exists(full_path):
+            print(f"照片文件不存在: {full_path}")
+            return 0
+        
+        # 获取图片尺寸
+        from PIL import Image
+        img = Image.open(full_path)
+        img_width, img_height = img.size
+        
+        # 计算缩放比例
+        ratio = min(max_width / img_width, max_height / img_height)
+        draw_width = img_width * ratio
+        draw_height = img_height * ratio
+        
+        # 绘制图片
+        c.drawImage(full_path, x, y - draw_height, width=draw_width, height=draw_height)
+        
+        # 绘制边框
+        c.setStrokeColor(colors.HexColor('#E5E7EB'))
+        c.setLineWidth(0.5)
+        c.rect(x, y - draw_height, draw_width, draw_height)
+        
+        return draw_height
+    except Exception as e:
+        print(f"绘制照片失败 {photo_path}: {e}")
+        return 0
+
 def draw_checklist(c, width, margin, y, height, data):
-    """绘制检查项列表"""
+    """绘制检查项列表（包含照片）"""
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#4F46E5'))
     c.drawString(margin, y, '【 检验项目 / Inspection Items 】')
     y -= 6 * mm
     
     checklist_items = data.get('checklist_items', [])
-    
-    # 分组显示 - 按分类
     categories = data.get('categories', [])
+    
+    # 照片配置
+    photo_max_width = 45 * mm
+    photo_max_height = 40 * mm
+    photo_spacing = 3 * mm
+    
+    def check_page_break(required_height):
+        nonlocal y
+        if y < margin + required_height:
+            c.showPage()
+            y = height - margin
     
     if categories:
         # 按分类显示
         for category in categories:
-            if y < margin + 30 * mm:
-                c.showPage()
-                y = height - margin
+            check_page_break(15 * mm)
             
             # 分类标题
             c.setFont('ChineseFont', 10)
@@ -154,13 +213,16 @@ def draw_checklist(c, width, margin, y, height, data):
             # 该分类下的检查项
             category_items = [item for item in checklist_items if item.get('category') == category]
             for item in category_items:
-                if y < margin + 25 * mm:
-                    c.showPage()
-                    y = height - margin
-                
                 item_name = item.get('item_name', item.get('name', 'N/A'))
                 description = item.get('description', '')
                 result = item.get('status', item.get('result', 'pending'))
+                photos = item.get('photos', []) or []
+                
+                # 估算需要的高度：名称(4mm) + 描述(4mm) + 照片行(如果有多张照片)
+                required = 8 * mm
+                if photos:
+                    required += photo_max_height + 5 * mm
+                check_page_break(required)
                 
                 # 状态颜色
                 status_colors = {
@@ -185,31 +247,47 @@ def draw_checklist(c, width, margin, y, height, data):
                 if description:
                     c.setFont('ChineseFont', 8)
                     c.setFillColor(colors.HexColor('#6B7280'))
-                    # 截断过长的描述
-                    desc = description[:60] + '...' if len(description) > 60 else description
+                    desc = description[:50] + '...' if len(description) > 50 else description
                     c.drawString(margin + 10*mm, y, f'检验标准: {desc}')
                     y -= 4 * mm
                 
-                # 照片
-                photos = item.get('photos', [])
+                # 绘制照片
                 if photos:
-                    photo_count = len(photos)
                     c.setFont('ChineseFont', 8)
                     c.setFillColor(colors.HexColor('#4F46E5'))
-                    c.drawString(margin + 10*mm, y, f'📷 {photo_count}张照片')
+                    c.drawString(margin + 10*mm, y, f'📷 {len(photos)}张照片')
                     y -= 4 * mm
+                    
+                    # 计算每行能放多少张照片
+                    content_width = width - 2 * margin - 10 * mm
+                    photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
+                    
+                    photo_y = y - photo_max_height
+                    for i, photo_path in enumerate(photos):
+                        photo_x = margin + 10*mm + (i % photos_per_row) * (photo_max_width + photo_spacing)
+                        
+                        # 如果当前行放不下，换行
+                        if i > 0 and i % photos_per_row == 0:
+                            photo_y -= photo_max_height + photo_spacing
+                            check_page_break(photo_max_height + 10 * mm)
+                        
+                        draw_photo(c, photo_x, photo_y + photo_max_height, photo_path, photo_max_width, photo_max_height)
+                    
+                    y = photo_y - 5 * mm
                 
-                y -= 2 * mm
+                y -= 3 * mm
     else:
         # 无分类，直接显示
         for item in checklist_items:
-            if y < margin + 25 * mm:
-                c.showPage()
-                y = height - margin
-            
             item_name = item.get('item_name', item.get('name', 'N/A'))
             description = item.get('description', '')
             result = item.get('status', item.get('result', 'pending'))
+            photos = item.get('photos', []) or []
+            
+            required = 8 * mm
+            if photos:
+                required += photo_max_height + 5 * mm
+            check_page_break(required)
             
             status_colors = {
                 'pass': ('✓ 通过', '#10B981'),
@@ -230,18 +308,32 @@ def draw_checklist(c, width, margin, y, height, data):
             if description:
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#6B7280'))
-                desc = description[:60] + '...' if len(description) > 60 else description
+                desc = description[:50] + '...' if len(description) > 50 else description
                 c.drawString(margin + 10*mm, y, f'检验标准: {desc}')
                 y -= 4 * mm
             
-            photos = item.get('photos', [])
             if photos:
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#4F46E5'))
                 c.drawString(margin + 10*mm, y, f'📷 {len(photos)}张照片')
                 y -= 4 * mm
+                
+                content_width = width - 2 * margin - 10 * mm
+                photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
+                
+                photo_y = y - photo_max_height
+                for i, photo_path in enumerate(photos):
+                    photo_x = margin + 10*mm + (i % photos_per_row) * (photo_max_width + photo_spacing)
+                    
+                    if i > 0 and i % photos_per_row == 0:
+                        photo_y -= photo_max_height + photo_spacing
+                        check_page_break(photo_max_height + 10 * mm)
+                    
+                    draw_photo(c, photo_x, photo_y + photo_max_height, photo_path, photo_max_width, photo_max_height)
+                
+                y = photo_y - 5 * mm
             
-            y -= 2 * mm
+            y -= 3 * mm
     
     y -= 5 * mm
     return y
@@ -312,7 +404,7 @@ def generate_inspection_pdf(data, output_path):
     # 绘制汇总
     y = draw_summary(c, width, margin, y, data)
     
-    # 绘制检查项
+    # 绘制检查项（包含照片）
     y = draw_checklist(c, width, margin, y, height, data)
     
     # 绘制缺陷记录
