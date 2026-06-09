@@ -429,9 +429,9 @@ export default function InspectionDetailScreen() {
     return count + (item.photos?.filter((p: string) => p.startsWith('file:') || p.startsWith('content://')).length || 0);
   }, 0) || 0;
 
-  // 同步本地照片到服务器
+  // 同步本地照片到服务器（自动调用，静默同步）
   const syncPhotosToServer = async () => {
-    if (!inspection?.checklist_items || isSyncingPhotos) return;
+    if (!inspection?.checklist_items || isSyncingPhotosRef.current) return;
 
     // 收集所有需要同步的本地照片
     const photosToSync: Array<{ itemRecordId: number; photoUri: string; itemIndex: number; photoIndex: number }> = [];
@@ -444,66 +444,62 @@ export default function InspectionDetailScreen() {
     });
 
     if (photosToSync.length === 0) {
-      Alert.alert('提示', '没有需要同步的照片');
-      return;
+      return; // 没有本地照片需要同步
     }
 
+    isSyncingPhotosRef.current = true;
     setIsSyncingPhotos(true);
     setSyncProgress({ current: 0, total: photosToSync.length });
 
-    const updatedItems = JSON.parse(JSON.stringify(inspection.checklist_items)); // 深拷贝
+    const updatedItems = JSON.parse(JSON.stringify(inspection.checklist_items));
 
     try {
       for (let i = 0; i < photosToSync.length; i++) {
         const { itemRecordId, photoUri, itemIndex, photoIndex } = photosToSync[i];
         setSyncProgress({ current: i + 1, total: photosToSync.length });
 
-        // 上传照片
-        const filename = photoUri.split('/').pop() || `photo_${Date.now()}.jpg`;
-        const extMatch = /\.(\w+)$/.exec(filename);
-        const ext = extMatch ? extMatch[1] : 'jpg';
+        try {
+          // 读取本地照片文件并转换为Base64
+          const base64Data = await (FileSystem as any).readAsStringAsync(photoUri, {
+            encoding: (FileSystem as any).EncodingType.Base64,
+          });
 
-        const formData = new FormData();
-        formData.append('file', {
-          uri: photoUri,
-          name: filename,
-          type: `image/${ext}`,
-        } as any);
-        formData.append('inspection_id', String(id));
-        formData.append('record_id', String(itemRecordId));
-        formData.append('category', updatedItems[itemIndex].category || updatedItems[itemIndex].name);
-        formData.append('item_name', updatedItems[itemIndex].name);
+          // 获取文件扩展名
+          const filename = photoUri.split('/').pop() || `photo_${Date.now()}.jpg`;
+          const extMatch = /\.(\w+)$/.exec(filename);
+          const ext = extMatch ? extMatch[1].toLowerCase() : 'jpg';
+          const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+          const base64WithPrefix = `data:${mimeType};base64,${base64Data}`;
 
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
-          method: 'POST',
-          body: formData,
-        });
+          // 调用后端导入接口
+          const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/import-photo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              photoData: base64WithPrefix,
+              recordId: itemRecordId,
+              oldPhotoPath: photoUri,
+            }),
+          });
 
-        if (response.ok) {
-          const result = await response.json();
-          const serverUrl = result.data?.photo_url;
-
-          if (serverUrl) {
-            // 替换本地路径为服务器路径
-            updatedItems[itemIndex].photos[photoIndex] = serverUrl;
-
-            // 更新数据库
-            await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${itemRecordId}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ photos: updatedItems[itemIndex].photos }),
-            });
+          if (response.ok) {
+            const result = await response.json();
+            if (result.serverPath) {
+              // 替换本地路径为服务器路径
+              updatedItems[itemIndex].photos[photoIndex] = result.serverPath;
+            }
           }
+        } catch (readError) {
+          console.error('[AutoSync] 读取照片失败:', photoUri, readError);
         }
       }
 
       // 更新前端状态
       setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
-      Alert.alert('成功', `已同步 ${photosToSync.length} 张照片到服务器`);
     } catch (error) {
-      console.error('同步照片失败:', error);
-      Alert.alert('错误', '同步照片失败，请重试');
+      console.error('[AutoSync] 同步失败:', error);
     } finally {
+      isSyncingPhotosRef.current = false;
       setIsSyncingPhotos(false);
       setSyncProgress({ current: 0, total: 0 });
     }

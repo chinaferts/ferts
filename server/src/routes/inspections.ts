@@ -29,6 +29,90 @@ import {
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+// 确保上传目录存在
+const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// 接收Base64照片并保存到服务器
+router.post('/import-photo', async (req: Request, res: Response) => {
+  try {
+    const { photoData, recordId, oldPhotoPath } = req.body;
+    
+    if (!photoData) {
+      return res.status(400).json({ success: false, error: '缺少照片数据' });
+    }
+    
+    // 解析Base64数据
+    const base64Data = photoData.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    // 检测图片类型
+    let extension = '.jpg';
+    if (photoData.startsWith('data:image/png')) {
+      extension = '.png';
+    } else if (photoData.startsWith('data:image/webp')) {
+      extension = '.webp';
+    }
+    
+    // 生成唯一文件名
+    const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}${extension}`;
+    const filePath = path.join(uploadsDir, filename);
+    
+    // 保存文件
+    fs.writeFileSync(filePath, buffer);
+    
+    // 返回服务器路径（相对于uploads目录）
+    const serverPath = `/uploads/photos/${filename}`;
+    
+    // 如果提供了recordId和旧照片路径，更新数据库
+    if (recordId && isSupabaseConfigured()) {
+      try {
+        const client = requireSupabaseClient();
+        
+        // 获取当前照片列表
+        const { data: record } = await client
+          .from('inspection_records')
+          .select('photos')
+          .eq('id', recordId)
+          .single();
+        
+        if (record) {
+          let photos = [];
+          try {
+            photos = JSON.parse(record.photos || '[]');
+          } catch (e) {
+            photos = [];
+          }
+          
+          // 如果有旧照片路径，替换它
+          if (oldPhotoPath && photos.includes(oldPhotoPath)) {
+            const index = photos.indexOf(oldPhotoPath);
+            photos[index] = serverPath;
+          } else if (!photos.includes(serverPath)) {
+            photos.push(serverPath);
+          }
+          
+          // 更新数据库
+          await client
+            .from('inspection_records')
+            .update({ photos: JSON.stringify(photos) })
+            .eq('id', recordId);
+        }
+      } catch (dbError) {
+        console.error('更新照片路径失败:', dbError);
+        // 即使数据库更新失败，文件已保存
+      }
+    }
+    
+    res.json({ success: true, serverPath });
+  } catch (error) {
+    console.error('导入照片失败:', error);
+    res.status(500).json({ success: false, error: '导入照片失败' });
+  }
+});
+
 // 获取验货列表
 router.get('/', async (req: Request, res: Response) => {
   try {
