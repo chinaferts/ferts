@@ -422,6 +422,7 @@ export default function InspectionDetailScreen() {
   // 照片同步状态
   const [isSyncingPhotos, setIsSyncingPhotos] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
+  const isSyncingPhotosRef = useRef(false);
 
   // 检查是否有本地路径照片需要同步
   const localPhotosCount = inspection?.checklist_items?.reduce((count: number, item: ChecklistItem) => {
@@ -739,6 +740,90 @@ export default function InspectionDetailScreen() {
       fetchInspection();
     }, [id])
   );
+
+  // 自动同步本地照片到服务器（已完成的验货自动同步）
+  useEffect(() => {
+    if (!inspection || !id) {
+      console.log('[AutoSync] 未执行: inspection或id为空');
+      return;
+    }
+    
+    // 只对已完成的验货自动同步
+    if (inspection.status !== 'completed') {
+      console.log('[AutoSync] 未执行: 状态不是completed, 当前状态:', inspection.status);
+      return;
+    }
+    
+    // 检查是否有本地照片需要同步
+    const photosToSync: Array<{ itemRecordId: number; photoUri: string; itemIndex: number; photoIndex: number }> = [];
+    (inspection.checklist_items || []).forEach((item: ChecklistItem, itemIndex: number) => {
+      (item.photos || []).forEach((photo: string, photoIndex: number) => {
+        if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
+          photosToSync.push({ itemRecordId: item.record_id, photoUri: photo, itemIndex, photoIndex });
+        }
+      });
+    });
+
+    console.log('[AutoSync] 发现本地照片:', photosToSync.length, '张');
+
+    if (photosToSync.length === 0) return;
+
+    // 静默同步，不显示弹窗
+    const doSync = async () => {
+      if (isSyncingPhotosRef.current) return;
+      isSyncingPhotosRef.current = true;
+      setIsSyncingPhotos(true);
+      const updatedItems = JSON.parse(JSON.stringify(inspection.checklist_items));
+
+      try {
+        console.log('[AutoSync] 开始同步...');
+        for (let i = 0; i < photosToSync.length; i++) {
+          const { itemRecordId, photoUri, itemIndex, photoIndex } = photosToSync[i];
+          console.log(`[AutoSync] 同步第 ${i + 1}/${photosToSync.length} 张`);
+          const filename = photoUri.split('/').pop() || `photo_${Date.now()}.jpg`;
+          const extMatch = /\.(\w+)$/.exec(filename);
+          const ext = extMatch ? extMatch[1] : 'jpg';
+
+          const formData = new FormData();
+          formData.append('file', {
+            uri: photoUri,
+            name: filename,
+            type: `image/${ext}`,
+          } as any);
+          formData.append('inspection_id', String(id));
+          formData.append('record_id', String(itemRecordId));
+          formData.append('category', updatedItems[itemIndex].category || updatedItems[itemIndex].name);
+          formData.append('item_name', updatedItems[itemIndex].name);
+
+          const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            const serverUrl = result.data?.photo_url;
+            if (serverUrl) {
+              updatedItems[itemIndex].photos[photoIndex] = serverUrl;
+              await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${itemRecordId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ photos: updatedItems[itemIndex].photos }),
+              });
+            }
+          }
+        }
+        setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
+      } catch (error) {
+        console.error('自动同步照片失败:', error);
+      } finally {
+        isSyncingPhotosRef.current = false;
+        setIsSyncingPhotos(false);
+      }
+    };
+
+    doSync();
+  }, [inspection?.id, inspection?.status]);
 
   // 更新检查项状态
   const updateChecklistItem = async (item: ChecklistItem, status: 'pass' | 'fail' | 'na') => {
@@ -1854,26 +1939,6 @@ export default function InspectionDetailScreen() {
               </View>
             </View>
           </View>
-
-          {/* 照片同步按钮 - 当有本地路径照片时显示 */}
-          {localPhotosCount > 0 && (
-            <TouchableOpacity
-              style={[styles.syncButton, isSyncingPhotos && styles.syncButtonDisabled]}
-              onPress={syncPhotosToServer}
-              disabled={isSyncingPhotos}
-            >
-              <Feather name="upload-cloud" size={18} color="#FFFFFF" />
-              {isSyncingPhotos ? (
-                <Text style={styles.syncButtonText}>
-                  同步中 {syncProgress.current}/{syncProgress.total}
-                </Text>
-              ) : (
-                <Text style={styles.syncButtonText}>
-                  同步照片到服务器 ({localPhotosCount}张)
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* 验货清单 */}
