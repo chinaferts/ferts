@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 验货报告PDF生成脚本 - 使用reportlab支持中文
+优化版本：包含完整表头信息和检验标准
 """
 import sys
 import json
@@ -10,123 +11,315 @@ from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib import colors
 
 # 注册中文字体
 FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'
 pdfmetrics.registerFont(TTFont('ChineseFont', FONT_PATH))
 
+def draw_header(c, width, margin, data):
+    """绘制报告头部区域"""
+    y = height - margin
+    
+    # 标题
+    c.setFont('ChineseFont', 20)
+    c.drawCentredString(width/2, y, '验货报告 / Inspection Report')
+    y -= 12 * mm
+    
+    # 分隔线
+    c.setStrokeColor(colors.HexColor('#4F46E5'))
+    c.setLineWidth(2)
+    c.line(margin, y, width - margin, y)
+    y -= 8 * mm
+    
+    return y
+
+def draw_info_table(c, width, margin, y, data):
+    """绘制表头信息表格"""
+    c.setFont('ChineseFont', 11)
+    c.setFillColor(colors.HexColor('#4F46E5'))
+    c.drawString(margin, y, '【 验货信息 / Inspection Info 】')
+    y -= 6 * mm
+    
+    # 表格数据 - 两列布局
+    col1_x = margin
+    col2_x = width / 2 + 5 * mm
+    row_height = 6 * mm
+    
+    info_rows = [
+        ('订单号 / Order No:', data.get('order_number', data.get('orderNo', 'N/A'))),
+        ('供应商 / Supplier:', data.get('supplier', data.get('supplier_name', 'N/A'))),
+        ('产品名称 / Product:', data.get('product_name', 'N/A')),
+        ('产品编号 / SKU:', data.get('product_sku', data.get('productNo', 'N/A'))),
+        ('数量 / Quantity:', str(data.get('quantity', 'N/A'))),
+        ('抽样数 / Sample Size:', str(data.get('sample_size', data.get('sampleSize', 'N/A')))),
+        ('AQL标准 / AQL:', str(data.get('aql', 'N/A'))),
+        ('检验日期 / Date:', data.get('inspection_date', data.get('created_at', 'N/A'))[:10] if data.get('created_at') else 'N/A'),
+        ('验货员 / Inspector:', data.get('inspector_name', data.get('created_by', 'N/A'))),
+        ('整体结果 / Result:', '合格 / PASS' if data.get('overall_result') == 'pass' else '不合格 / FAIL'),
+    ]
+    
+    c.setFillColor(colors.black)
+    c.setFont('ChineseFont', 9)
+    
+    for i, (label, value) in enumerate(info_rows):
+        row_y = y - (i // 2) * row_height
+        x = col1_x if i % 2 == 0 else col2_x
+        
+        # 标签
+        c.setFont('ChineseFont', 9)
+        c.drawString(x, row_y, label)
+        
+        # 值
+        c.setFont('ChineseFont', 9)
+        c.setFillColor(colors.HexColor('#1F2937'))
+        c.drawString(x + 35 * mm, row_y, str(value))
+        c.setFillColor(colors.black)
+    
+    # 计算最后的y位置
+    rows_count = (len(info_rows) + 1) // 2
+    y = y - rows_count * row_height - 5 * mm
+    
+    return y
+
+def draw_summary(c, width, margin, y, data):
+    """绘制汇总信息"""
+    c.setFont('ChineseFont', 11)
+    c.setFillColor(colors.HexColor('#4F46E5'))
+    c.drawString(margin, y, '【 检验汇总 / Summary 】')
+    y -= 6 * mm
+    
+    summary = data.get('summary', {})
+    pass_count = summary.get('pass', 0)
+    fail_count = summary.get('fail', 0)
+    na_count = summary.get('na', 0)
+    pending_count = summary.get('pending', 0)
+    total = pass_count + fail_count + na_count + pending_count
+    
+    # 汇总统计框
+    box_y = y - 15 * mm
+    box_width = (width - 2 * margin - 6 * mm) / 4
+    
+    stats = [
+        ('通过 Pass', pass_count, '#10B981'),
+        ('不通过 Fail', fail_count, '#EF4444'),
+        ('不适用 N/A', na_count, '#6B7280'),
+        ('待检 Pending', pending_count, '#F59E0B'),
+    ]
+    
+    for i, (label, count, color) in enumerate(stats):
+        x = margin + i * (box_width + 2 * mm)
+        
+        # 背景框
+        c.setFillColor(colors.HexColor(color))
+        c.roundRect(x, box_y, box_width, 12 * mm, 3 * mm, fill=1, stroke=0)
+        
+        # 文字
+        c.setFillColor(colors.white)
+        c.setFont('ChineseFont', 8)
+        c.drawCentredString(x + box_width/2, box_y + 7 * mm, label)
+        c.setFont('ChineseFont', 14)
+        c.drawCentredString(x + box_width/2, box_y + 2 * mm, str(count))
+    
+    c.setFillColor(colors.black)
+    y = box_y - 8 * mm
+    
+    return y
+
+def draw_checklist(c, width, margin, y, height, data):
+    """绘制检查项列表"""
+    c.setFont('ChineseFont', 11)
+    c.setFillColor(colors.HexColor('#4F46E5'))
+    c.drawString(margin, y, '【 检验项目 / Inspection Items 】')
+    y -= 6 * mm
+    
+    checklist_items = data.get('checklist_items', [])
+    
+    # 分组显示 - 按分类
+    categories = data.get('categories', [])
+    
+    if categories:
+        # 按分类显示
+        for category in categories:
+            if y < margin + 30 * mm:
+                c.showPage()
+                y = height - margin
+            
+            # 分类标题
+            c.setFont('ChineseFont', 10)
+            c.setFillColor(colors.HexColor('#374151'))
+            c.drawString(margin, y, f'▸ {category}')
+            y -= 5 * mm
+            
+            # 该分类下的检查项
+            category_items = [item for item in checklist_items if item.get('category') == category]
+            for item in category_items:
+                if y < margin + 25 * mm:
+                    c.showPage()
+                    y = height - margin
+                
+                item_name = item.get('item_name', item.get('name', 'N/A'))
+                description = item.get('description', '')
+                result = item.get('status', item.get('result', 'pending'))
+                
+                # 状态颜色
+                status_colors = {
+                    'pass': ('✓ 通过', '#10B981'),
+                    'fail': ('✗ 不通过', '#EF4444'),
+                    'na': ('- 不适用', '#6B7280'),
+                    'pending': ('○ 待检', '#F59E0B'),
+                }
+                status_text, status_color = status_colors.get(result, ('○ 待检', '#F59E0B'))
+                
+                # 检查项名称
+                c.setFont('ChineseFont', 9)
+                c.setFillColor(colors.black)
+                c.drawString(margin + 5*mm, y, f'• {item_name}')
+                
+                # 状态
+                c.setFillColor(colors.HexColor(status_color))
+                c.drawRightString(width - margin, y, status_text)
+                y -= 4 * mm
+                
+                # 检验标准描述
+                if description:
+                    c.setFont('ChineseFont', 8)
+                    c.setFillColor(colors.HexColor('#6B7280'))
+                    # 截断过长的描述
+                    desc = description[:60] + '...' if len(description) > 60 else description
+                    c.drawString(margin + 10*mm, y, f'检验标准: {desc}')
+                    y -= 4 * mm
+                
+                # 照片
+                photos = item.get('photos', [])
+                if photos:
+                    photo_count = len(photos)
+                    c.setFont('ChineseFont', 8)
+                    c.setFillColor(colors.HexColor('#4F46E5'))
+                    c.drawString(margin + 10*mm, y, f'📷 {photo_count}张照片')
+                    y -= 4 * mm
+                
+                y -= 2 * mm
+    else:
+        # 无分类，直接显示
+        for item in checklist_items:
+            if y < margin + 25 * mm:
+                c.showPage()
+                y = height - margin
+            
+            item_name = item.get('item_name', item.get('name', 'N/A'))
+            description = item.get('description', '')
+            result = item.get('status', item.get('result', 'pending'))
+            
+            status_colors = {
+                'pass': ('✓ 通过', '#10B981'),
+                'fail': ('✗ 不通过', '#EF4444'),
+                'na': ('- 不适用', '#6B7280'),
+                'pending': ('○ 待检', '#F59E0B'),
+            }
+            status_text, status_color = status_colors.get(result, ('○ 待检', '#F59E0B'))
+            
+            c.setFont('ChineseFont', 9)
+            c.setFillColor(colors.black)
+            c.drawString(margin + 5*mm, y, f'• {item_name}')
+            
+            c.setFillColor(colors.HexColor(status_color))
+            c.drawRightString(width - margin, y, status_text)
+            y -= 4 * mm
+            
+            if description:
+                c.setFont('ChineseFont', 8)
+                c.setFillColor(colors.HexColor('#6B7280'))
+                desc = description[:60] + '...' if len(description) > 60 else description
+                c.drawString(margin + 10*mm, y, f'检验标准: {desc}')
+                y -= 4 * mm
+            
+            photos = item.get('photos', [])
+            if photos:
+                c.setFont('ChineseFont', 8)
+                c.setFillColor(colors.HexColor('#4F46E5'))
+                c.drawString(margin + 10*mm, y, f'📷 {len(photos)}张照片')
+                y -= 4 * mm
+            
+            y -= 2 * mm
+    
+    y -= 5 * mm
+    return y
+
+def draw_defects(c, width, margin, y, height, data):
+    """绘制缺陷记录"""
+    defects = data.get('defects', [])
+    if not defects:
+        return y
+    
+    if y < margin + 40 * mm:
+        c.showPage()
+        y = height - margin
+    
+    c.setFont('ChineseFont', 11)
+    c.setFillColor(colors.HexColor('#EF4444'))
+    c.drawString(margin, y, '【 缺陷记录 / Defects 】')
+    y -= 6 * mm
+    
+    c.setFillColor(colors.black)
+    
+    for defect in defects:
+        if y < margin + 20 * mm:
+            c.showPage()
+            y = height - margin
+        
+        description = defect.get('description', 'N/A')
+        severity = defect.get('severity', 'minor')
+        severity_map = {'critical': '严重', 'major': '主要', 'minor': '轻微'}
+        severity_text = severity_map.get(severity, '轻微')
+        quantity = defect.get('quantity', 1)
+        
+        text = f'• {description} | 等级: {severity_text} | 数量: {quantity}'
+        c.setFont('ChineseFont', 9)
+        c.drawString(margin + 5*mm, y, text)
+        y -= 5 * mm
+    
+    y -= 5 * mm
+    return y
+
+def draw_footer(c, width, margin, y, data):
+    """绘制页脚"""
+    c.setStrokeColor(colors.HexColor('#E5E7EB'))
+    c.setLineWidth(1)
+    c.line(margin, y, width - margin, y)
+    y -= 5 * mm
+    
+    c.setFont('ChineseFont', 8)
+    c.setFillColor(colors.HexColor('#9CA3AF'))
+    c.drawString(margin, y, f'报告生成时间: {data.get("generated_time", "N/A")}')
+    c.drawRightString(width - margin, y, '验货报告系统 / Inspection System')
+    
+    c.setFillColor(colors.black)
+
 def generate_inspection_pdf(data, output_path):
     """生成验货报告PDF"""
+    global height
     c = canvas.Canvas(output_path, pagesize=A4)
     width, height = A4
     margin = 20 * mm
     
-    y = height - margin
+    # 绘制头部
+    y = draw_header(c, width, margin, data)
     
-    # 标题
-    c.setFont('ChineseFont', 18)
-    c.drawCentredString(width/2, y, '验货报告')
-    y -= 15 * mm
+    # 绘制表头信息
+    y = draw_info_table(c, width, margin, y, data)
     
-    # 报告编号
-    c.setFont('ChineseFont', 10)
-    c.drawCentredString(width/2, y, f"报告编号: {data.get('inspection_number', 'N/A')}")
-    y -= 15 * mm
+    # 绘制汇总
+    y = draw_summary(c, width, margin, y, data)
     
-    # 基本信息
-    c.setFont('ChineseFont', 12)
-    c.drawString(margin, y, '基本信息')
-    y -= 8 * mm
+    # 绘制检查项
+    y = draw_checklist(c, width, margin, y, height, data)
     
-    c.setFont('ChineseFont', 9)
-    info_items = [
-        f"产品名称: {data.get('product_name', 'N/A')}",
-        f"供应商: {data.get('supplier', 'N/A')}",
-        f"批次号: {data.get('batch_number', 'N/A')}",
-        f"验货日期: {data.get('inspection_date', 'N/A')}",
-        f"验货员: {data.get('inspector_name', data.get('created_by', 'N/A'))}",
-        f"状态: {'已完成' if data.get('status') == 'completed' else '进行中'}",
-    ]
+    # 绘制缺陷记录
+    y = draw_defects(c, width, margin, y, height, data)
     
-    for item in info_items:
-        c.drawString(margin + 5*mm, y, item)
-        y -= 6 * mm
-    
-    y -= 5 * mm
-    
-    # 汇总
-    c.setFont('ChineseFont', 12)
-    c.drawString(margin, y, '汇总')
-    y -= 8 * mm
-    
-    c.setFont('ChineseFont', 9)
-    summary = data.get('summary', {})
-    c.drawString(margin + 5*mm, y, f"通过: {summary.get('pass', 0)}")
-    c.drawString(margin + 40*mm, y, f"不通过: {summary.get('fail', 0)}")
-    c.drawString(margin + 75*mm, y, f"不适用: {summary.get('na', 0)}")
-    c.drawString(margin + 110*mm, y, f"待检: {summary.get('pending', 0)}")
-    y -= 10 * mm
-    
-    # 检查项
-    c.setFont('ChineseFont', 12)
-    c.drawString(margin, y, '检查项')
-    y -= 8 * mm
-    
-    checklist_items = data.get('checklist_items', [])
-    for item in checklist_items:
-        item_name = f"{item.get('item_number', '')} {item.get('item_name', item.get('name', 'N/A'))}"
-        result = item.get('result', 'pending')
-        
-        status_text = '待检'
-        if result == 'pass':
-            status_text = '通过'
-        elif result == 'fail':
-            status_text = '不通过'
-        elif result == 'na':
-            status_text = '不适用'
-        
-        text = f"{item_name} - {status_text}"
-        c.setFont('ChineseFont', 8)
-        c.drawString(margin + 5*mm, y, text)
-        y -= 5 * mm
-        
-        # 添加照片
-        photos = item.get('photos', [])
-        if photos:
-            photo_x = margin + 8*mm
-            for photo_url in photos[:3]:
-                full_path = photo_url.lstrip('/')
-                if os.path.exists(full_path):
-                    try:
-                        c.drawImage(full_path, photo_x, y - 25*mm, width=25*mm, height=25*mm)
-                        photo_x += 28*mm
-                    except:
-                        pass
-            y -= 30 * mm
-        
-        if y < margin + 20*mm:
-            c.showPage()
-            y = height - margin
-    
-    # 缺陷记录
-    defects = data.get('defects', [])
-    if defects:
-        y -= 5 * mm
-        c.setFont('ChineseFont', 12)
-        c.drawString(margin, y, '缺陷记录')
-        y -= 8 * mm
-        
-        c.setFont('ChineseFont', 8)
-        for defect in defects:
-            severity_text = {'critical': '严重', 'major': '主要', 'minor': '轻微'}.get(defect.get('severity', 'minor'), '轻微')
-            text = f"- {defect.get('description', 'N/A')} ({severity_text})"
-            c.drawString(margin + 5*mm, y, text)
-            y -= 5 * mm
-    
-    # 生成时间
-    y -= 10 * mm
-    c.setFont('ChineseFont', 7)
-    c.drawCentredString(width/2, y, f"生成时间: {data.get('generated_time', 'N/A')}")
+    # 绘制页脚
+    draw_footer(c, width, margin, margin, data)
     
     c.save()
     print(f"PDF生成成功: {output_path}")

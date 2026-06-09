@@ -1162,14 +1162,24 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   // 使用 Python reportlab 生成 PDF（支持中文）
   const pdfScriptPath = path.join(process.cwd(), 'scripts', 'generate_pdf.py');
   
-  // 准备PDF数据
+  // 准备PDF数据 - 包含完整的表头信息
   const pdfData = {
-    inspection_number: inspection.inspection_number,
+    // 表头基本信息
+    order_number: inspection.order_number || inspection.orderNo,
+    inspection_number: inspection.inspection_number || inspection.order_number || inspection.orderNo,
+    supplier: inspection.supplier || inspection.supplier_name,
+    supplier_name: inspection.supplier_name || inspection.supplier,
     product_name: inspection.product_name,
-    supplier: inspection.supplier,
+    product_sku: inspection.product_sku || inspection.productNo,
+    quantity: inspection.quantity,
+    sample_size: inspection.sample_size || inspection.sampleSize,
+    aql: inspection.aql,
     batch_number: inspection.batch_number,
-    inspection_date: inspection.inspection_date,
-    inspector_name: inspection.inspector_name || inspection.created_by,
+    style_number: inspection.style_number,
+    inspection_date: inspection.inspection_date || (inspection.created_at ? String(inspection.created_at).substring(0, 10) : null),
+    created_at: inspection.created_at,
+    inspector_name: inspection.inspector_name || inspection.inspector_id || inspection.created_by,
+    overall_result: inspection.overall_result,
     status: inspection.status,
     summary: { pass: passCount, fail: failCount, na: naCount, pending: pendingCount },
     checklist_items: Array.from(categoriesMap.values()).flat().map(item => {
@@ -1178,7 +1188,9 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       return {
         item_number: item.item_number,
         item_name: item.item_name || item.name,
-        result: record?.result || 'pending',
+        description: item.description,  // 添加检验标准描述
+        category: item.category,
+        result: record?.status || record?.result || 'pending',
         photos: photos
       };
     }),
