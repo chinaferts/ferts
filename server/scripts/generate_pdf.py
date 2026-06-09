@@ -200,82 +200,83 @@ def draw_checklist(c, width, margin, y, height, data):
             y = height - margin
     
     if categories:
-        # 按分类显示
-        for category in categories:
-            check_page_break(15 * mm)
+        # 按checklist_items的原始顺序显示，只在category变化时显示分类标题
+        last_category = None
+        for item in checklist_items:
+            category = item.get('category', '')
             
-            # 分类标题
-            c.setFont('ChineseFont', 10)
-            c.setFillColor(colors.HexColor('#374151'))
-            c.drawString(margin, y, f'▸ {category}')
-            y -= 5 * mm
+            # 只在category变化时显示分类标题
+            if category != last_category:
+                check_page_break(15 * mm)
+                c.setFont('ChineseFont', 10)
+                c.setFillColor(colors.HexColor('#374151'))
+                c.drawString(margin, y, f'▸ {category}')
+                y -= 5 * mm
+                last_category = category
             
-            # 该分类下的检查项
-            category_items = [item for item in checklist_items if item.get('category') == category]
-            for item in category_items:
-                item_name = item.get('item_name', item.get('name', 'N/A'))
-                description = item.get('description', '')
-                result = item.get('status', item.get('result', 'pending'))
-                photos = item.get('photos', []) or []
-                
-                # 估算需要的高度：名称(4mm) + 描述(4mm) + 照片行(如果有多张照片)
-                required = 8 * mm
-                if photos:
-                    required += photo_max_height + 5 * mm
-                check_page_break(required)
-                
-                # 状态颜色
-                status_colors = {
-                    'pass': ('✓ 通过', '#10B981'),
-                    'fail': ('✗ 不通过', '#EF4444'),
-                    'na': ('- 不适用', '#6B7280'),
-                    'pending': ('○ 待检', '#F59E0B'),
-                }
-                status_text, status_color = status_colors.get(result, ('○ 待检', '#F59E0B'))
-                
-                # 检查项名称
-                c.setFont('ChineseFont', 9)
-                c.setFillColor(colors.black)
-                c.drawString(margin + 5*mm, y, f'• {item_name}')
-                
-                # 状态
-                c.setFillColor(colors.HexColor(status_color))
-                c.drawRightString(width - margin, y, status_text)
+            item_name = item.get('item_name', item.get('name', 'N/A'))
+            description = item.get('description', '')
+            result = item.get('status', item.get('result', 'pending'))
+            photos = item.get('photos', []) or []
+            
+            # 估算需要的高度：名称(4mm) + 描述(4mm) + 照片行(如果有多张照片)
+            required = 8 * mm
+            if photos:
+                required += photo_max_height + 5 * mm
+            check_page_break(required)
+            
+            # 状态颜色
+            status_colors = {
+                'pass': ('✓ 通过', '#10B981'),
+                'fail': ('✗ 不通过', '#EF4444'),
+                'na': ('- 不适用', '#6B7280'),
+                'pending': ('○ 待检', '#F59E0B'),
+            }
+            status_text, status_color = status_colors.get(result, ('○ 待检', '#F59E0B'))
+            
+            # 检查项名称
+            c.setFont('ChineseFont', 9)
+            c.setFillColor(colors.black)
+            c.drawString(margin + 5*mm, y, f'• {item_name}')
+            
+            # 状态
+            c.setFillColor(colors.HexColor(status_color))
+            c.drawRightString(width - margin, y, status_text)
+            y -= 4 * mm
+            
+            # 检验标准描述
+            if description:
+                c.setFont('ChineseFont', 8)
+                c.setFillColor(colors.HexColor('#6B7280'))
+                desc = description[:50] + '...' if len(description) > 50 else description
+                c.drawString(margin + 10*mm, y, f'检验标准: {desc}')
+                y -= 4 * mm
+            
+            # 绘制照片
+            if photos:
+                c.setFont('ChineseFont', 8)
+                c.setFillColor(colors.HexColor('#4F46E5'))
+                c.drawString(margin + 10*mm, y, f'📷 {len(photos)}张照片')
                 y -= 4 * mm
                 
-                # 检验标准描述
-                if description:
-                    c.setFont('ChineseFont', 8)
-                    c.setFillColor(colors.HexColor('#6B7280'))
-                    desc = description[:50] + '...' if len(description) > 50 else description
-                    c.drawString(margin + 10*mm, y, f'检验标准: {desc}')
-                    y -= 4 * mm
+                # 计算每行能放多少张照片
+                content_width = width - 2 * margin - 10 * mm
+                photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
                 
-                # 绘制照片
-                if photos:
-                    c.setFont('ChineseFont', 8)
-                    c.setFillColor(colors.HexColor('#4F46E5'))
-                    c.drawString(margin + 10*mm, y, f'📷 {len(photos)}张照片')
-                    y -= 4 * mm
+                photo_y = y - photo_max_height
+                for i, photo_path in enumerate(photos):
+                    photo_x = margin + 10*mm + (i % photos_per_row) * (photo_max_width + photo_spacing)
                     
-                    # 计算每行能放多少张照片
-                    content_width = width - 2 * margin - 10 * mm
-                    photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
+                    # 如果当前行放不下，换行
+                    if i > 0 and i % photos_per_row == 0:
+                        photo_y -= photo_max_height + photo_spacing
+                        check_page_break(photo_max_height + 10 * mm)
                     
-                    photo_y = y - photo_max_height
-                    for i, photo_path in enumerate(photos):
-                        photo_x = margin + 10*mm + (i % photos_per_row) * (photo_max_width + photo_spacing)
-                        
-                        # 如果当前行放不下，换行
-                        if i > 0 and i % photos_per_row == 0:
-                            photo_y -= photo_max_height + photo_spacing
-                            check_page_break(photo_max_height + 10 * mm)
-                        
-                        draw_photo(c, photo_x, photo_y + photo_max_height, photo_path, photo_max_width, photo_max_height)
-                    
-                    y = photo_y - 5 * mm
+                    draw_photo(c, photo_x, photo_y + photo_max_height, photo_path, photo_max_width, photo_max_height)
                 
-                y -= 3 * mm
+                y = photo_y - 5 * mm
+            
+            y -= 3 * mm
     else:
         # 无分类，直接显示
         for item in checklist_items:
