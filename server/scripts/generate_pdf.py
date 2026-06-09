@@ -208,6 +208,21 @@ def draw_checklist(c, width, margin, y, height, data):
     y -= 6 * mm
     
     checklist_items = data.get('checklist_items', [])
+    
+    # 调整检查项顺序：将"彩盒/彩卡信息以及其规格重量拍照"从第10位移动到第5位
+    # 目标顺序：[0,1,2,3,4,9,5,6,7,8,10] 即第10项(索引9)移动到第5项(索引4)之后
+    caiba_index = None
+    for i, item in enumerate(checklist_items):
+        item_name = item.get('name', item.get('item_name', ''))
+        if '彩盒' in item_name or '彩卡' in item_name:
+            caiba_index = i
+            break
+    
+    if caiba_index is not None and caiba_index > 4:
+        # 把彩盒检查项移动到第5位（替换原第5位，原第5位及之后的项后移）
+        caiba_item = checklist_items.pop(caiba_index)
+        checklist_items.insert(4, caiba_item)
+    
     categories = data.get('categories', [])
     
     # 照片配置
