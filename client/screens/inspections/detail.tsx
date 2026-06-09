@@ -1289,11 +1289,14 @@ export default function InspectionDetailScreen() {
       let failCount = 0;
 
       // 下载并保存每张照片
-      for (const photoUrl of allPhotos) {
+      for (const photo of allPhotos) {
         try {
-          // 只处理 http/https 的远程照片
+          // 统一转换照片URL为完整路径
+          const photoUrl = getImageUrl(photo);
+          
+          // 处理远程照片 (http/https)
           if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-            const filename = photoUrl.split('/').pop() || `photo_${Date.now()}.jpg`;
+            const filename = photo.split('/').pop() || `photo_${Date.now()}.jpg`;
             const FileSystemAny = FileSystem as any;
             const fileUri = `${FileSystemAny.cacheDirectory}${filename}`;
 
@@ -1310,7 +1313,7 @@ export default function InspectionDetailScreen() {
             } else {
               failCount++;
             }
-          } else if (photoUrl.startsWith('file:') || photoUrl.startsWith('content:')) {
+          } else if (photoUrl.startsWith('file:') || photoUrl.startsWith('content:') || photoUrl.startsWith('ph://')) {
             // 本地照片直接保存
             const asset = await MediaLibrary.createAssetAsync(photoUrl);
             if (asset) {
@@ -1318,9 +1321,21 @@ export default function InspectionDetailScreen() {
             } else {
               failCount++;
             }
+          } else {
+            // 其他情况（如 data:base64），尝试直接保存原始路径
+            try {
+              const asset = await MediaLibrary.createAssetAsync(photo);
+              if (asset) {
+                successCount++;
+              } else {
+                failCount++;
+              }
+            } catch {
+              failCount++;
+            }
           }
         } catch (err) {
-          console.error('[Export] 单张照片保存失败:', photoUrl, err);
+          console.error('[Export] 单张照片保存失败:', photo, err);
           failCount++;
         }
       }
