@@ -1438,6 +1438,7 @@ export default function InspectionDetailScreen() {
 
         // 上传本地照片
         if (allLocalPhotos.length > 0) {
+          // 显示上传提示
           Alert.alert(t('uploading'), `${t('uploadingPhotos')} ${allLocalPhotos.length} ${t('count')}`);
           
           const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
@@ -1445,42 +1446,54 @@ export default function InspectionDetailScreen() {
           
           for (const { recordId, localPath } of allLocalPhotos) {
             try {
-              // 读取本地文件
+              // 检查文件是否存在
               const FileSystemAny = FileSystem as any;
               const fileInfo = await FileSystemAny.getInfoAsync(localPath);
-              if (!fileInfo.exists) continue;
+              if (!fileInfo.exists) {
+                console.log('[doSubmit] File not found:', localPath);
+                continue;
+              }
               
-              const fileData = await FileSystemAny.readAsStringAsync(localPath, {
-                encoding: FileSystemAny.EncodingType.Base64,
-              });
+              // 获取文件名
+              const filename = localPath.split('/').pop() || `photo_${Date.now()}.jpg`;
               
               // 创建 FormData
-              const filename = localPath.split('/').pop() || `photo_${Date.now()}.jpg`;
               const formData = new FormData();
               formData.append('file', {
                 uri: localPath,
                 name: filename,
                 type: 'image/jpeg',
               } as any);
+              formData.append('recordId', String(recordId));
               
-              // 上传到服务器
-              const uploadRes = await fetch(`${baseUrl}/api/v1/upload/photo`, {
+              // 上传到服务器 - 使用正确的API路径
+              const uploadRes = await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
                 method: 'POST',
                 body: formData,
               });
               
               if (uploadRes.ok) {
                 const uploadData = await uploadRes.json();
-                const serverPath = uploadData.path || uploadData.url;
+                // 服务器返回的路径可能是完整的URL或相对路径
+                let serverPath = uploadData.photo_url || uploadData.url || uploadData.path;
+                
+                // 如果返回的是相对路径，补全为完整路径
+                if (serverPath && !serverPath.startsWith('http') && !serverPath.startsWith('/uploads')) {
+                  serverPath = `/uploads/photos/${serverPath}`;
+                }
+                
+                console.log('[doSubmit] Upload success:', serverPath);
                 
                 // 收集上传成功的照片
                 if (!uploadedPhotos[recordId]) {
                   uploadedPhotos[recordId] = [];
                 }
                 uploadedPhotos[recordId].push(serverPath);
+              } else {
+                console.error('[doSubmit] Upload failed, status:', uploadRes.status);
               }
             } catch (uploadError) {
-              console.error('Upload photo failed:', uploadError);
+              console.error('[doSubmit] Upload error:', uploadError);
             }
           }
           
