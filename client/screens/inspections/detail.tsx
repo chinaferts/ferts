@@ -1026,12 +1026,15 @@ export default function InspectionDetailScreen() {
     const targetItem = item || selectedItem;
     if (!targetItem) return;
     
+    console.log('[takePhoto] Called with item record_id:', targetItem.record_id, 'photos:', targetItem.photos);
+    
     // 设置临时目标
     setTempPhotoTarget(targetItem);
     // 将之前保存的照片（从服务器加载的）加载到临时预览区
     const previousPhotos = (targetItem.photos || []).filter((p: string) => 
       p && (p.startsWith('http://') || p.startsWith('https://'))
     );
+    console.log('[takePhoto] previousPhotos:', previousPhotos);
     setTempPhotos(previousPhotos);
     // 打开相机
     setCameraVisible(true);
@@ -1179,13 +1182,21 @@ export default function InspectionDetailScreen() {
     // 同时更新 barcodeItems 状态，确保条码检查项的照片能显示
     if (tempPhotoTarget) {
       const targetRecordId = String(tempPhotoTarget.record_id || tempPhotoTarget.id);
-      setBarcodeItems(prev => prev.map(item => {
-        const itemRecordId = String(item.record_id || item.id);
-        if (itemRecordId === targetRecordId) {
-          return { ...item, photos: allPhotos };
-        }
-        return item;
-      }));
+      console.log('[CompletePhotos] Updating barcodeItems - targetRecordId:', targetRecordId);
+      console.log('[CompletePhotos] allPhotos to set:', allPhotos);
+      setBarcodeItems(prev => {
+        console.log('[CompletePhotos] Current barcodeItems count:', prev.length);
+        const updated = prev.map(item => {
+          const itemRecordId = String(item.record_id || item.id);
+          console.log('[CompletePhotos] Comparing itemRecordId:', itemRecordId, 'with target:', targetRecordId, 'match:', itemRecordId === targetRecordId);
+          if (itemRecordId === targetRecordId) {
+            return { ...item, photos: allPhotos };
+          }
+          return item;
+        });
+        console.log('[CompletePhotos] Updated barcodeItems photos:', updated.find(i => String(i.record_id || i.id) === targetRecordId)?.photos);
+        return updated;
+      });
     }
     
     // 清除临时状态
@@ -1867,6 +1878,21 @@ export default function InspectionDetailScreen() {
               return item;
             });
             setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
+            
+            // 同步更新 barcodeItems 状态，确保条码检查项的照片能显示
+            const targetRecordIdStr = String(targetRecordId);
+            // 合并之前已上传的照片URL（http/https开头）和新拍的照片
+            const previousUploadedPhotos = (tempPhotoTarget?.photos || []).filter((p: string) => 
+              p && (p.startsWith('http://') || p.startsWith('https://'))
+            );
+            const newPhotos = [...previousUploadedPhotos, ...photoUris];
+            setBarcodeItems(prev => prev.map(item => {
+              const itemRecordIdStr = String(item.record_id || item.id);
+              if (itemRecordIdStr === targetRecordIdStr) {
+                return { ...item, photos: newPhotos };
+              }
+              return item;
+            }));
             
             // 同步更新 tempPhotos 状态，让预览区能显示照片
             setTempPhotos(prev => [...prev, ...photoUris]);
