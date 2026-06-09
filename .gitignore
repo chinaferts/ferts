@@ -99,7 +99,6 @@ node-compile-cache/
 .preview
 
 uploads/
-uploads/
 
 # Assets中的图片文件（不应存储在代码仓库）
 assets/*.jpg
