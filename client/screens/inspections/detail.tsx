@@ -10,6 +10,8 @@ import CustomCamera from '@/components/CustomCamera';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { Image as ExpoImage } from 'expo-image';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { useTranslation } from '@/contexts/LanguageContext';
@@ -301,17 +303,24 @@ export default function InspectionDetailScreen() {
     });
     setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
     
-    // 上传照片到服务器
+    // 上传照片到服务器（压缩后上传）
     const uploadPhoto = async () => {
       try {
-        const filename = photoUri.split("/").pop() || `photo_${Date.now()}.jpg`;
-        const match = /\.(\w+)$/.exec(filename);
-        const ext = match ? match[1] : "jpg";
+        // 压缩照片：1600x1200像素, 96DPI, 90% JPEG质量
+        console.log('[UploadPhoto] 开始压缩照片...');
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
+          photoUri,
+          [{ resize: { width: 1600, height: 1200 } }], // 1600x1200分辨率
+          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG } // 90% JPEG质量
+        );
+        console.log('[UploadPhoto] 照片压缩完成:', manipulatedImage.uri);
+        
+        const filename = `photo_${Date.now()}.jpg`;
         const formData = new FormData();
         formData.append("file", {
-          uri: photoUri,
+          uri: manipulatedImage.uri,
           name: filename,
-          type: `image/${ext}`,
+          type: "image/jpeg",
         } as any);
         formData.append("inspection_id", String(id));
         formData.append("record_id", String(targetRecordId));
@@ -325,7 +334,6 @@ export default function InspectionDetailScreen() {
         
         if (response.ok) {
           const result = await response.json();
-          // 后端返回的字段名是 photo_url
           const photoUrl = result.data?.photo_url || result.photo_url;
           console.log('[UploadPhoto] 服务器返回 URL:', photoUrl);
           
@@ -333,7 +341,6 @@ export default function InspectionDetailScreen() {
             // 替换本地路径为服务器 URL
             const updatedItems = (inspectionRef.current?.checklist_items || []).map((checkItem) => {
               if (checkItem.record_id === targetRecordId) {
-                // 过滤掉当前本地路径，用服务器 URL 替换
                 const filteredPhotos = (checkItem.photos || []).filter(p => p !== photoUri);
                 return { ...checkItem, photos: [...filteredPhotos, photoUrl] };
               }
@@ -1864,15 +1871,20 @@ export default function InspectionDetailScreen() {
             // 同步更新 tempPhotos 状态，让预览区能显示照片
             setTempPhotos(prev => [...prev, ...photoUris]);
             
-            // 上传照片到服务器
+            // 上传照片到服务器（先压缩为1600x1200@96DPI, 90%质量）
             try {
               for (let i = 0; i < photos.length; i++) {
                 const photo = photos[i];
-                const filename = photo.uri.split('/').pop() || `photo_${Date.now()}_${i}.jpg`;
-                const match = /\.(\w+)$/.exec(filename);
-                const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
                 
-                const fileObj = await createFormDataFile(photo.uri, filename, mimeType);
+                // 压缩照片：1600x1200像素, 90% JPEG质量
+                const manipulatedImage = await ImageManipulator.manipulateAsync(
+                  photo.uri,
+                  [{ resize: { width: 1600, height: 1200 } }],
+                  { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+                );
+                
+                const filename = `photo_${Date.now()}_${i}.jpg`;
+                const fileObj = await createFormDataFile(manipulatedImage.uri, filename, 'image/jpeg');
                 
                 const formData = new FormData();
                 formData.append('record_id', String(targetRecordId));
