@@ -1352,29 +1352,20 @@ export default function InspectionDetailScreen() {
       let permissionResult;
       try {
         permissionResult = await MediaLibrary.requestPermissionsAsync();
+        console.log('[Export] 权限请求结果:', JSON.stringify(permissionResult));
       } catch (permError) {
         console.error('[Export] 权限请求失败:', permError);
-        Alert.alert('提示', '无法请求相册权限，请检查应用权限设置');
+        Alert.alert('提示', '无法请求相册权限，请确保应用已授权存储权限');
         return;
       }
       
-      console.log('[Export] 权限状态:', permissionResult.status);
+      // 检查权限是否授予
+      const hasPermission = permissionResult?.granted;
       
-      if (permissionResult.status !== 'granted') {
-        // 第二次请求权限
-        try {
-          permissionResult = await MediaLibrary.requestPermissionsAsync();
-        } catch (permError2) {
-          console.error('[Export] 第二次权限请求失败:', permError2);
-          Alert.alert('提示', '相册权限被拒绝，请在手机设置中开启相册访问权限');
-          return;
-        }
-        
-        if (permissionResult.status !== 'granted') {
-          console.error('[Export] 权限仍未授权:', permissionResult.status);
-          Alert.alert('提示', '需要相册权限才能保存照片，请在设置中开启相册访问权限');
-          return;
-        }
+      if (!hasPermission) {
+        console.error('[Export] 权限未授权');
+        Alert.alert('提示', '需要相册权限才能保存照片，请在手机设置中开启相册访问权限');
+        return;
       }
 
       Alert.alert('导出照片', `正在导出 ${allPhotos.length} 张照片，请稍候...`);
