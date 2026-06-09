@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import { execSync } from 'child_process';
 const require = createRequire(import.meta.url);
 // PDFKit 不需要 fontkit
 import PDFDocument from 'pdfkit';
@@ -1158,153 +1159,59 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       } else pendingCount++;
     }
 
-  // 使用 PDFKit 生成 PDF（更好的中文支持）
-  const fontPath = path.join(process.cwd(), 'src', 'fonts', 'NotoSans-Regular.ttf');
+  // 使用 Python reportlab 生成 PDF（支持中文）
+  const pdfScriptPath = path.join(process.cwd(), 'scripts', 'generate_pdf.py');
   
-  // 创建 PDF 文档
-  const doc = new PDFDocument({
-    size: 'A4',
-    margins: { top: 50, bottom: 50, left: 50, right: 50 },
-    info: { Title: '验货报告', Author: 'Quality Inspection System' }
-  });
-  
-  // 设置中文字体
-  doc.registerFont('NotoSans', fontPath);
-  doc.font('NotoSans');
-  
-  const pageWidth = doc.page.width;
-  const pageHeight = doc.page.height;
-  const margin = 50;
-  let y = margin;
-  
-  // Title
-  doc.fontSize(22).fillColor('#000000');
-  doc.text('验货报告', { align: 'center' });
-  y = doc.y + 10;
-  
-  // Report number
-  doc.fontSize(12).fillColor('#666666');
-  doc.text('报告编号: ' + (inspection.inspection_number || 'N/A'), { align: 'center' });
-  y = doc.y + 25;
-  
-  // Basic Information Header
-  doc.fontSize(14).fillColor('#000000');
-  doc.text('基本信息');
-  y = doc.y + 15;
-  
-  const infoItems = [
-    ['产品名称', inspection.product_name || 'N/A'],
-    ['供应商', inspection.supplier || 'N/A'],
-    ['批次号', inspection.batch_number || 'N/A'],
-    ['验货日期', inspection.inspection_date || 'N/A'],
-    ['验货员', inspection.inspector_name || inspection.created_by || 'N/A'],
-    ['状态', inspection.status === 'completed' ? '已完成' : '进行中']
-  ];
-
-  for (const [label, value] of infoItems) {
-    doc.fontSize(10).fillColor('#000000').text(label + ': ' + value, margin + 10);
-    y = doc.y;
-  }
-  y += 15;
-
-  // Summary
-  doc.fontSize(14).fillColor('#000000').text('汇总');
-  y = doc.y + 15;
-
-  // Summary values
-  const summaryItems = [
-    { label: '通过', value: passCount.toString(), color: '#00AA00' },
-    { label: '不通过', value: failCount.toString(), color: '#CC0000' },
-    { label: '不适用', value: naCount.toString(), color: '#666666' },
-    { label: '待检', value: pendingCount.toString(), color: '#FF8800' }
-  ];
-  
-  const colWidth = 100;
-  for (let i = 0; i < 4; i++) {
-    const xPos = margin + 10 + i * colWidth;
-    doc.fontSize(10).fillColor('#000000').text(summaryItems[i].label, xPos);
-    doc.fontSize(10).fillColor(summaryItems[i].color).text(summaryItems[i].value, xPos);
-    y = doc.y;
-  }
-  y += 15;
-
-  // Checklist Items
-  doc.fontSize(14).fillColor('#000000').text('检查项');
-  y = doc.y + 10;
-
-  for (const [category, items] of categoriesMap) {
-    doc.fontSize(11).fillColor('#000000').text(category);
-    y = doc.y + 5;
-    
-    for (const item of items) {
+  // 准备PDF数据
+  const pdfData = {
+    inspection_number: inspection.inspection_number,
+    product_name: inspection.product_name,
+    supplier: inspection.supplier,
+    batch_number: inspection.batch_number,
+    inspection_date: inspection.inspection_date,
+    inspector_name: inspection.inspector_name || inspection.created_by,
+    status: inspection.status,
+    summary: { pass: passCount, fail: failCount, na: naCount, pending: pendingCount },
+    checklist_items: Array.from(categoriesMap.values()).flat().map(item => {
       const record = recordsMap.get(item.id);
-      let statusText = '待检', statusColor = '#666666';
-      if (record) {
-        if (record.result === 'pass') { statusText = '通过'; statusColor = '#00AA00'; }
-        else if (record.result === 'fail') { statusText = '不通过'; statusColor = '#CC0000'; }
-        else if (record.result === 'na') { statusText = '不适用'; statusColor = '#666666'; }
-      }
-      const itemName = (item.item_number || '') + ' ' + (item.item_name || item.name || 'N/A');
-      
-      doc.fontSize(9).fillColor(statusColor).text(itemName + ' - ' + statusText, margin + 15);
-      y = doc.y + 5;
-      
-      // 添加照片
-      const recordId = record?.id;
-      const recordPhotos = recordId ? (photosByRecordId.get(recordId) || []) : [];
-      if (recordPhotos.length > 0) {
-        for (const photoUrl of recordPhotos.slice(0, 3)) {
-          try {
-            const fullPhotoPath = path.join(process.cwd(), photoUrl);
-            if (fs.existsSync(fullPhotoPath)) {
-              doc.image(fullPhotoPath, margin + 20, y, { width: 100 });
-              y += 105;
-            }
-          } catch (photoErr) {
-            console.log('Failed to embed photo:', photoUrl);
-          }
-        }
-      }
-    }
-    y += 5;
-  }
-
-  // Defect Records
-  if (defects && defects.length > 0) {
-    y += 10;
-    doc.fontSize(14).fillColor('#000000').text('缺陷记录');
-    y = doc.y + 5;
-    
-    for (const defect of defects) {
-      const severityText = defect.severity === 'critical' ? '严重' : defect.severity === 'major' ? '主要' : '轻微';
-      doc.fontSize(9).fillColor('#000000').text('- ' + (defect.description || 'N/A') + ' (' + severityText + ')', margin + 10);
-      y = doc.y;
-    }
-  }
-
-  // Generated time
-  y += 15;
-  doc.fontSize(8).fillColor('#666666').text('生成时间: ' + new Date().toLocaleString('zh-CN'), { align: 'center' });
-
-  // 生成 PDF Buffer
-  const pdfChunks: Buffer[] = [];
-  doc.on('data', (chunk: Buffer) => pdfChunks.push(chunk));
+      const photos = record ? (photosByRecordId.get(record.id) || []) : [];
+      return {
+        item_number: item.item_number,
+        item_name: item.item_name || item.name,
+        result: record?.result || 'pending',
+        photos: photos
+      };
+    }),
+    defects: defects || [],
+    generated_time: new Date().toLocaleString('zh-CN')
+  };
   
-  const pdfBuffer = await new Promise<Buffer>((resolve) => {
-    doc.on('end', () => resolve(Buffer.concat(pdfChunks)));
-    doc.end();
-  });
+  // 创建临时JSON文件
+  const tempJsonPath = path.join('/tmp', 'pdf_data_' + Date.now() + '.json');
+  const tempPdfPath = path.join('/tmp', 'inspection_report_' + Date.now() + '.pdf');
+  fs.writeFileSync(tempJsonPath, JSON.stringify(pdfData));
   
-  const filename = 'Inspection_Report_' + (inspection.inspection_number || 'unknown') + '.pdf';
-  
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Content-Length', pdfBuffer.length);
-  res.send(pdfBuffer);
-  } catch (err: any) {
-    console.error('Error generating PDF:', err);
-    res.status(500).json({ error: 'Failed to generate PDF' });
+  // 执行Python脚本生成PDF（输出路径与JSON文件相同，只是扩展名变为.pdf）
+  const pdfOutputPath = tempJsonPath.replace('.json', '.pdf');
+  execSync('python3 "' + pdfScriptPath + '" "' + tempJsonPath + '"', { encoding: 'utf-8' });
+
+  // 读取生成的PDF
+  const pdfBuffer = fs.readFileSync(pdfOutputPath);
+
+  // 清理临时文件
+  fs.unlinkSync(tempJsonPath);
+  fs.unlinkSync(pdfOutputPath);
+
+    const filename = 'Inspection_Report_' + (inspection.inspection_number || 'unknown') + '.pdf';
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (pdfErr: any) {
+    console.error('PDF生成错误:', pdfErr);
+    res.status(500).json({ error: 'Failed to generate PDF: ' + (pdfErr?.message || String(pdfErr)) });
   }
 });
 
