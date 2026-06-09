@@ -1259,17 +1259,16 @@ export default function InspectionDetailScreen() {
       return;
     }
 
-    // 获取服务器地址
     const serverBaseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
     if (!serverBaseUrl) {
       Alert.alert('错误', '服务器地址未配置');
       return;
     }
 
-    // 收集所有照片
     const allPhotos: string[] = [];
     const photoMap: { [key: string]: string } = {};
-    (inspection.checklist_items || []).forEach(item => {
+    
+    (inspection.checklist_items || []).forEach((item: any) => {
       if (item.photos && item.photos.length > 0) {
         item.photos.forEach((photo: string) => {
           if (!photoMap[photo]) {
@@ -1280,7 +1279,6 @@ export default function InspectionDetailScreen() {
       }
     });
 
-    // 也收集缺陷照片
     if (inspection.defects && inspection.defects.length > 0) {
       inspection.defects.forEach((defect: any) => {
         if (defect.photos && defect.photos.length > 0) {
@@ -1301,7 +1299,7 @@ export default function InspectionDetailScreen() {
 
     console.log(`[Export] 找到 ${allPhotos.length} 张照片待导出`);
 
-    // Web端：逐个下载并通过浏览器下载
+    // Web端下载
     if (Platform.OS === 'web') {
       Alert.alert('导出照片', `正在导出 ${allPhotos.length} 张照片，请在浏览器中允许下载...`);
       
@@ -1315,11 +1313,9 @@ export default function InspectionDetailScreen() {
           
           console.log(`[Export] (Web) 下载第 ${i+1}/${allPhotos.length}: ${photoUrl}`);
           
-          // 使用fetch下载图片
           const response = await fetch(photoUrl);
           const blob = await response.blob();
           
-          // 创建下载链接
           const url = window.URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = url;
@@ -1347,23 +1343,11 @@ export default function InspectionDetailScreen() {
 
     // 移动端：保存到相册
     try {
-      // 请求媒体库权限
       console.log('[Export] 请求媒体库权限...');
-      let permissionResult;
-      try {
-        permissionResult = await MediaLibrary.requestPermissionsAsync();
-        console.log('[Export] 权限请求结果:', JSON.stringify(permissionResult));
-      } catch (permError) {
-        console.error('[Export] 权限请求失败:', permError);
-        Alert.alert('提示', '无法请求相册权限，请确保应用已授权存储权限');
-        return;
-      }
+      const result = await MediaLibrary.requestPermissionsAsync();
+      console.log('[Export] 权限请求结果:', JSON.stringify(result));
       
-      // 检查权限是否授予
-      const hasPermission = permissionResult?.granted;
-      
-      if (!hasPermission) {
-        console.error('[Export] 权限未授权');
+      if (!result.granted) {
         Alert.alert('提示', '需要相册权限才能保存照片，请在手机设置中开启相册访问权限');
         return;
       }
@@ -1372,54 +1356,32 @@ export default function InspectionDetailScreen() {
 
       let successCount = 0;
       let failCount = 0;
+      const FileSystemAny = FileSystem as any;
 
       for (let i = 0; i < allPhotos.length; i++) {
         const photo = allPhotos[i];
         try {
-          // 构建完整的照片URL
-          let photoUrl = photo;
-          if (photo.startsWith('/')) {
-            photoUrl = `${serverBaseUrl}${photo}`;
-          } else if (!photo.startsWith('http')) {
-            photoUrl = `${serverBaseUrl}/${photo}`;
-          }
+          const photoUrl = photo.startsWith('/') 
+            ? `${serverBaseUrl}${photo}` 
+            : `${serverBaseUrl}/${photo}`;
           
           console.log(`[Export] (Mobile) 下载第 ${i+1}/${allPhotos.length}: ${photoUrl}`);
           
           const filename = photo.split('/').pop() || `inspection_${Date.now()}_${i}.jpg`;
-          const FileSystemAny = FileSystem as any;
           const localFileUri = `${FileSystemAny.cacheDirectory}${filename}`;
 
-          console.log(`[Export] 下载到: ${localFileUri}`);
-          
-          // 下载照片
-          let downloadResult;
-          try {
-            downloadResult = await FileSystemAny.downloadAsync(photoUrl, localFileUri);
-          } catch (downloadError) {
-            console.error(`[Export] 下载出错:`, downloadError);
-            failCount++;
-            continue;
-          }
-          
+          const downloadResult = await FileSystemAny.downloadAsync(photoUrl, localFileUri);
           console.log(`[Export] 下载状态: ${downloadResult.status}`);
           
           if (downloadResult.status === 200) {
-            // 保存到相册
+            const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
+            console.log(`[Export] (Mobile) 第 ${i+1} 张保存成功`);
+            successCount++;
+            
             try {
-              const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-              console.log(`[Export] (Mobile) 第 ${i+1} 张保存成功: ${asset.uri}`);
-              successCount++;
-              
-              // 清理缓存
-              try {
-                await FileSystemAny.deleteAsync(localFileUri);
-              } catch (cleanupError) {
-                console.log('[Export] 清理缓存失败:', cleanupError);
-              }
-            } catch (assetError) {
-              console.error(`[Export] 保存到相册失败:`, assetError);
-              failCount++;
+              await FileSystemAny.deleteAsync(localFileUri);
+            } catch (cleanupError) {
+              console.log('[Export] 清理缓存失败:', cleanupError);
             }
           } else {
             console.error(`[Export] (Mobile) 第 ${i+1} 张下载失败: HTTP ${downloadResult.status}`);
@@ -1430,7 +1392,6 @@ export default function InspectionDetailScreen() {
           failCount++;
         }
         
-        // 每张照片之间稍作延迟
         if (i < allPhotos.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 300));
         }
@@ -1447,7 +1408,7 @@ export default function InspectionDetailScreen() {
       }
     } catch (error) {
       console.error('[Export] 导出照片失败:', error);
-      Alert.alert('导出失败', `保存照片时出错: ${error instanceof Error ? error.message : '未知错误'}`);
+      Alert.alert('导出失败', `保存照片时出错`);
     }
   };
 
