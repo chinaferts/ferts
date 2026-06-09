@@ -1415,13 +1415,26 @@ export default function InspectionDetailScreen() {
       for (let i = 0; i < allPhotos.length; i++) {
         const photo = allPhotos[i];
         try {
-          const photoUrl = photo.startsWith('/') 
-            ? `${serverBaseUrl}${photo}` 
-            : `${serverBaseUrl}/${photo}`;
+          // 使用后端代理下载照片，避免跨域和认证问题
+          let originalPhotoUrl: string;
+          if (photo.startsWith('http')) {
+            originalPhotoUrl = photo;
+          } else {
+            // 如果是相对路径，构建完整URL
+            originalPhotoUrl = photo.startsWith('/') 
+              ? `${serverBaseUrl}${photo}` 
+              : `${serverBaseUrl}/${photo}`;
+          }
+          
+          // 通过后端代理下载
+          const encodedUrl = encodeURIComponent(originalPhotoUrl);
+          const photoUrl = `${serverBaseUrl}/api/v1/photos/download?url=${encodedUrl}`;
           
           console.log(`[Export] (Mobile) 下载第 ${i+1}/${allPhotos.length}: ${photoUrl}`);
           
-          const filename = photo.split('/').pop() || `inspection_${Date.now()}_${i}.jpg`;
+          // 生成合适的文件名
+          const timestamp = Date.now();
+          const filename = `inspection_${timestamp}_${i + 1}.jpg`;
           const localFileUri = `${FileSystemAny.cacheDirectory}${filename}`;
 
           const downloadResult = await FileSystemAny.downloadAsync(photoUrl, localFileUri);

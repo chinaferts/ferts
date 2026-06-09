@@ -162,4 +162,51 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// 下载照片（代理模式，解决跨域和认证问题）
+router.get('/download', async (req: Request, res: Response) => {
+  try {
+    const { url } = req.query;
+
+    if (!url || typeof url !== 'string') {
+      res.status(400).json({ success: false, error: '缺少URL参数' });
+      return;
+    }
+
+    console.log('[Photo Download] 代理下载:', url);
+
+    // 检查是否是支持的存储类型
+    if (url.includes('coze-storage') || url.includes('supabase') || url.startsWith('https://')) {
+      try {
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          console.error('[Photo Download] 获取照片失败:', response.status, response.statusText);
+          res.status(502).json({ success: false, error: `获取照片失败: ${response.status}` });
+          return;
+        }
+
+        const buffer = await response.arrayBuffer();
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        
+        console.log('[Photo Download] 照片大小:', buffer.byteLength, '类型:', contentType);
+
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', buffer.byteLength);
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        res.send(Buffer.from(buffer));
+        return;
+      } catch (fetchError) {
+        console.error('[Photo Download] fetch失败:', fetchError);
+        res.status(502).json({ success: false, error: '获取照片失败' });
+        return;
+      }
+    }
+
+    res.status(400).json({ success: false, error: '不支持的照片URL' });
+  } catch (err: any) {
+    console.error('下载照片失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 export default router;
