@@ -100,3 +100,12 @@ node-compile-cache/
 
 uploads/
 uploads/
+
+# Assets中的图片文件（不应存储在代码仓库）
+assets/*.jpg
+assets/*.jpeg
+assets/*.png
+assets/*.gif
+assets/*.webp
+assets/*.svg
+assets/*.ico
