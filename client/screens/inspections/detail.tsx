@@ -1289,48 +1289,67 @@ export default function InspectionDetailScreen() {
       let failCount = 0;
 
       // 下载并保存每张照片
-      for (const photo of allPhotos) {
+      const FileSystemAny = FileSystem as any;
+      for (let i = 0; i < allPhotos.length; i++) {
+        const photo = allPhotos[i];
         try {
           // 统一转换照片URL为完整路径
           const photoUrl = getImageUrl(photo);
+          console.log(`[Export] 正在下载第 ${i+1}/${allPhotos.length} 张照片: ${photoUrl}`);
           
           // 处理远程照片 (http/https)
           if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-            const filename = photo.split('/').pop() || `photo_${Date.now()}.jpg`;
-            const FileSystemAny = FileSystem as any;
+            const filename = photo.split('/').pop() || `inspection_${Date.now()}_${i}.jpg`;
             const fileUri = `${FileSystemAny.cacheDirectory}${filename}`;
 
             // 下载照片
             const downloadResult = await FileSystemAny.downloadAsync(photoUrl, fileUri);
+            console.log(`[Export] 下载结果: status=${downloadResult.status}, uri=${downloadResult.uri}`);
+            
             if (downloadResult.status === 200) {
               // 保存到相册
-              const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-              if (asset) {
+              try {
+                const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
+                console.log(`[Export] 保存到相册成功: ${asset.uri}`);
                 successCount++;
-              } else {
-                failCount++;
+              } catch (mediaErr) {
+                console.error('[Export] 保存到相册失败:', mediaErr);
+                // 如果MediaLibrary不可用，尝试使用Sharing分享
+                if (Platform.OS !== 'web' && await Sharing.isAvailableAsync()) {
+                  try {
+                    await Sharing.shareAsync(downloadResult.uri, {
+                      mimeType: 'image/jpeg',
+                      dialogTitle: '分享验货照片'
+                    });
+                    console.log('[Export] 已分享照片');
+                    successCount++;
+                  } catch {
+                    failCount++;
+                  }
+                } else {
+                  failCount++;
+                }
               }
             } else {
+              console.error('[Export] 下载失败, status:', downloadResult.status);
               failCount++;
             }
           } else if (photoUrl.startsWith('file:') || photoUrl.startsWith('content:') || photoUrl.startsWith('ph://')) {
             // 本地照片直接保存
-            const asset = await MediaLibrary.createAssetAsync(photoUrl);
-            if (asset) {
+            try {
+              const asset = await MediaLibrary.createAssetAsync(photoUrl);
               successCount++;
-            } else {
+            } catch (localErr) {
+              console.error('[Export] 保存本地照片失败:', localErr);
               failCount++;
             }
           } else {
-            // 其他情况（如 data:base64），尝试直接保存原始路径
+            // 其他情况，尝试直接保存
             try {
-              const asset = await MediaLibrary.createAssetAsync(photo);
-              if (asset) {
-                successCount++;
-              } else {
-                failCount++;
-              }
+              const asset = await MediaLibrary.createAssetAsync(photoUrl);
+              successCount++;
             } catch {
+              console.error('[Export] 保存照片失败，无法识别的格式');
               failCount++;
             }
           }
