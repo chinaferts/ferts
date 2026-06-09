@@ -1,9 +1,18 @@
 import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
-import PdfPrinter from 'pdfmake';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const fontkit = require('fontkit');
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument as PDFLib, rgb as LibRgb, StandardFonts as LibFonts } from '@pdfme/pdf-lib';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
+
+// ES Module 中获取 __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import {
   mockGetInspections,
   mockGetInspection,
@@ -20,6 +29,90 @@ import {
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// 确保上传目录存在
+const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// 接收Base64照片并保存到服务器
+router.post('/import-photo', async (req: Request, res: Response) => {
+  try {
+    const { photoData, recordId, oldPhotoPath } = req.body;
+    
+    if (!photoData) {
+      return res.status(400).json({ success: false, error: '缺少照片数据' });
+    }
+    
+    // 解析Base64数据
+    const base64Data = photoData.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    // 检测图片类型
+    let extension = '.jpg';
+    if (photoData.startsWith('data:image/png')) {
+      extension = '.png';
+    } else if (photoData.startsWith('data:image/webp')) {
+      extension = '.webp';
+    }
+    
+    // 生成唯一文件名
+    const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}${extension}`;
+    const filePath = path.join(uploadsDir, filename);
+    
+    // 保存文件
+    fs.writeFileSync(filePath, buffer);
+    
+    // 返回服务器路径（相对于uploads目录）
+    const serverPath = `/uploads/photos/${filename}`;
+    
+    // 如果提供了recordId和旧照片路径，更新数据库
+    if (recordId && isSupabaseConfigured()) {
+      try {
+        const client = requireSupabaseClient();
+        
+        // 获取当前照片列表
+        const { data: record } = await client
+          .from('inspection_records')
+          .select('photos')
+          .eq('id', recordId)
+          .single();
+        
+        if (record) {
+          let photos = [];
+          try {
+            photos = JSON.parse(record.photos || '[]');
+          } catch (e) {
+            photos = [];
+          }
+          
+          // 如果有旧照片路径，替换它
+          if (oldPhotoPath && photos.includes(oldPhotoPath)) {
+            const index = photos.indexOf(oldPhotoPath);
+            photos[index] = serverPath;
+          } else if (!photos.includes(serverPath)) {
+            photos.push(serverPath);
+          }
+          
+          // 更新数据库
+          await client
+            .from('inspection_records')
+            .update({ photos: JSON.stringify(photos) })
+            .eq('id', recordId);
+        }
+      } catch (dbError) {
+        console.error('更新照片路径失败:', dbError);
+        // 即使数据库更新失败，文件已保存
+      }
+    }
+    
+    res.json({ success: true, serverPath });
+  } catch (error) {
+    console.error('导入照片失败:', error);
+    res.status(500).json({ success: false, error: '导入照片失败' });
+  }
+});
 
 // 获取验货列表
 router.get('/', async (req: Request, res: Response) => {
@@ -68,10 +161,36 @@ router.get('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: mockData });
     }
     
+    // 获取所有验货的照片信息
+    const inspectionIds = data.map((item: any) => item.id);
+    const { data: recordsData } = await client!
+      .from('inspection_records')
+      .select('inspection_id, photos')
+      .in('inspection_id', inspectionIds);
+    
+    // 整理照片信息
+    const photosMap: { [key: number]: string[] } = {};
+    if (recordsData) {
+      for (const record of recordsData) {
+        if (record.photos && Array.isArray(record.photos)) {
+          if (!photosMap[record.inspection_id]) {
+            photosMap[record.inspection_id] = [];
+          }
+          photosMap[record.inspection_id].push(...record.photos);
+        }
+      }
+    }
+    
+    // 将照片信息添加到验货数据中
+    const dataWithPhotos = data.map((item: any) => ({
+      ...item,
+      photos: photosMap[item.id] || []
+    }));
+    
     // 合并 Supabase 数据和通用模板 mock 数据，避免重复
-    const supabaseIds = new Set(data.map((item: any) => item.id));
+    const supabaseIds = new Set(dataWithPhotos.map((item: any) => item.id));
     const mergedData = [
-      ...data,
+      ...dataWithPhotos,
       ...mockUniversalData.filter((item: any) => !supabaseIds.has(item.id))
     ];
     
@@ -165,7 +284,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     const client = requireSupabaseClient();
 
-    // 获取验货记录基本信息
+    // 获取验货记录Basic Information
     const { data: inspection, error } = await client
       .from('inspections')
       .select('*')
@@ -301,7 +420,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       });
     }
 
-    // 获取缺陷记录
+    // 获取Defect Records
     const { data: defects } = await client
       .from('defects')
       .select('*')
@@ -321,8 +440,18 @@ router.get('/:id', async (req: Request, res: Response) => {
       const recordBarcodes = record.barcode_codes || [];
       
       // 合并两个来源的照片：inspection_records.photos 字段 + inspection_photos 表
-      const photosFromRecord = record.photos || [];
-      const photosFromTable = recordPhotos || [];
+      // 保留所有有效的图片路径（包括服务器路径和本地路径）
+      // 注意：本地路径（file:///...）只能在拍摄设备上访问，其他设备会显示空白
+      // 同时过滤掉非图片文件（如 .txt 测试文件）
+      const validImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+      const isValidImage = (p: string) => {
+        const lower = p.toLowerCase();
+        return validImageExtensions.some(ext => lower.endsWith(ext));
+      };
+      const photosFromRecord = (record.photos || []).filter((p: string) => 
+        (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || p.startsWith('file://') || p.startsWith('content://')) && isValidImage(p)
+      );
+      const photosFromTable = recordPhotos.filter((p: string) => isValidImage(p));
       // 合并去重
       const allPhotos = [...new Set([...photosFromRecord, ...photosFromTable])];
       
@@ -540,10 +669,10 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
       // 根据结果计算通过数
       let passedItemsFinal = passedItems;
       if (result === 'pass') {
-        // 合格提交：未检查的项目也算通过
+        // Pass提交：Pending的项目也算通过
         passedItemsFinal = records.length;
       } else if (result === 'fail') {
-        // 不合格提交：保持原来的通过数
+        // 不Pass提交：保持原来的通过数
         passedItemsFinal = passedItems;
       }
       
@@ -622,7 +751,7 @@ router.post('/:id/records', async (req: Request, res: Response) => {
 
     if (error) throw error;
 
-    // 更新验货状态为进行中
+    // 更新验货状态为In Progress
     await client
       .from('inspections')
       .update({ status: 'in_progress' })
@@ -730,7 +859,7 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
 
     if (error) throw error;
 
-    // 更新验货状态为进行中
+    // 更新验货状态为In Progress
     await client
       .from('inspections')
       .update({ status: 'in_progress' })
@@ -853,7 +982,7 @@ router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response)
       return res.status(500).json({ success: false, error: 'Failed to update barcode codes' });
     }
 
-    // 更新验货状态为进行中
+    // 更新验货状态为In Progress
     await client
       .from('inspections')
       .update({ status: 'in_progress' })
@@ -893,27 +1022,24 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
       });
     }
 
-    // 尝试使用S3存储
-    let photoUrl = '';
-    try {
-      const { storage } = await import('../storage/s3.js');
-      const fileName = `${Date.now()}-${file.originalname}`;
-      // 上传到对象存储，获取 key
-      const key = await (storage as any).uploadFile({
-        fileContent: file.buffer,
-        fileName: fileName,
-        contentType: file.mimetype
-      });
-      // 生成可访问的预签名 URL
-      photoUrl = await (storage as any).generatePresignedUrl({ key });
-      console.log('[UPLOAD_PHOTO] S3 photo URL:', photoUrl);
-    } catch (storageError) {
-      console.error('S3存储失败:', storageError);
-      // 如果S3不可用，返回base64编码的数据
-      const base64 = file.buffer.toString('base64');
-      photoUrl = `data:${file.mimetype};base64,${base64}`;
+    // 保存照片到本地文件系统
+    const uploadDir = path.join(process.cwd(), 'uploads', 'photos');
+    const fileName = `${Date.now()}-${file.originalname}`;
+    const filePath = path.join(uploadDir, fileName);
+    
+    // 确保目录存在
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
-
+    
+    // 保存文件
+    fs.writeFileSync(filePath, file.buffer);
+    console.log('[UPLOAD_PHOTO] 文件已保存到:', filePath);
+    
+    // 生成访问URL（相对于 uploads 目录）
+    const photoUrl = `/uploads/photos/${fileName}`;
+    
+    // 如果 Supabase 配置了，保存到数据库；否则只返回本地URL
     const client = requireSupabaseClient();
     const { data, error } = await client
       .from('inspection_photos')
@@ -936,67 +1062,92 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
   }
 });
 
-// 生成验货报告 PDF
+// 生成Inspection Report PDF (使用 @pdfme/pdf-lib)
 router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const client = requireSupabaseClient();
-
-    // 解析 id 参数
     const idStr = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const inspectionId = parseInt(idStr || '0');
 
-    // 获取验货详情
-    const { data: inspection, error: inspectError } = await client
-      .from('inspections')
-      .select('*')
-      .eq('id', inspectionId)
-      .single();
-
-    if (inspectError || !inspection) {
-      res.status(404).json({ success: false, error: '验货记录不存在' });
-      return;
+    let inspection: any;
+    
+    // 尝试使用 mock 数据（mockGetInspection 返回完整的验货数据）
+    const mockInspection = mockGetInspection(idStr);
+    if (mockInspection) {
+      inspection = mockInspection;
+    } else {
+      const { data, error } = await client
+        .from('inspections').select('*').eq('id', inspectionId).single();
+      if (error || !data) {
+        res.status(404).json({ success: false, error: 'Inspection not found' });
+        return;
+      }
+      inspection = data;
+      
+      // 从数据库获取 inspection_records
+      const { data: recordsData } = await client
+        .from('inspection_records')
+        .select('*')
+        .eq('inspection_id', inspectionId);
+      inspection.inspection_records = recordsData || [];
+      
+      // 从数据库获取 defects
+      const { data: defectsData } = await client
+        .from('defects')
+        .select('*')
+        .eq('inspection_id', inspectionId);
+      inspection.defects = defectsData || [];
     }
 
-    // 获取检查项记录
-    const { data: records } = await client
-      .from('inspection_records')
-      .select('*')
-      .eq('inspection_id', inspectionId);
-
-    // 获取缺陷记录
-    const { data: defects } = await client
-      .from('inspection_defects')
-      .select('*')
-      .eq('inspection_id', inspectionId);
-
-    // 获取照片
+    // 获取照片记录
     const { data: photos } = await client
       .from('inspection_photos')
       .select('*')
       .eq('inspection_id', inspectionId);
-
-    // 按分类分组检查项
-    const categoriesMap = new Map<string, any[]>();
-    const checklistItems = inspection.checklist_items || [];
-
-    for (const item of checklistItems) {
-      const category = item.category || '未分类';
-      if (!categoriesMap.has(category)) {
-        categoriesMap.set(category, []);
+    
+    // 按 record_id 分组照片
+    const photosByRecordId = new Map<number, string[]>();
+    if (photos) {
+      for (const photo of photos) {
+        if (photo.record_id) {
+          if (!photosByRecordId.has(photo.record_id)) {
+            photosByRecordId.set(photo.record_id, []);
+          }
+          photosByRecordId.get(photo.record_id)!.push(photo.photo_url);
+        }
       }
+    }
+    const defects = inspection.defects || [];
+    console.log('[EXPORT_PDF] Photos by record_id:', Array.from(photosByRecordId.entries()).slice(0, 3));
+
+    const records = inspection.records || inspection.inspection_records || [];
+
+    console.log('[EXPORT_PDF] Inspection:', { id: inspection.id, hasRecords: !!inspection.records, hasInspectionRecords: !!inspection.inspection_records, recordsCount: records.length });
+
+    // 构建分类和检查项（从 records 转换）
+    const checklistItems = records.map((record: any) => ({
+      id: record.checklist_item_id || record.id,
+      name: record.item_name,
+      description: record.item_description,
+      category: record.item_category,
+      status: record.result,
+      notes: record.notes,
+      record_id: record.id,
+      photos: record.photos || [],
+      barcodeCodes: record.barcode_codes || []
+    }));
+    
+    const categoriesMap = new Map<string, any[]>();
+    for (const item of checklistItems) {
+      const category = item.category || 'General';
+      if (!categoriesMap.has(category)) categoriesMap.set(category, []);
       categoriesMap.get(category)!.push(item);
     }
-
-    // 按检查项 ID 分组记录
     const recordsMap = new Map<number, any>();
-    if (records) {
-      for (const record of records) {
-        recordsMap.set(record.checklist_item_id, record);
-      }
-    }
+    for (const record of records) recordsMap.set(record.checklist_item_id, record);
+    console.log('[EXPORT_PDF] Records map:', Array.from(recordsMap.entries()).slice(0, 3));
 
-    // 统计
     let passCount = 0, failCount = 0, naCount = 0, pendingCount = 0;
     for (const item of checklistItems) {
       const record = recordsMap.get(item.id);
@@ -1005,199 +1156,200 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         else if (record.result === 'fail') failCount++;
         else if (record.result === 'na') naCount++;
         else pendingCount++;
-      } else {
-        pendingCount++;
-      }
+      } else pendingCount++;
     }
 
-    // 生成 PDF
-    const doc = new PDFDocument({
-      size: 'A4',
-      margins: { top: 50, bottom: 50, left: 50, right: 50 },
-      info: {
-        Title: `Inspection Report - ${inspection.inspection_number}`,
-        Author: 'Inspection System',
-        Subject: 'QC Inspection Report'
+    // 使用 @pdfme/pdf-lib 直接生成 PDF
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
+    
+    // 加载 NotoSans 字体支持中文
+    const fontPath = path.join(__dirname, '..', 'fonts', 'NotoSans-Regular.ttf');
+    const fontBytes = fs.readFileSync(fontPath);
+    const notoFont = await pdfDoc.embedFont(fontBytes);
+    
+    const pageWidth = 595.28;
+    const pageHeight = 841.89;
+    const margin = 50;
+    let y = pageHeight - margin;
+
+    const addPage = () => {
+      pdfDoc.addPage([pageWidth, pageHeight]);
+      return { y: pageHeight - margin };
+    };
+
+    const drawText = async (text: string, x: number, currentY: number, font: any, size: number, options: { bold?: boolean; color?: string } = {}) => {
+      let currentYPos = currentY;
+      
+      // Simple text wrapping
+      const maxWidth = pageWidth - margin * 2;
+      const words = text.split(' ');
+      let line = '';
+      const lines: string[] = [];
+      
+      for (const word of words) {
+        const testLine = line ? line + ' ' + word : word;
+        const width = font.widthOfTextAtSize(testLine, size);
+        if (width > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = testLine;
+        }
       }
-    });
+      if (line) lines.push(line);
+      
+      for (const l of lines) {
+        if (currentYPos < margin + 20) {
+          const newPage = addPage();
+          currentYPos = newPage.y;
+        }
+        const hexColor = options.color === 'green' ? '00AA00' : options.color === 'red' ? 'CC0000' : options.color === 'gray' ? '666666' : options.color === 'orange' ? 'FF8800' : '000000';
+        const page = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
+        page.drawText(l, { x, y: currentYPos, size, font, color: rgb(parseInt(hexColor.slice(0,2), 16)/255, parseInt(hexColor.slice(2,4), 16)/255, parseInt(hexColor.slice(4), 16)/255) });
+        currentYPos -= size + 4;
+      }
+      return currentYPos;
+    };
 
-    // PDF 生成器不支持 TTC 字体，改用内置 Helvetica 字体
-    // 中文内容采用中英双语格式
+    let { y: startY } = addPage();
+    y = startY;
 
-    // 设置响应头 - 使用英文文件名避免编码问题
-    const filename = `Inspection_Report_${inspection.inspection_number}.pdf`;
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    // Title (中文)
+    y = await drawText('验货报告', pageWidth / 2 - notoFont.widthOfTextAtSize('验货报告', 22) / 2, y, notoFont, 22);
+    y -= 10;
+    
+    // Report number (中英混合)
+    y = await drawText('报告编号: ' + (inspection.inspection_number || 'N/A'), pageWidth / 2 - notoFont.widthOfTextAtSize('报告编号: ' + (inspection.inspection_number || 'N/A'), 12) / 2, y, notoFont, 12);
+    y -= 25;
 
-    doc.pipe(res);
+    // Basic Information Header
+    y = await drawText('基本信息', margin, y, notoFont, 14);
+    y -= 15;
+    
+    const infoItems = [
+      ['产品名称', inspection.product_name || 'N/A'],
+      ['供应商', inspection.supplier || 'N/A'],
+      ['批次号', inspection.batch_number || 'N/A'],
+      ['验货日期', inspection.inspection_date || 'N/A'],
+      ['验货员', inspection.inspector_name || inspection.created_by || 'N/A'],
+      ['状态', inspection.status === 'completed' ? '已完成' : '进行中']
+    ];
 
-    // 标题
-    doc.fontSize(24).font('Helvetica-Bold').text('Inspection Report / 验货报告', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fontSize(12).font('Helvetica').text(`Report No. / 报告编号: ${inspection.inspection_number}`, { align: 'center' });
-    doc.moveDown(1);
+    for (const [label, value] of infoItems) {
+      y = await drawText(label + ': ' + value, margin + 10, y, notoFont, 10);
+    }
+    y -= 15;
 
-    // 基本信息 / Basic Information
-    doc.fontSize(14).font('Helvetica-Bold').text('Basic Information / 基本信息');
-    doc.moveDown(0.3);
-    doc.fontSize(10).font('Helvetica');
-    doc.text(`Product Name / 产品名称: ${inspection.product_name || 'N/A'}`);
-    doc.text(`Supplier / 供应商: ${inspection.supplier || 'N/A'}`);
-    doc.text(`Batch No. / 批次号: ${inspection.batch_number || 'N/A'}`);
-    doc.text(`Inspection Date / 验货日期: ${inspection.inspection_date || 'N/A'}`);
-    doc.text(`Inspector / 验货员: ${inspection.inspector_name || inspection.created_by || 'N/A'}`);
-    doc.moveDown(1);
+    // Summary
+    y = await drawText('汇总', margin, y, notoFont, 14);
+    y -= 15;
 
-    // 检验结果 / Inspection Result
-    const resultStatus = inspection.status === 'completed' ? 'Completed / 已完成' : 'In Progress / 进行中';
-    const resultColor = inspection.status === 'completed' ? '#008000' : '#FFA500';
-    doc.fontSize(14).font('Helvetica-Bold').text('Inspection Result / 检验结果');
-    doc.moveDown(0.3);
-    doc.fontSize(12).fillColor(resultColor).text(`Status / 状态: ${resultStatus}`, { align: 'center' });
-    doc.fillColor('black');
-    doc.moveDown(1);
-
-    // 统计摘要 / Summary
-    doc.fontSize(14).font('Helvetica-Bold').text('Summary / 统计摘要');
-    doc.moveDown(0.3);
-    doc.fontSize(10).font('Helvetica');
-
-    // 绘制统计表格
-    const tableTop = doc.y;
+    // Summary table header
+    const summaryStartX = margin + 10;
     const colWidth = 100;
-    const rowHeight = 25;
-
-    // 表头 / Headers
-    doc.rect(50, tableTop, colWidth * 4, rowHeight).stroke();
-    doc.fontSize(10).font('Helvetica-Bold');
-    const headers = ['Pass\n合格', 'Fail\n不合格', 'N/A\n不适用', 'Pending\n未检查'];
-    const headerX = [50, 150, 250, 350];
-    for (let i = 0; i < headers.length; i++) {
-      doc.text(headers[i], headerX[i] + 5, tableTop + 3, { width: colWidth - 10, align: 'center' });
+    const headers = ['通过', '不通过', '不适用', '待检'];
+    const summaryValues = [passCount.toString(), failCount.toString(), naCount.toString(), pendingCount.toString()];
+    const summaryColors = ['green', 'red', 'gray', 'orange'];
+    
+    for (let i = 0; i < 4; i++) {
+      const xPos = summaryStartX + i * colWidth;
+      y = await drawText(headers[i], xPos, y, notoFont, 10);
+      y = await drawText(summaryValues[i], xPos, y, notoFont, 10, { color: summaryColors[i] });
     }
+    y -= 15;
 
-    // 数据行
-    const dataY = tableTop + rowHeight;
-    doc.rect(50, dataY, colWidth * 4, rowHeight).stroke();
-    doc.font('Helvetica');
-    const values = [passCount.toString(), failCount.toString(), naCount.toString(), pendingCount.toString()];
-    const colors = ['#008000', '#DC143C', '#6C757D', '#FFA500'];
-    for (let i = 0; i < values.length; i++) {
-      doc.fillColor(colors[i] as any).text(values[i], headerX[i] + 5, dataY + 8, { width: colWidth - 10 });
-    }
-    doc.fillColor('black');
-
-    doc.y = dataY + rowHeight + 20;
-
-    // Checklist Details / 检查项明细
-    doc.fontSize(14).font('Helvetica-Bold').text('Checklist Details / 检查项明细');
-    doc.moveDown(0.5);
+    // Checklist Items
+    y = await drawText('检查项', margin, y, notoFont, 14);
+    y -= 10;
 
     for (const [category, items] of categoriesMap) {
-      // 检查是否需要换页
-      if (doc.y > 650) {
-        doc.addPage();
+      if (y < margin + 50) {
+        const newPage = addPage();
+        y = newPage.y;
       }
-
-      doc.fontSize(12).font('Helvetica-Bold').fillColor('#2563eb').text(category);
-      doc.fillColor('black');
-      doc.moveDown(0.2);
-
+      y = await drawText(category, margin + 5, y, notoFont, 11);
+      y -= 5;
+      
       for (const item of items) {
-        if (doc.y > 700) {
-          doc.addPage();
-        }
-
         const record = recordsMap.get(item.id);
-        let statusText = 'Pending / 未检查';
-        let statusColor = '#808080';
-
+        let statusText = '待检', statusColor = 'gray';
         if (record) {
-          if (record.result === 'pass') {
-            statusText = 'Pass / 合格';
-            statusColor = '#008000';
-          } else if (record.result === 'fail') {
-            statusText = 'Fail / 不合格';
-            statusColor = '#DC143C';
-          } else if (record.result === 'na') {
-            statusText = 'N/A / 不适用';
-            statusColor = '#6C757D';
+          if (record.result === 'pass') { statusText = '通过'; statusColor = 'green'; }
+          else if (record.result === 'fail') { statusText = '不通过'; statusColor = 'red'; }
+          else if (record.result === 'na') { statusText = '不适用'; statusColor = 'gray'; }
+        }
+        const itemName = (item.item_number || '') + ' ' + (item.item_name || item.name || 'N/A');
+        y = await drawText(itemName + ' - ' + statusText, margin + 15, y, notoFont, 9, { color: statusColor });
+        
+        // 添加照片 - 使用 inspection_photos 表中的照片
+        const recordId = record?.id;
+        const recordPhotos = recordId ? (photosByRecordId.get(recordId) || []) : [];
+        if (recordPhotos.length > 0) {
+          y -= 5;
+          for (const photoUrl of recordPhotos.slice(0, 3)) { // 最多显示3张照片
+            if (y < margin + 80) {
+              const newPage = addPage();
+              y = newPage.y;
+            }
+            try {
+              // 读取本地照片文件
+              const fullPhotoPath = path.join(process.cwd(), photoUrl);
+              if (fs.existsSync(fullPhotoPath)) {
+                const photoBytes = fs.readFileSync(fullPhotoPath);
+                let img;
+                if (photoUrl.toLowerCase().endsWith('.png')) {
+                  img = await pdfDoc.embedPng(photoBytes);
+                } else {
+                  img = await pdfDoc.embedJpg(photoBytes);
+                }
+                const imgDims = img.scale(100 / Math.max(img.width, img.height));
+                const page = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
+                page.drawImage(img, { x: margin + 20, y: y - imgDims.height, width: imgDims.width, height: imgDims.height });
+                y -= imgDims.height + 5;
+              }
+            } catch (photoErr) {
+              console.log('Failed to embed photo:', photoUrl, photoErr);
+            }
           }
         }
-
-        // 检查项名称
-        doc.fontSize(10).font('Helvetica-Bold').text(`${item.item_number || ''}. ${item.item_name || item.name || 'N/A'}`, { continued: true });
-
-        // 状态
-        doc.font('Helvetica').fillColor(statusColor).text(` [${statusText}]`, { continued: false });
-        doc.fillColor('black');
-
-        // 条码 / Barcode
-        const barcodes = record?.barcode_codes;
-        if (barcodes && barcodes.length > 0) {
-          doc.fontSize(9).font('Helvetica').text(`   Barcode / 条码: ${barcodes.join(', ')}`);
-        }
-
-        // 备注 / Notes
-        if (record?.notes) {
-          doc.fontSize(9).fillColor('#666').text(`   Notes / 备注: ${record.notes}`);
-          doc.fillColor('black');
-        }
-
-        doc.moveDown(0.2);
       }
-      doc.moveDown(0.5);
+      y -= 5;
     }
 
-    // Defect Records / 缺陷记录
+    // Defect Records
     if (defects && defects.length > 0) {
-      if (doc.y > 600) {
-        doc.addPage();
+      if (y < margin + 100) {
+        const newPage = addPage();
+        y = newPage.y;
       }
-
-      doc.fontSize(14).font('Helvetica-Bold').text('Defect Records / 缺陷记录');
-      doc.moveDown(0.5);
-
+      y -= 10;
+      y = await drawText('缺陷记录', margin, y, notoFont, 14);
+      y -= 5;
+      
       for (const defect of defects) {
-        if (doc.y > 700) {
-          doc.addPage();
-        }
-
-        const severityColors: Record<string, string> = {
-          critical: '#DC143C',
-          major: '#FFA500',
-          minor: '#FFC107'
-        };
-
-        doc.fontSize(10).font('Helvetica-Bold');
-        doc.fillColor(severityColors[defect.severity] || '#808080');
-        doc.text(`[${defect.severity?.toUpperCase() || 'N/A'}] ${defect.description || 'N/A'}`);
-        doc.fillColor('black');
-        doc.fontSize(9).font('Helvetica');
-        if (defect.location) {
-          doc.text(`   Location / 位置: ${defect.location}`);
-        }
-        if (defect.quantity) {
-          doc.text(`   Quantity / 数量: ${defect.quantity}`);
-        }
-        doc.moveDown(0.3);
+        const severityText = defect.severity === 'critical' ? '严重' : defect.severity === 'major' ? '主要' : '轻微';
+        y = await drawText('- ' + (defect.description || 'N/A') + ' (' + severityText + ')', margin + 10, y, notoFont, 9);
       }
     }
 
-    // Report Footer / 报告底部
-    if (doc.y > 720) {
-      doc.addPage();
-    }
-    doc.moveDown(2);
-    doc.fontSize(10).font('Helvetica').fillColor('#666');
-    doc.text(`Generated / 生成时间: ${new Date().toLocaleString('en-US')}`, { align: 'center' });
-    doc.text('This report is automatically generated by the Inspection System / 本报告由验货系统自动生成', { align: 'center' });
-    doc.fillColor('black');
+    // Generated time
+    y -= 15;
+    const genText = '生成时间: ' + new Date().toLocaleString('zh-CN');
+    y = await drawText(genText, pageWidth / 2 - notoFont.widthOfTextAtSize(genText, 8) / 2, y, notoFont, 8, { color: 'gray' });
 
-    doc.end();
+    // Save PDF
+    const pdfBytes = await pdfDoc.save();
+    const pdfBuffer = Buffer.from(pdfBytes);
+    const filename = 'Inspection_Report_' + (inspection.inspection_number || 'unknown') + '.pdf';
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
   } catch (err: any) {
-    console.error('PDF report generation failed / PDF报告生成失败:', err);
+    console.error('PDF report generation failed:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

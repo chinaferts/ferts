@@ -5,8 +5,8 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const fontkit = require('fontkit');
-import { PDFDocument, rgb, StandardFonts } from '@pdfme/pdf-lib';
+// PDFKit 不需要 fontkit
+import PDFDocument from 'pdfkit';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 
 // ES Module 中获取 __dirname
@@ -1158,198 +1158,153 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       } else pendingCount++;
     }
 
-    // 使用 @pdfme/pdf-lib 直接生成 PDF
-    const pdfDoc = await PDFDocument.create();
-    pdfDoc.registerFontkit(fontkit);
-    
-    // 加载 NotoSans 字体支持中文
-    const fontPath = path.join(__dirname, '..', 'fonts', 'NotoSans-Regular.ttf');
-    const fontBytes = fs.readFileSync(fontPath);
-    const notoFont = await pdfDoc.embedFont(fontBytes);
-    
-    const pageWidth = 595.28;
-    const pageHeight = 841.89;
-    const margin = 50;
-    let y = pageHeight - margin;
+  // 使用 PDFKit 生成 PDF（更好的中文支持）
+  const fontPath = path.join(process.cwd(), 'src', 'fonts', 'NotoSans-Regular.ttf');
+  
+  // 创建 PDF 文档
+  const doc = new PDFDocument({
+    size: 'A4',
+    margins: { top: 50, bottom: 50, left: 50, right: 50 },
+    info: { Title: '验货报告', Author: 'Quality Inspection System' }
+  });
+  
+  // 设置中文字体
+  doc.registerFont('NotoSans', fontPath);
+  doc.font('NotoSans');
+  
+  const pageWidth = doc.page.width;
+  const pageHeight = doc.page.height;
+  const margin = 50;
+  let y = margin;
+  
+  // Title
+  doc.fontSize(22).fillColor('#000000');
+  doc.text('验货报告', { align: 'center' });
+  y = doc.y + 10;
+  
+  // Report number
+  doc.fontSize(12).fillColor('#666666');
+  doc.text('报告编号: ' + (inspection.inspection_number || 'N/A'), { align: 'center' });
+  y = doc.y + 25;
+  
+  // Basic Information Header
+  doc.fontSize(14).fillColor('#000000');
+  doc.text('基本信息');
+  y = doc.y + 15;
+  
+  const infoItems = [
+    ['产品名称', inspection.product_name || 'N/A'],
+    ['供应商', inspection.supplier || 'N/A'],
+    ['批次号', inspection.batch_number || 'N/A'],
+    ['验货日期', inspection.inspection_date || 'N/A'],
+    ['验货员', inspection.inspector_name || inspection.created_by || 'N/A'],
+    ['状态', inspection.status === 'completed' ? '已完成' : '进行中']
+  ];
 
-    const addPage = () => {
-      pdfDoc.addPage([pageWidth, pageHeight]);
-      return { y: pageHeight - margin };
-    };
+  for (const [label, value] of infoItems) {
+    doc.fontSize(10).fillColor('#000000').text(label + ': ' + value, margin + 10);
+    y = doc.y;
+  }
+  y += 15;
 
-    const drawText = async (text: string, x: number, currentY: number, font: any, size: number, options: { bold?: boolean; color?: string } = {}) => {
-      let currentYPos = currentY;
-      
-      // Simple text wrapping
-      const maxWidth = pageWidth - margin * 2;
-      const words = text.split(' ');
-      let line = '';
-      const lines: string[] = [];
-      
-      for (const word of words) {
-        const testLine = line ? line + ' ' + word : word;
-        const width = font.widthOfTextAtSize(testLine, size);
-        if (width > maxWidth && line) {
-          lines.push(line);
-          line = word;
-        } else {
-          line = testLine;
-        }
+  // Summary
+  doc.fontSize(14).fillColor('#000000').text('汇总');
+  y = doc.y + 15;
+
+  // Summary values
+  const summaryItems = [
+    { label: '通过', value: passCount.toString(), color: '#00AA00' },
+    { label: '不通过', value: failCount.toString(), color: '#CC0000' },
+    { label: '不适用', value: naCount.toString(), color: '#666666' },
+    { label: '待检', value: pendingCount.toString(), color: '#FF8800' }
+  ];
+  
+  const colWidth = 100;
+  for (let i = 0; i < 4; i++) {
+    const xPos = margin + 10 + i * colWidth;
+    doc.fontSize(10).fillColor('#000000').text(summaryItems[i].label, xPos);
+    doc.fontSize(10).fillColor(summaryItems[i].color).text(summaryItems[i].value, xPos);
+    y = doc.y;
+  }
+  y += 15;
+
+  // Checklist Items
+  doc.fontSize(14).fillColor('#000000').text('检查项');
+  y = doc.y + 10;
+
+  for (const [category, items] of categoriesMap) {
+    doc.fontSize(11).fillColor('#000000').text(category);
+    y = doc.y + 5;
+    
+    for (const item of items) {
+      const record = recordsMap.get(item.id);
+      let statusText = '待检', statusColor = '#666666';
+      if (record) {
+        if (record.result === 'pass') { statusText = '通过'; statusColor = '#00AA00'; }
+        else if (record.result === 'fail') { statusText = '不通过'; statusColor = '#CC0000'; }
+        else if (record.result === 'na') { statusText = '不适用'; statusColor = '#666666'; }
       }
-      if (line) lines.push(line);
+      const itemName = (item.item_number || '') + ' ' + (item.item_name || item.name || 'N/A');
       
-      for (const l of lines) {
-        if (currentYPos < margin + 20) {
-          const newPage = addPage();
-          currentYPos = newPage.y;
-        }
-        const hexColor = options.color === 'green' ? '00AA00' : options.color === 'red' ? 'CC0000' : options.color === 'gray' ? '666666' : options.color === 'orange' ? 'FF8800' : '000000';
-        const page = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
-        page.drawText(l, { x, y: currentYPos, size, font, color: rgb(parseInt(hexColor.slice(0,2), 16)/255, parseInt(hexColor.slice(2,4), 16)/255, parseInt(hexColor.slice(4), 16)/255) });
-        currentYPos -= size + 4;
-      }
-      return currentYPos;
-    };
-
-    let { y: startY } = addPage();
-    y = startY;
-
-    // Title (中文)
-    y = await drawText('验货报告', pageWidth / 2 - notoFont.widthOfTextAtSize('验货报告', 22) / 2, y, notoFont, 22);
-    y -= 10;
-    
-    // Report number (中英混合)
-    y = await drawText('报告编号: ' + (inspection.inspection_number || 'N/A'), pageWidth / 2 - notoFont.widthOfTextAtSize('报告编号: ' + (inspection.inspection_number || 'N/A'), 12) / 2, y, notoFont, 12);
-    y -= 25;
-
-    // Basic Information Header
-    y = await drawText('基本信息', margin, y, notoFont, 14);
-    y -= 15;
-    
-    const infoItems = [
-      ['产品名称', inspection.product_name || 'N/A'],
-      ['供应商', inspection.supplier || 'N/A'],
-      ['批次号', inspection.batch_number || 'N/A'],
-      ['验货日期', inspection.inspection_date || 'N/A'],
-      ['验货员', inspection.inspector_name || inspection.created_by || 'N/A'],
-      ['状态', inspection.status === 'completed' ? '已完成' : '进行中']
-    ];
-
-    for (const [label, value] of infoItems) {
-      y = await drawText(label + ': ' + value, margin + 10, y, notoFont, 10);
-    }
-    y -= 15;
-
-    // Summary
-    y = await drawText('汇总', margin, y, notoFont, 14);
-    y -= 15;
-
-    // Summary table header
-    const summaryStartX = margin + 10;
-    const colWidth = 100;
-    const headers = ['通过', '不通过', '不适用', '待检'];
-    const summaryValues = [passCount.toString(), failCount.toString(), naCount.toString(), pendingCount.toString()];
-    const summaryColors = ['green', 'red', 'gray', 'orange'];
-    
-    for (let i = 0; i < 4; i++) {
-      const xPos = summaryStartX + i * colWidth;
-      y = await drawText(headers[i], xPos, y, notoFont, 10);
-      y = await drawText(summaryValues[i], xPos, y, notoFont, 10, { color: summaryColors[i] });
-    }
-    y -= 15;
-
-    // Checklist Items
-    y = await drawText('检查项', margin, y, notoFont, 14);
-    y -= 10;
-
-    for (const [category, items] of categoriesMap) {
-      if (y < margin + 50) {
-        const newPage = addPage();
-        y = newPage.y;
-      }
-      y = await drawText(category, margin + 5, y, notoFont, 11);
-      y -= 5;
+      doc.fontSize(9).fillColor(statusColor).text(itemName + ' - ' + statusText, margin + 15);
+      y = doc.y + 5;
       
-      for (const item of items) {
-        const record = recordsMap.get(item.id);
-        let statusText = '待检', statusColor = 'gray';
-        if (record) {
-          if (record.result === 'pass') { statusText = '通过'; statusColor = 'green'; }
-          else if (record.result === 'fail') { statusText = '不通过'; statusColor = 'red'; }
-          else if (record.result === 'na') { statusText = '不适用'; statusColor = 'gray'; }
-        }
-        const itemName = (item.item_number || '') + ' ' + (item.item_name || item.name || 'N/A');
-        y = await drawText(itemName + ' - ' + statusText, margin + 15, y, notoFont, 9, { color: statusColor });
-        
-        // 添加照片 - 使用 inspection_photos 表中的照片
-        const recordId = record?.id;
-        const recordPhotos = recordId ? (photosByRecordId.get(recordId) || []) : [];
-        if (recordPhotos.length > 0) {
-          y -= 5;
-          for (const photoUrl of recordPhotos.slice(0, 3)) { // 最多显示3张照片
-            if (y < margin + 80) {
-              const newPage = addPage();
-              y = newPage.y;
+      // 添加照片
+      const recordId = record?.id;
+      const recordPhotos = recordId ? (photosByRecordId.get(recordId) || []) : [];
+      if (recordPhotos.length > 0) {
+        for (const photoUrl of recordPhotos.slice(0, 3)) {
+          try {
+            const fullPhotoPath = path.join(process.cwd(), photoUrl);
+            if (fs.existsSync(fullPhotoPath)) {
+              doc.image(fullPhotoPath, margin + 20, y, { width: 100 });
+              y += 105;
             }
-            try {
-              // 读取本地照片文件
-              const fullPhotoPath = path.join(process.cwd(), photoUrl);
-              if (fs.existsSync(fullPhotoPath)) {
-                const photoBytes = fs.readFileSync(fullPhotoPath);
-                let img;
-                if (photoUrl.toLowerCase().endsWith('.png')) {
-                  img = await pdfDoc.embedPng(photoBytes);
-                } else {
-                  img = await pdfDoc.embedJpg(photoBytes);
-                }
-                const imgDims = img.scale(100 / Math.max(img.width, img.height));
-                const page = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
-                page.drawImage(img, { x: margin + 20, y: y - imgDims.height, width: imgDims.width, height: imgDims.height });
-                y -= imgDims.height + 5;
-              }
-            } catch (photoErr) {
-              console.log('Failed to embed photo:', photoUrl, photoErr);
-            }
+          } catch (photoErr) {
+            console.log('Failed to embed photo:', photoUrl);
           }
         }
       }
-      y -= 5;
     }
+    y += 5;
+  }
 
-    // Defect Records
-    if (defects && defects.length > 0) {
-      if (y < margin + 100) {
-        const newPage = addPage();
-        y = newPage.y;
-      }
-      y -= 10;
-      y = await drawText('缺陷记录', margin, y, notoFont, 14);
-      y -= 5;
-      
-      for (const defect of defects) {
-        const severityText = defect.severity === 'critical' ? '严重' : defect.severity === 'major' ? '主要' : '轻微';
-        y = await drawText('- ' + (defect.description || 'N/A') + ' (' + severityText + ')', margin + 10, y, notoFont, 9);
-      }
-    }
-
-    // Generated time
-    y -= 15;
-    const genText = '生成时间: ' + new Date().toLocaleString('zh-CN');
-    y = await drawText(genText, pageWidth / 2 - notoFont.widthOfTextAtSize(genText, 8) / 2, y, notoFont, 8, { color: 'gray' });
-
-    // Save PDF
-    const pdfBytes = await pdfDoc.save();
-    const pdfBuffer = Buffer.from(pdfBytes);
-    const filename = 'Inspection_Report_' + (inspection.inspection_number || 'unknown') + '.pdf';
+  // Defect Records
+  if (defects && defects.length > 0) {
+    y += 10;
+    doc.fontSize(14).fillColor('#000000').text('缺陷记录');
+    y = doc.y + 5;
     
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Content-Length', pdfBuffer.length);
-    res.send(pdfBuffer);
+    for (const defect of defects) {
+      const severityText = defect.severity === 'critical' ? '严重' : defect.severity === 'major' ? '主要' : '轻微';
+      doc.fontSize(9).fillColor('#000000').text('- ' + (defect.description || 'N/A') + ' (' + severityText + ')', margin + 10);
+      y = doc.y;
+    }
+  }
+
+  // Generated time
+  y += 15;
+  doc.fontSize(8).fillColor('#666666').text('生成时间: ' + new Date().toLocaleString('zh-CN'), { align: 'center' });
+
+  // 生成 PDF Buffer
+  const pdfChunks: Buffer[] = [];
+  doc.on('data', (chunk: Buffer) => pdfChunks.push(chunk));
+  
+  const pdfBuffer = await new Promise<Buffer>((resolve) => {
+    doc.on('end', () => resolve(Buffer.concat(pdfChunks)));
+    doc.end();
+  });
+  
+  const filename = 'Inspection_Report_' + (inspection.inspection_number || 'unknown') + '.pdf';
+  
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Content-Length', pdfBuffer.length);
+  res.send(pdfBuffer);
   } catch (err: any) {
-    console.error('PDF report generation failed:', err);
-    res.status(500).json({ success: false, error: err.message });
+    console.error('Error generating PDF:', err);
+    res.status(500).json({ error: 'Failed to generate PDF' });
   }
 });
 
