@@ -143,35 +143,60 @@ def draw_summary(c, width, margin, y, data):
     return y
 
 def draw_photo(c, x, y, photo_path, max_width=40*mm, max_height=35*mm):
-    """绘制单张照片，返回实际占用高度"""
+    """绘制单张照片（压缩后），返回实际占用高度"""
     try:
-        # 获取完整路径
-        full_path = get_full_photo_path(photo_path)
-        if not full_path:
-            return 0
+        import io
+        import uuid
         
-        # 检查文件是否存在
-        if not os.path.exists(full_path):
-            print(f"照片文件不存在: {full_path}")
-            return 0
+        # 获取完整路径或下载网络图片
+        if photo_path.startswith('http'):
+            import requests
+            response = requests.get(photo_path, timeout=10)
+            if response.status_code == 200:
+                img_data = response.content
+            else:
+                return 0
+        else:
+            full_path = get_full_photo_path(photo_path)
+            if not full_path or not os.path.exists(full_path):
+                print(f"照片文件不存在: {photo_path}")
+                return 0
+            with open(full_path, 'rb') as f:
+                img_data = f.read()
         
-        # 获取图片尺寸
+        # 使用Pillow处理图片（压缩）
         from PIL import Image
-        img = Image.open(full_path)
+        img = Image.open(io.BytesIO(img_data))
+        
+        # 转换为RGB（处理PNG等格式）
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+        
         img_width, img_height = img.size
         
         # 计算缩放比例
         ratio = min(max_width / img_width, max_height / img_height)
-        draw_width = img_width * ratio
-        draw_height = img_height * ratio
+        if ratio < 1:  # 只有当图片大于目标尺寸时才缩放
+            new_width = int(img_width * ratio)
+            new_height = int(img_height * ratio)
+            img = img.resize((new_width, new_height), Image.LANCZOS)
         
-        # 绘制图片
-        c.drawImage(full_path, x, y - draw_height, width=draw_width, height=draw_height)
+        draw_width, draw_height = img.size
+        
+        # 保存到临时文件
+        tmp_path = f'/tmp/pdf_photo_{uuid.uuid4().hex[:8]}.jpg'
+        img.save(tmp_path, 'JPEG', quality=60, optimize=True)
+        
+        # 绘制压缩后的图片
+        c.drawImage(tmp_path, x, y - draw_height, width=draw_width, height=draw_height)
         
         # 绘制边框
         c.setStrokeColor(colors.HexColor('#E5E7EB'))
         c.setLineWidth(0.5)
         c.rect(x, y - draw_height, draw_width, draw_height)
+        
+        # 删除临时文件
+        os.remove(tmp_path)
         
         return draw_height
     except Exception as e:
