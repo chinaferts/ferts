@@ -17,8 +17,8 @@ from reportlab.lib import colors
 FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'
 pdfmetrics.registerFont(TTFont('ChineseFont', FONT_PATH))
 
-# 服务器uploads目录基础路径
-UPLOADS_BASE_PATH = '/workspace/projects/server/uploads'
+# 服务器uploads目录基础路径（不含uploads子目录）
+UPLOADS_BASE_PATH = '/workspace/projects/server'
 
 def get_full_photo_path(photo_path):
     """将相对路径转换为完整路径"""
@@ -29,7 +29,7 @@ def get_full_photo_path(photo_path):
     if photo_path.startswith('/workspace') or photo_path.startswith('http'):
         return photo_path
     
-    # 相对路径，拼接基础路径
+    # 相对路径（如 /uploads/photos/xxx.jpg），直接拼接
     clean_path = photo_path.lstrip('/')
     full_path = os.path.join(UPLOADS_BASE_PATH, clean_path)
     return full_path
