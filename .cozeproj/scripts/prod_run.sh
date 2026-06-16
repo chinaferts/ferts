@@ -24,6 +24,12 @@ check_command() {
   fi
 }
 
+# ============== 创建上传目录 ======================
+info "创建上传目录..."
+mkdir -p "$ROOT_DIR/server/uploads/photos"
+mkdir -p "$ROOT_DIR/server/uploads/qrcode"
+info "上传目录创建完成"
+
 # ============== 启动服务 ======================
 # 检查核心命令
 check_command "pnpm"
