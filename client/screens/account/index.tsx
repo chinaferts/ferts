@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View,
   Text,
