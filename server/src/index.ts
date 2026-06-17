@@ -20,6 +20,10 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Serve web app static files
+const clientDistPath = path.join(process.cwd(), '..', 'client', 'dist');
+app.use(express.static(clientDistPath));
+
 // Serve uploaded files as static
 const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction) {
@@ -43,6 +47,12 @@ app.use('/api/v1/defects', defectsRouter);
 app.use('/api/v1/photos', photosRouter);
 app.use('/api/v1/users', usersRouter);
 app.use('/api/v1/auth', usersRouter);
+
+// Serve web app static files (SPA fallback)
+app.use(express.static(clientDistPath));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientDistPath, 'index.html'));
+});
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
