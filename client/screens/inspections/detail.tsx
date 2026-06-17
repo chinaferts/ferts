@@ -2370,7 +2370,7 @@ export default function InspectionDetailScreen() {
                                   });
                                 }} style={styles.photoContainer}>
                                   <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
-                                  {item.status !== 'pass' && (
+                                  {item.status !== 'pass' && inspection.status !== 'completed' && (
                                     <TouchableOpacity style={styles.photoDeleteButton}
                                       onPress={() => {
                                         if (!inspectionRef.current) return;
