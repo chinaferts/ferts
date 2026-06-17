@@ -390,7 +390,7 @@ export default function InspectionDetailScreen() {
     
     const isCompleted = inspection.status === 'completed';
     const originalBarcodeItems = inspection.checklist_items
-      .filter(item => item.category === '条码扫描以及拍照')
+      .filter(item => item.category === '条码扫描以及拍照' || item.name?.includes('条码'))
       .map(item => ({ ...item, barcodeType: 'box' as const, type: 'barcode' as const }));
     
     // 如果验货已完成，显示所有已保存的条码项
@@ -744,12 +744,18 @@ export default function InspectionDetailScreen() {
         });
       }
       
-      setIssuePhotosUploaded(true);
-      Alert.alert('完成', `已上传 ${uploadedCount} 张问题照片`);
+      if (uploadedCount === 0 && localPhotos.length > 0) {
+        Alert.alert('错误', '上传失败，请重试');
+        return;
+      }
       
-    } catch (error) {
+      setIssuePhotosUploaded(true);
+      const failCount = localPhotos.length - uploadedCount;
+      Alert.alert('完成', failCount > 0 ? `已上传 ${uploadedCount} 张，失败 ${failCount} 张` : `已上传 ${uploadedCount} 张问题照片`);
+      
+    } catch (error: any) {
       console.error('[handleCompleteIssuePhotos] Error:', error);
-      Alert.alert('错误', '上传问题照片失败');
+      Alert.alert('错误', error?.message || '上传问题照片失败');
     }
   };
   
@@ -1996,11 +2002,16 @@ export default function InspectionDetailScreen() {
           { text: t('ok'), onPress: () => router.navigate('/records') },
         ]);
       } else {
-        Alert.alert(t('error'), t('submitFailed'));
+        let errMsg = t('submitFailed');
+        try {
+          const errData = await response.json();
+          if (errData?.error) errMsg = errData.error;
+        } catch (_) {}
+        Alert.alert(t('error'), errMsg);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to submit:', error);
-      Alert.alert(t('error'), t('submitFailed'));
+      Alert.alert(t('error'), error?.message || t('submitFailed'));
     }
   };
 
@@ -2487,7 +2498,7 @@ export default function InspectionDetailScreen() {
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: '#00B894' }]}>
-                  {inspection.checklist_items.filter(i => i.category !== '问题统计以及拍照并描述').length - inspection.checkedCount}
+                  {inspection.checklist_items.filter(i => i.category !== '问题统计以及拍照并描述' && i.category !== '条码扫描以及拍照').length - inspection.checkedCount}
                 </Text>
                 <Text style={styles.statLabel}>待检查 / Pending</Text>
               </View>
@@ -2639,7 +2650,7 @@ export default function InspectionDetailScreen() {
                       })()}
 
                       {/* 外箱箱唛尺寸统计表 */}
-                      {item.category === '外箱箱唛以及尺寸重量拍照' && (
+                      {(item.category === '外箱箱唛以及尺寸重量拍照' || item.name?.includes('外箱')) && (
                         <View style={styles.dimensionTable}>
                           <Text style={styles.dimensionTableTitle}>尺寸重量统计表 / Dimensional Table</Text>
                           <View style={styles.dimensionTableRow}>
@@ -2753,7 +2764,7 @@ export default function InspectionDetailScreen() {
                             <Text style={styles.naButtonText}>不适用</Text>
                           </TouchableOpacity>
                           {/* 条码分类显示扫码按钮 */}
-                          {item.category === '条码扫描以及拍照' && (
+                          {(item.category === '条码扫描以及拍照' || item.name?.includes('条码')) && (
                             <TouchableOpacity
                               style={[styles.actionButton, styles.scanButton]}
                               onPress={() => openBarcodeScanner(item)}
@@ -5105,18 +5116,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   dimensionTableLabelCell: {
-    flex: 1,
+    flex: 1.4,
     paddingHorizontal: 4,
+    justifyContent: 'center' as const,
   },
   dimensionTableInputCell: {
-    flex: 1,
-    height: 32,
+    flex: 0.9,
+    height: 36,
     backgroundColor: '#F8F9FA',
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#E9ECEF',
-    paddingHorizontal: 6,
-    fontSize: 13,
+    paddingHorizontal: 4,
+    fontSize: 14,
     color: '#333',
     textAlign: 'center' as const,
   },

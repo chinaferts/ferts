@@ -759,11 +759,14 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
     // 如果 select() 返回多条记录（没有 .single()），取第一条
     const updatedInspection = Array.isArray(data) ? data[0] : data;
 
-    if (error) throw error;
-    res.json({ success: true, data });
+    if (error) {
+      console.error('[SUBMIT] Database update error:', JSON.stringify(error));
+      return res.status(500).json({ success: false, error: error.message || '更新验货状态失败' });
+    }
+    res.json({ success: true, data: updatedInspection });
   } catch (err: any) {
-    console.error('提交验货记录失败:', err);
-    res.status(500).json({ success: false, error: err.message });
+    console.error('[SUBMIT] Unexpected error:', err);
+    res.status(500).json({ success: false, error: err.message || '提交验货失败' });
   }
 });
 
@@ -1120,11 +1123,14 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
     // 如果 select() 返回多条记录，取第一条
     const insertedPhoto = Array.isArray(data) ? data[0] : data;
 
-    if (error) throw error;
+    if (error) {
+      console.error('[UPLOAD_PHOTO] Database insert error:', JSON.stringify(error));
+      return res.status(500).json({ success: false, error: error.message || '保存照片记录失败' });
+    }
     res.json({ success: true, data: insertedPhoto });
   } catch (err: any) {
-    console.error('上传照片失败:', err);
-    res.status(500).json({ success: false, error: err.message });
+    console.error('[UPLOAD_PHOTO] Unexpected error:', err);
+    res.status(500).json({ success: false, error: err.message || '上传照片失败' });
   }
 });
 
