@@ -3019,7 +3019,7 @@ export default function InspectionDetailScreen() {
 
             </View>
 
-            {defectPhotos.length > 0 && (
+            {defectPhotos.length > 0 && inspection.status !== 'completed' && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.defectPhotoPreview}>
                 {defectPhotos.map((photo, idx) => (
                   <View key={idx} style={styles.defectPhotoItem}>
@@ -3051,41 +3051,45 @@ export default function InspectionDetailScreen() {
           </TouchableOpacity>
           {/* 操作按钮区域 */}
           <View style={styles.photoActionButtons}>
-            {/* 编辑按钮 */}
-            <TouchableOpacity style={styles.photoActionBtn} onPress={() => {
-              if (selectedPhoto && selectedPhotoItem) {
-                setPhotoModalVisible(false);
-                setEditingPhoto({ uri: selectedPhoto, recordId: selectedPhotoItem.record_id, index: selectedPhotoIndex });
-                setTempPhotos([selectedPhoto]);
-                setTempPhotoTarget(selectedPhotoItem);
-                setCameraVisible(true);
-              }
-            }}>
-              <Feather name="edit-2" size={22} color="#FFFFFF" />
-              <Text style={styles.photoActionBtnText}>编辑</Text>
-            </TouchableOpacity>
-            {/* 删除按钮 */}
-            <TouchableOpacity style={[styles.photoActionBtn, styles.deletePhotoBtn]} onPress={() => {
-              if (selectedPhotoItem && selectedPhotoIndex >= 0) {
-                const updatedChecklist = inspection.checklist_items.map(item => {
-                  if (item.record_id === selectedPhotoItem.record_id) {
-                    return {
-                      ...item,
-                      photos: (item.photos || []).filter((_, i) => i !== selectedPhotoIndex)
-                    };
+            {inspection.status !== 'completed' && (
+              <>
+                {/* 编辑按钮 */}
+                <TouchableOpacity style={styles.photoActionBtn} onPress={() => {
+                  if (selectedPhoto && selectedPhotoItem) {
+                    setPhotoModalVisible(false);
+                    setEditingPhoto({ uri: selectedPhoto, recordId: selectedPhotoItem.record_id, index: selectedPhotoIndex });
+                    setTempPhotos([selectedPhoto]);
+                    setTempPhotoTarget(selectedPhotoItem);
+                    setCameraVisible(true);
                   }
-                  return item;
-                });
-                setInspection({ ...inspection, checklist_items: updatedChecklist });
-                setPhotoModalVisible(false);
-                setSelectedPhoto(null);
-                setSelectedPhotoItem(null);
-                setSelectedPhotoIndex(-1);
-              }
-            }}>
-              <Feather name="trash-2" size={22} color="#FFFFFF" />
-              <Text style={styles.photoActionBtnText}>删除</Text>
-            </TouchableOpacity>
+                }}>
+                  <Feather name="edit-2" size={22} color="#FFFFFF" />
+                  <Text style={styles.photoActionBtnText}>编辑</Text>
+                </TouchableOpacity>
+                {/* 删除按钮 */}
+                <TouchableOpacity style={[styles.photoActionBtn, styles.deletePhotoBtn]} onPress={() => {
+                  if (selectedPhotoItem && selectedPhotoIndex >= 0) {
+                    const updatedChecklist = inspection.checklist_items.map(item => {
+                      if (item.record_id === selectedPhotoItem.record_id) {
+                        return {
+                          ...item,
+                          photos: (item.photos || []).filter((_, i) => i !== selectedPhotoIndex)
+                        };
+                      }
+                      return item;
+                    });
+                    setInspection({ ...inspection, checklist_items: updatedChecklist });
+                    setPhotoModalVisible(false);
+                    setSelectedPhoto(null);
+                    setSelectedPhotoItem(null);
+                    setSelectedPhotoIndex(-1);
+                  }
+                }}>
+                  <Feather name="trash-2" size={22} color="#FFFFFF" />
+                  <Text style={styles.photoActionBtnText}>删除</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
