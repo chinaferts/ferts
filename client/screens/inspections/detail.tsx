@@ -144,6 +144,7 @@ interface ChecklistItem {
   issueIndex?: number; // 动态添加的问题描述索引
   categoryIndex?: number; // 分类索引
   itemIndex?: number; // 项目索引
+  type?: string; // 项目类型：'barcode' 等
 }
 
 interface Defect {
@@ -2281,18 +2282,14 @@ export default function InspectionDetailScreen() {
                             <View style={styles.photoGridContainer}>
                               {item.photos.map((photo, idx) => (
                                 <TouchableOpacity key={idx} onPress={() => {
-                                  // 已完成验货：点击照片跳转到预览页面
-                                  if (inspection.status === 'completed') {
-                                    router.push('/photo-preview' as any, {
-                                      photos: item.photos,
-                                      initialIndex: idx,
-                                    });
-                                    return;
-                                  }
-                                  // 进行中验货：点击照片打开相机
-                                  setEditingPhoto({ uri: photo, index: idx, item });
-                                  setTempPhotos([]);
-                                  setCameraVisible(true);
+                                  // 点击照片跳转到编辑页面
+                                  router.push('/photo-edit' as any, {
+                                    photos: item.photos,
+                                    initialIndex: idx,
+                                    itemRecordId: item.record_id,
+                                    itemId: item.id,
+                                    inspectionId: id,
+                                  });
                                 }} style={styles.photoContainer}>
                                   <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
                                   {item.status !== 'pass' && (
