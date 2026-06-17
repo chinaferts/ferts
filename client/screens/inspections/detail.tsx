@@ -2516,38 +2516,24 @@ export default function InspectionDetailScreen() {
                     </View>
                   )}
                   
-                  {/* 已保存的照片预览 */}
+                  {/* 已保存的照片预览 - 与普通检查项一致 */}
                   {item.photos && item.photos.length > 0 && (
-                    <View style={styles.issuePhotosContainer}>
+                    <View style={styles.photoContainer}>
                       {item.photos.map((photo, idx) => (
-                        <View key={idx} style={styles.issuePhotoItem}>
-                          <TouchableOpacity
-                            style={styles.issuePhotoTouchable}
-                            onPress={() => {
-                              router.push('/photo-edit' as any, {
-                                photos: item.photos,
-                                initialIndex: idx,
-                                inspectionId: id,
-                                itemRecordId: item.record_id,
-                                itemId: item.id,
-                              });
-                            }}>
-                            <Image source={{ uri: getImageUrl(photo) }} style={styles.issuePhoto} />
-                          </TouchableOpacity>
-                          {/* 删除按钮 - 显示编号 */}
-                          <TouchableOpacity style={styles.removeIssuePhotoButton}
-                            onPress={() => {
-                              const updatedItems = barcodeItems.map(barcodeItem => {
-                                if (barcodeItem.record_id === item.record_id) {
-                                  return { ...barcodeItem, photos: (barcodeItem.photos || []).filter((_, i) => i !== idx) };
-                                }
-                                return barcodeItem;
-                              });
-                              setBarcodeItems(updatedItems);
-                            }}>
-                            <Text style={styles.removeIssuePhotoText}>{idx + 1}</Text>
-                          </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                          key={idx}
+                          style={styles.photoItem}
+                          onPress={() => {
+                            router.push('/photo-edit' as any, {
+                              photos: item.photos,
+                              initialIndex: idx,
+                              inspectionId: id,
+                              itemRecordId: item.record_id,
+                              itemId: item.id,
+                            });
+                          }}>
+                          <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
+                        </TouchableOpacity>
                       ))}
                     </View>
                   )}
