@@ -2646,17 +2646,6 @@ export default function InspectionDetailScreen() {
                       )}
                     </View>
                   )}
-                  {item.status === 'unchecked' && inspection.status === 'completed' && (
-                    <View style={styles.actionButtonsRow}>
-                      <TouchableOpacity 
-                        style={styles.issueCameraButton} 
-                        onPress={() => openBarcodeScanner(item)}
-                      >
-                        <Feather name="maximize-2" size={16} color="#6C63FF" />
-                        <Text style={styles.issueCameraText}>扫码</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
                 </View>
               );
             })}
@@ -2732,84 +2721,86 @@ export default function InspectionDetailScreen() {
               )}
             </View>
             
-            {/* 缺陷统计表格 */}
-            <View style={styles.defectStatsContainer}>
-              <Text style={styles.defectStatsTitle}>{t('defectStatistics')}</Text>
-              <View style={styles.defectStatsTable}>
-                <View style={styles.defectStatsRow}>
-                  <Text style={styles.defectStatsLabel}>{t('criticalDefect')}</Text>
-                  <View style={styles.defectStatsInputWrapper}>
-                    <TouchableOpacity 
-                      style={styles.defectStatsBtn}
-                      onPress={() => setDefectStats({...defectStats, critical: Math.max(0, defectStats.critical - 1)})}
-                    >
-                      <Feather name="minus" size={16} color="#6C63FF" />
-                    </TouchableOpacity>
-                    <TextInput
-                      style={styles.defectStatsInput}
-                      value={String(defectStats.critical)}
-                      onChangeText={(text) => setDefectStats({...defectStats, critical: parseInt(text) || 0})}
-                      keyboardType="number-pad"
-                      textAlign="center"
-                    />
-                    <TouchableOpacity 
-                      style={styles.defectStatsBtn}
-                      onPress={() => setDefectStats({...defectStats, critical: defectStats.critical + 1})}
-                    >
-                      <Feather name="plus" size={16} color="#6C63FF" />
-                    </TouchableOpacity>
+            {/* 缺陷统计表格 - 仅在未完成时显示 */}
+            {inspection.status !== 'completed' && (
+              <View style={styles.defectStatsContainer}>
+                <Text style={styles.defectStatsTitle}>{t('defectStatistics')}</Text>
+                <View style={styles.defectStatsTable}>
+                  <View style={styles.defectStatsRow}>
+                    <Text style={styles.defectStatsLabel}>{t('criticalDefect')}</Text>
+                    <View style={styles.defectStatsInputWrapper}>
+                      <TouchableOpacity 
+                        style={styles.defectStatsBtn}
+                        onPress={() => setDefectStats({...defectStats, critical: Math.max(0, defectStats.critical - 1)})}
+                      >
+                        <Feather name="minus" size={16} color="#6C63FF" />
+                      </TouchableOpacity>
+                      <TextInput
+                        style={styles.defectStatsInput}
+                        value={String(defectStats.critical)}
+                        onChangeText={(text) => setDefectStats({...defectStats, critical: parseInt(text) || 0})}
+                        keyboardType="number-pad"
+                        textAlign="center"
+                      />
+                      <TouchableOpacity 
+                        style={styles.defectStatsBtn}
+                        onPress={() => setDefectStats({...defectStats, critical: defectStats.critical + 1})}
+                      >
+                        <Feather name="plus" size={16} color="#6C63FF" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.defectStatsRow}>
-                  <Text style={styles.defectStatsLabel}>{t('majorDefect')}</Text>
-                  <View style={styles.defectStatsInputWrapper}>
-                    <TouchableOpacity 
-                      style={styles.defectStatsBtn}
-                      onPress={() => setDefectStats({...defectStats, serious: Math.max(0, defectStats.serious - 1)})}
-                    >
-                      <Feather name="minus" size={16} color="#6C63FF" />
-                    </TouchableOpacity>
-                    <TextInput
-                      style={styles.defectStatsInput}
-                      value={String(defectStats.serious)}
-                      onChangeText={(text) => setDefectStats({...defectStats, serious: parseInt(text) || 0})}
-                      keyboardType="number-pad"
-                      textAlign="center"
-                    />
-                    <TouchableOpacity 
-                      style={styles.defectStatsBtn}
-                      onPress={() => setDefectStats({...defectStats, serious: defectStats.serious + 1})}
-                    >
-                      <Feather name="plus" size={16} color="#6C63FF" />
-                    </TouchableOpacity>
+                  <View style={styles.defectStatsRow}>
+                    <Text style={styles.defectStatsLabel}>{t('majorDefect')}</Text>
+                    <View style={styles.defectStatsInputWrapper}>
+                      <TouchableOpacity 
+                        style={styles.defectStatsBtn}
+                        onPress={() => setDefectStats({...defectStats, serious: Math.max(0, defectStats.serious - 1)})}
+                      >
+                        <Feather name="minus" size={16} color="#6C63FF" />
+                      </TouchableOpacity>
+                      <TextInput
+                        style={styles.defectStatsInput}
+                        value={String(defectStats.serious)}
+                        onChangeText={(text) => setDefectStats({...defectStats, serious: parseInt(text) || 0})}
+                        keyboardType="number-pad"
+                        textAlign="center"
+                      />
+                      <TouchableOpacity 
+                        style={styles.defectStatsBtn}
+                        onPress={() => setDefectStats({...defectStats, serious: defectStats.serious + 1})}
+                      >
+                        <Feather name="plus" size={16} color="#6C63FF" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.defectStatsRow}>
-                  <Text style={styles.defectStatsLabel}>{t('minorDefect')}</Text>
-                  <View style={styles.defectStatsInputWrapper}>
-                    <TouchableOpacity 
-                      style={styles.defectStatsBtn}
-                      onPress={() => setDefectStats({...defectStats, minor: Math.max(0, defectStats.minor - 1)})}
-                    >
-                      <Feather name="minus" size={16} color="#6C63FF" />
-                    </TouchableOpacity>
-                    <TextInput
-                      style={styles.defectStatsInput}
-                      value={String(defectStats.minor)}
-                      onChangeText={(text) => setDefectStats({...defectStats, minor: parseInt(text) || 0})}
-                      keyboardType="number-pad"
-                      textAlign="center"
-                    />
-                    <TouchableOpacity 
-                      style={styles.defectStatsBtn}
-                      onPress={() => setDefectStats({...defectStats, minor: defectStats.minor + 1})}
-                    >
-                      <Feather name="plus" size={16} color="#6C63FF" />
-                    </TouchableOpacity>
+                  <View style={styles.defectStatsRow}>
+                    <Text style={styles.defectStatsLabel}>{t('minorDefect')}</Text>
+                    <View style={styles.defectStatsInputWrapper}>
+                      <TouchableOpacity 
+                        style={styles.defectStatsBtn}
+                        onPress={() => setDefectStats({...defectStats, minor: Math.max(0, defectStats.minor - 1)})}
+                      >
+                        <Feather name="minus" size={16} color="#6C63FF" />
+                      </TouchableOpacity>
+                      <TextInput
+                        style={styles.defectStatsInput}
+                        value={String(defectStats.minor)}
+                        onChangeText={(text) => setDefectStats({...defectStats, minor: parseInt(text) || 0})}
+                        keyboardType="number-pad"
+                        textAlign="center"
+                      />
+                      <TouchableOpacity 
+                        style={styles.defectStatsBtn}
+                        onPress={() => setDefectStats({...defectStats, minor: defectStats.minor + 1})}
+                      >
+                        <Feather name="plus" size={16} color="#6C63FF" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               </View>
-            </View>
+            )}
             
             {issues.map((issue, index) => (
               <View key={index} style={styles.issueItem}>
@@ -2825,7 +2816,8 @@ export default function InspectionDetailScreen() {
                         borderColor: severityOptions.find(o => o.value === issue.severity)?.color,
                       }
                     ]} 
-                    onPress={() => openSeveritySelector(index)}
+                    onPress={inspection.status !== 'completed' ? () => openSeveritySelector(index) : undefined}
+                    disabled={inspection.status === 'completed'}
                   >
                     <Text style={[
                       styles.severitySelectorText,
@@ -2839,9 +2831,11 @@ export default function InspectionDetailScreen() {
                         ? severityOptions.find(o => o.value === issue.severity)?.label 
                         : `${t('selectDefectLevel')} / Select defect level`}
                     </Text>
-                    <Feather name="chevron-down" size={16} color={issue.severity ? severityOptions.find(o => o.value === issue.severity)?.color : '#666'} />
+                    {inspection.status !== 'completed' && (
+                      <Feather name="chevron-down" size={16} color={issue.severity ? severityOptions.find(o => o.value === issue.severity)?.color : '#666'} />
+                    )}
                   </TouchableOpacity>
-                  {issues.length > 1 && (
+                  {issues.length > 1 && inspection.status !== 'completed' && (
                     <TouchableOpacity style={styles.removeIssueButton} onPress={() => handleRemoveIssue(index)}>
                       <Feather name="x" size={16} color="#FF6B6B" />
                     </TouchableOpacity>
@@ -2853,21 +2847,28 @@ export default function InspectionDetailScreen() {
                   placeholderTextColor="#B2BEC3"
                   multiline
                   value={issue.text}
-                  onChangeText={(text) => handleIssueChange(index, text)}
+                  onChangeText={inspection.status !== 'completed' ? (text) => handleIssueChange(index, text) : undefined}
+                  editable={inspection.status !== 'completed'}
                 />
                 {/* 问题照片预览 */}
                 {issue.photos.length > 0 && (
                   <View style={styles.issuePhotosContainer}>
-                    {issue.photos.map((photo, photoIndex) => (
-                      <TouchableOpacity key={photoIndex} style={styles.issuePhotoItem}
-                        onPress={() => {
-                          setEditingPhoto({ uri: photo, issueIndex: index, photoIndex: photoIndex });
-                          setEditPhotoModalVisible(true);
-                        }}
-                        onLongPress={() => handleRemoveIssuePhoto(index, photoIndex)}>
-                        <Image source={{ uri: photo }} style={styles.issuePhoto} />
-                      </TouchableOpacity>
-                    ))}
+                    {issue.photos.map((photo, photoIndex) => {
+                      const isCompleted = inspection.status === 'completed';
+                      return (
+                        <TouchableOpacity 
+                          key={photoIndex} 
+                          style={styles.issuePhotoItem}
+                          onPress={isCompleted ? undefined : () => {
+                            setEditingPhoto({ uri: photo, issueIndex: index, photoIndex: photoIndex });
+                            setEditPhotoModalVisible(true);
+                          }}
+                          onLongPress={isCompleted ? undefined : () => handleRemoveIssuePhoto(index, photoIndex)}
+                        >
+                          <Image source={{ uri: photo }} style={styles.issuePhoto} />
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 )}
                 {/* 拍照按钮 - 仅在未完成时显示 */}
