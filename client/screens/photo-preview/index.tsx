@@ -8,6 +8,7 @@ import {
   StatusBar,
   Text,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
@@ -131,7 +132,7 @@ export default function PhotoPreviewScreen() {
       <View className="flex-1 justify-center items-center">
         {loading && (
           <View className="absolute z-10">
-            <Ionicons name="loader" size={48} color="white" className="animate-spin" />
+            <ActivityIndicator size="large" color="white" />
           </View>
         )}
         {error ? (
