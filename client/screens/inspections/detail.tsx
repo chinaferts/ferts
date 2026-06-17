@@ -1143,16 +1143,78 @@ export default function InspectionDetailScreen() {
     );
     
     // 同时更新inspection_records表的photos字段
+    let realRecordId: string | null = null;
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-      // 必须使用record_id（数据库中的实际记录ID），而不是id（检查项模板ID）
-      const recordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0 
-        ? String(tempPhotoTarget.record_id) 
-        : String(tempPhotoTarget.id);
       
-      console.log('[CompletePhotos] Saving with recordId:', recordId, 'tempPhotoTarget.record_id:', tempPhotoTarget.record_id);
+      // 检查是否是新建条码项（record_id > 1000000000000 表示 Date.now()）
+      const isNewBarcodeItem = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 1000000000000;
       
-      const saveResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${recordId}`, {
+      // 保存照片前的 recordId
+      let saveRecordId: string;
+      
+      if (isNewBarcodeItem) {
+        // 对于新建条码项，先 POST 创建记录
+        console.log('[CompletePhotos] Creating new record for barcode item');
+        const createResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: tempPhotoTarget.name,
+            category: tempPhotoTarget.category,
+            item_category: tempPhotoTarget.category,
+            result: 'pass',
+            photos: allPhotos,
+            barcode_codes: tempPhotoTarget.barcodeCodes || [],
+            barcode_type: tempPhotoTarget.barcodeType,
+          }),
+        });
+        
+        if (createResponse.ok) {
+          const createData = await createResponse.json();
+          realRecordId = String(createData.data?.id || createData.id);
+          saveRecordId = realRecordId;
+          console.log('[CompletePhotos] Created new record with id:', realRecordId);
+          
+          // 更新前端状态中的 record_id
+          const tempTargetRecordId = String(tempPhotoTarget.record_id || tempPhotoTarget.id);
+          
+          // 更新 inspection.checklist_items 中的 record_id
+          setInspection(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              checklist_items: prev.checklist_items.map(i =>
+                String(i.record_id) === tempTargetRecordId
+                  ? { ...i, record_id: parseInt(realRecordId!) }
+                  : i
+              )
+            };
+          });
+          
+          // 更新 barcodeItems 中的 record_id
+          setBarcodeItems(prev => prev.map(i =>
+            String(i.record_id) === tempTargetRecordId
+              ? { ...i, record_id: parseInt(realRecordId!) }
+              : i
+          ));
+        } else {
+          console.log('[CompletePhotos] Create record failed:', createResponse.status);
+          // 如果创建失败，跳过保存
+          setTempPhotoTarget(null);
+          setTempPhotos([]);
+          return;
+        }
+      } else {
+        // 对于已有记录，直接使用 record_id
+        saveRecordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0 
+          ? String(tempPhotoTarget.record_id) 
+          : String(tempPhotoTarget.id);
+      }
+      
+      console.log('[CompletePhotos] Saving with recordId:', saveRecordId, 'isNew:', isNewBarcodeItem);
+      
+      const saveResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${saveRecordId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

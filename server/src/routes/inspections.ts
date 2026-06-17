@@ -929,6 +929,8 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
         item_id: newChecklistItem.id,  // 兼容旧字段
         checklist_item_id: newChecklistItem.id,
         result: result,
+        photos: photos || [],
+        barcode_codes: barcode_codes || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
