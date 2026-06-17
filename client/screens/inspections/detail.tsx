@@ -1635,8 +1635,8 @@ export default function InspectionDetailScreen() {
       // 收集所有本地照片（包括 checklist_items 和 barcodeItems 中的照片）
       const allLocalPhotos: { recordId: number; localPath: string }[] = [];
       
-      // 从 checklist_items 收集本地照片
-      checklist_items.forEach(item => {
+      // 从 inspection.checklist_items 收集本地照片
+      (inspection?.checklist_items || []).forEach(item => {
         if (item.photos && item.photos.length > 0) {
           item.photos.forEach((photo: string) => {
             if (photo.startsWith('file:') || photo.startsWith('content:')) {
@@ -1720,7 +1720,7 @@ export default function InspectionDetailScreen() {
           
           // 更新数据库中的照片路径
           for (const [recordId, serverPaths] of Object.entries(uploadedPhotos)) {
-            if (serverPaths.length > 0) {
+            if (serverPaths.length > 0 && inspection) {
               const item = inspection.checklist_items.find(i => i.id === Number(recordId));
               if (item && item.photos) {
                 // 合并服务器路径和本地路径
@@ -1748,7 +1748,6 @@ export default function InspectionDetailScreen() {
             }
           }
         }
-      }
 
       // 提交验货结果
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
