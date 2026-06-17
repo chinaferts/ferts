@@ -304,11 +304,12 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     // 获取检查记录及其关联的清单项
+    // 优先按 checklist_items.item_order 排序（保持模板顺序），fallback 到 created_at
     const { data: records } = await client
       .from('inspection_records')
       .select('*, checklist_items(*)')
       .eq('inspection_id', id)
-      .order('created_at', { ascending: true });
+      .order('checklist_items.item_order', { ascending: true });
 
     // 如果是嵌入式模板(checklist_id=11 且没有记录，或 checklist_id=0)
     // 使用 UNIVERSAL_CHECKLIST_ITEMS
@@ -794,11 +795,12 @@ router.get('/:id/records', async (req: Request, res: Response) => {
     }
 
     const client = requireSupabaseClient();
+    // 按 checklist_items.item_order 排序以保持模板顺序
     const { data, error } = await client
       .from('inspection_records')
-      .select('*')
+      .select('*, checklist_items(*)')
       .eq('inspection_id', id)
-      .order('created_at', { ascending: true });
+      .order('checklist_items.item_order', { ascending: true });
 
     if (error) throw error;
     res.json({ success: true, data });
