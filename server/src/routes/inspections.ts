@@ -706,6 +706,12 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
 
     const client = requireSupabaseClient();
     
+    // 确保 id 是整数类型
+    const inspectionId = parseInt(id, 10);
+    if (isNaN(inspectionId)) {
+      return res.status(400).json({ success: false, error: 'Invalid inspection ID' });
+    }
+    
     // 构建更新对象
     const updateData: any = {
       status: 'completed',
@@ -716,7 +722,7 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
     const { data, error } = await client
       .from('inspections')
       .update(updateData)
-      .eq('id', id)
+      .eq('id', inspectionId)
       .select();
 
     // 如果 select() 返回多条记录（没有 .single()），取第一条
