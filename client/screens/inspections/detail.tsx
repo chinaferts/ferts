@@ -636,14 +636,50 @@ export default function InspectionDetailScreen() {
       const newPhotoUris = photos.map(p => p.uri);
       newIssues[cameraIssueIndex].photos = [...newIssues[cameraIssueIndex].photos, ...newPhotoUris];
       setIssues(newIssues);
+      
+      // 同时将照片添加到"问题统计以及拍照并描述"检查项的 photos 数组中（用于预览区显示）
+      const problemItem = inspection?.checklist_items?.find(
+        item => item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述'
+      );
+      if (problemItem) {
+        setInspection(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            checklist_items: prev.checklist_items.map(item => {
+              if ((item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述') && item.photos) {
+                return { ...item, photos: [...item.photos, ...newPhotoUris] };
+              }
+              return item;
+            })
+          };
+        });
+      }
     }
     handleCloseCamera();
   };
   
   const handleRemoveIssuePhoto = (issueIndex: number, photoIndex: number) => {
+    const photoToRemove = issues[issueIndex]?.photos[photoIndex];
     const newIssues = [...issues];
     newIssues[issueIndex].photos.splice(photoIndex, 1);
     setIssues(newIssues);
+    
+    // 同时从"问题统计以及拍照并描述"检查项的 photos 数组中移除该照片
+    if (photoToRemove) {
+      setInspection(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          checklist_items: prev.checklist_items.map(item => {
+            if ((item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述') && item.photos) {
+              return { ...item, photos: item.photos.filter(p => p !== photoToRemove) };
+            }
+            return item;
+          })
+        };
+      });
+    }
   };
   
   // 使用 ref 跟踪 inspection 以避免闭包问题
@@ -690,6 +726,25 @@ export default function InspectionDetailScreen() {
         newIssues[editingPhoto.issueIndex].photos[editingPhoto.photoIndex] = newUri;
         setIssues(newIssues);
       }
+      
+      // 同时更新"问题统计以及拍照并描述"检查项的 photos 数组
+      setInspection(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          checklist_items: prev.checklist_items.map(item => {
+            if ((item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述') && item.photos) {
+              const updatedPhotos = [...item.photos];
+              const photoIdx = updatedPhotos.findIndex(p => p === originalUri);
+              if (photoIdx !== -1) {
+                updatedPhotos[photoIdx] = newUri;
+              }
+              return { ...item, photos: updatedPhotos };
+            }
+            return item;
+          })
+        };
+      });
     }
     
     setEditingPhoto(null);
@@ -1632,7 +1687,7 @@ export default function InspectionDetailScreen() {
 
   const doSubmit = async (result: 'pass' | 'fail') => {
     try {
-      // 收集所有本地照片（包括 checklist_items 和 barcodeItems 中的照片）
+      // 收集所有本地照片（包括 checklist_items、barcodeItems 和 issues 中的照片）
       const allLocalPhotos: { recordId: number; localPath: string }[] = [];
       
       // 从 inspection.checklist_items 收集本地照片
@@ -1656,6 +1711,25 @@ export default function InspectionDetailScreen() {
           });
         }
       });
+      
+      // 从 issues（问题统计以及拍照并描述）收集本地照片
+      // 找到"问题统计以及拍照并描述"检查项的 record_id
+      const problemItem = inspection?.checklist_items?.find(
+        item => item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述'
+      );
+      const problemRecordId = problemItem?.record_id || problemItem?.id;
+      
+      if (problemRecordId && issues.length > 0) {
+        issues.forEach((issue, issueIndex) => {
+          if (issue.photos && issue.photos.length > 0) {
+            issue.photos.forEach((photo: string) => {
+              if (photo.startsWith('file:') || photo.startsWith('content:')) {
+                allLocalPhotos.push({ recordId: Number(problemRecordId), localPath: photo });
+              }
+            });
+          }
+        });
+      }
       
       // 上传本地照片
         if (allLocalPhotos.length > 0) {
