@@ -946,74 +946,19 @@ export default function InspectionDetailScreen() {
           return String(i.id) === String(item.id);
         }
       );
-      let photosToSave = currentItem?.photos || item.photos || [];
-      // 去重：移除重复的照片 URL
-      photosToSave = Array.from(new Set(photosToSave));
+      // 注意：照片不在此处上传，只更新状态
+      // 照片将在合格提交/不合格提交时统一上传到服务器
       const barcodeCodesToSave = currentItem?.barcodeCodes || item.barcodeCodes || [];
       
-      console.log('[PUT_REQUEST] record_id:', recordId, 'item.id:', item.id, 'item.record_id:', item.record_id, 'currentItem photos:', photosToSave.length);
+      console.log('[PUT_REQUEST] record_id:', recordId, 'item.id:', item.id, 'item.record_id:', item.record_id);
       
-      // 如果有本地照片（file:// 开头），需要先上传到服务器获取URL
-      const localPhotos = photosToSave.filter((p: string) => typeof p === 'string' && (p.startsWith('file:') || p.startsWith('content:')));
-      const serverPhotos = photosToSave.filter((p: string) => typeof p === 'string' && (p.startsWith('http://') || p.startsWith('https://')));
-      
-      if (localPhotos.length > 0) {
-        console.log('[PUT_REQUEST] Uploading', localPhotos.length, 'local photos to server...');
-        const uploadedUrls: string[] = [];
-        
-        for (const localUri of localPhotos) {
-          try {
-            const formData = new FormData();
-            const filename = localUri.split('/').pop() || `photo_${Date.now()}.jpg`;
-            formData.append('file', {
-              uri: localUri,
-              type: 'image/jpeg',
-              name: filename,
-            } as any);
-            formData.append('inspection_id', String(id));
-            formData.append('record_id', recordId);
-            formData.append('category', item.category || '');
-            formData.append('item_name', item.name);
-            
-            const uploadResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
-              method: 'POST',
-              body: formData,
-            });
-            
-            if (uploadResponse.ok) {
-              const uploadData = await uploadResponse.json();
-              const photoUrl = uploadData.data?.photo_url || uploadData.photo_url;
-              if (photoUrl) {
-                uploadedUrls.push(photoUrl);
-                console.log('[PUT_REQUEST] Uploaded photo URL:', photoUrl);
-              }
-            }
-          } catch (uploadError) {
-            console.error('[PUT_REQUEST] Failed to upload photo:', uploadError);
-          }
-        }
-        
-        // 合并服务器照片和之前已有的照片URL
-        photosToSave = [...serverPhotos, ...uploadedUrls];
-      }
-      
-      // 调试日志 - 显示要发送的数据
-      console.log('[PUT_REQUEST] Sending to API:', {
-        url: `${baseUrl}/api/v1/inspections/${id}/records/${recordId}`,
-        body: {
-          result: status,
-          photos: photosToSave,
-          barcode_codes: barcodeCodesToSave,
-        }
-      });
-      
-      // 更新状态时，同时保存照片和条码数据
+      // 更新状态时，只更新状态和条码数据，不上传照片
+      // 照片将在最终提交时统一上传
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${recordId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           result: status,
-          photos: photosToSave,
           barcode_codes: barcodeCodesToSave,
         }),
       });
@@ -1687,22 +1632,32 @@ export default function InspectionDetailScreen() {
 
   const doSubmit = async (result: 'pass' | 'fail') => {
     try {
-      // 先上传所有本地照片到服务器
-      if (inspection?.checklist_items) {
-        const allLocalPhotos: { recordId: number; localPath: string }[] = [];
-        
-        // 收集所有本地路径照片
-        inspection.checklist_items.forEach(item => {
-          if (item.photos && item.photos.length > 0) {
-            item.photos.forEach((photo: string) => {
-              if (photo.startsWith('file:') || photo.startsWith('content:')) {
-                allLocalPhotos.push({ recordId: item.id, localPath: photo });
-              }
-            });
-          }
-        });
-
-        // 上传本地照片
+      // 收集所有本地照片（包括 checklist_items 和 barcodeItems 中的照片）
+      const allLocalPhotos: { recordId: number; localPath: string }[] = [];
+      
+      // 从 checklist_items 收集本地照片
+      checklist_items.forEach(item => {
+        if (item.photos && item.photos.length > 0) {
+          item.photos.forEach((photo: string) => {
+            if (photo.startsWith('file:') || photo.startsWith('content:')) {
+              allLocalPhotos.push({ recordId: item.id, localPath: photo });
+            }
+          });
+        }
+      });
+      
+      // 从 barcodeItems 收集本地照片
+      barcodeItems.forEach(item => {
+        if (item.photos && item.photos.length > 0) {
+          item.photos.forEach((photo: string) => {
+            if (photo.startsWith('file:') || photo.startsWith('content:')) {
+              allLocalPhotos.push({ recordId: item.record_id, localPath: photo });
+            }
+          });
+        }
+      });
+      
+      // 上传本地照片
         if (allLocalPhotos.length > 0) {
           // 显示上传提示
           Alert.alert(t('uploading'), `${t('uploadingPhotos')} ${allLocalPhotos.length} ${t('count')}`);
