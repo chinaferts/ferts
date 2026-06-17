@@ -304,11 +304,19 @@ def draw_checklist(c, width, margin, y, height, data):
                 
                 y = photo_y - 5 * mm
             
-            # 绘制条码
+            # 绘制条码（带格式）
             if barcode_codes:
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#059669'))
-                codes_text = ', '.join(barcode_codes[:5])
+                # 显示条码和格式
+                codes_with_format = []
+                for i, code in enumerate(barcode_codes[:5]):
+                    fmt = barcode_formats[i] if i < len(barcode_formats) else ''
+                    if fmt:
+                        codes_with_format.append(f'{code} [{fmt}]')
+                    else:
+                        codes_with_format.append(code)
+                codes_text = ', '.join(codes_with_format)
                 if len(barcode_codes) > 5:
                     codes_text += f' ... (+{len(barcode_codes) - 5})'
                 c.drawString(margin + 10*mm, y, f'📱 条码: {codes_text}')
@@ -331,6 +339,7 @@ def draw_checklist(c, width, margin, y, height, data):
             result = item.get('status', item.get('result', 'pending'))
             photos = item.get('photos', []) or []
             barcode_codes = item.get('barcodeCodes', []) or []
+            barcode_formats = item.get('barcodeFormats', []) or []
             notes = item.get('notes', '') or ''
             
             required = 8 * mm

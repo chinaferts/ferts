@@ -814,7 +814,7 @@ router.get('/:id/records', async (req: Request, res: Response) => {
 router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
   try {
     const { id, recordId } = req.params;
-    const { result, notes, photos, barcode_codes } = req.body;
+    const { result, notes, photos, barcode_codes, barcode_formats } = req.body;
     
     console.log('[PUT_RECORDS] Received request:', {
       id,
@@ -858,6 +858,11 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
       const uniqueBarcodes = [...new Set(barcode_codes)];
       updateData.barcode_codes = uniqueBarcodes;
       console.log('[PUT_RECORDS] Updating barcode_codes:', uniqueBarcodes);
+    }
+    if (barcode_formats !== undefined) {
+      // 保持 barcode_formats 与 barcode_codes 一致
+      updateData.barcode_formats = barcode_formats;
+      console.log('[PUT_RECORDS] Updating barcode_formats:', barcode_formats);
     }
     
     let query = client
@@ -903,7 +908,7 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     // 接受前端发送的参数名称
-    const { name, category, result, photos, barcode_codes, barcode_type } = req.body;
+    const { name, category, result, photos, barcode_codes, barcode_formats, barcode_type } = req.body;
 
     if (!isSupabaseConfigured()) {
       const mockId = Math.floor(Math.random() * 1000000);
@@ -943,6 +948,7 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
         result: result,
         photos: photos || [],
         barcode_codes: barcode_codes || [],
+        barcode_formats: barcode_formats || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -966,7 +972,7 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
 router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response) => {
   try {
     const { id, itemId } = req.params;
-    const { barcodeCodes, codes, photos } = req.body;
+    const { barcodeCodes, codes, photos, barcode_formats } = req.body;
 
     if (!isSupabaseConfigured()) {
       return res.json({ success: true, data: { id: itemId, barcodeCodes, codes, photos } });
@@ -974,11 +980,12 @@ router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response)
 
     const client = requireSupabaseClient();
     
-    // 更新 inspection_records 表中的 barcode_codes 和 photos 字段
+    // 更新 inspection_records 表中的 barcode_codes、barcode_formats 和 photos 字段
     const recordUpdateData: any = {};
     if (barcodeCodes !== undefined) recordUpdateData.barcode_codes = barcodeCodes;
     if (codes !== undefined) recordUpdateData.barcode_codes = codes;
     if (photos !== undefined) recordUpdateData.photos = photos;
+    if (barcode_formats !== undefined) recordUpdateData.barcode_formats = barcode_formats;
 
     // 查找对应的 inspection_record（itemId 在这里是 record_id）
     // 对于嵌入式模板，recordId 可能是 item.name 而不是数字 ID

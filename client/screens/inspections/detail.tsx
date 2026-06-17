@@ -140,6 +140,7 @@ interface ChecklistItem {
   notes?: string;
   photos?: string[];
   barcodeCodes?: string[];  // 条码扫描记录
+  barcodeFormats?: string[]; // 条码格式记录
   barcodeType?: 'box' | 'inner' | 'color'; // 条码类型：外箱、内箱/内袋、彩盒/彩卡
   issueIndex?: number; // 动态添加的问题描述索引
   categoryIndex?: number; // 分类索引
@@ -1869,13 +1870,14 @@ export default function InspectionDetailScreen() {
     // 将扫描到的条码添加到对应检查项
     const targetRecordId = String(barcodeScanTarget.record_id);
     const scannedCode = result.data;
+    const scannedFormat = result.type || ''; // 条码格式，如 qr, ean13 等
     
     // 更新 inspection.checklist_items
     setInspection(prev => {
       if (!prev) return null;
       const updatedItems = prev.checklist_items.map(i =>
         String(i.record_id) === targetRecordId
-          ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), scannedCode] }
+          ? { ...i, barcodeCodes: [...(i.barcodeCodes || []), scannedCode], barcodeFormats: [...(i.barcodeFormats || []), scannedFormat] }
           : i
       );
       const checkedCount = updatedItems.filter(i => i.status !== 'unchecked').length;
@@ -1888,7 +1890,7 @@ export default function InspectionDetailScreen() {
       const targetIndex = prev.findIndex(item => String(item.record_id) === targetRecordId);
       if (targetIndex === -1) {
         // 如果在 barcodeItems 中没找到，创建新项（不自动设置合格）
-        const newItem = { ...barcodeScanTarget, barcodeCodes: [scannedCode], photos: [], status: 'unchecked' as const, type: 'barcode' as const };
+        const newItem = { ...barcodeScanTarget, barcodeCodes: [scannedCode], barcodeFormats: [scannedFormat], photos: [], status: 'unchecked' as const, type: 'barcode' as const };
         console.log('[BarcodeScan] Creating new item:', newItem);
         return [...prev, newItem];
       }
@@ -1896,6 +1898,7 @@ export default function InspectionDetailScreen() {
       updated[targetIndex] = {
         ...updated[targetIndex],
         barcodeCodes: [...(updated[targetIndex].barcodeCodes || []), scannedCode],
+        barcodeFormats: [...(updated[targetIndex].barcodeFormats || []), scannedFormat],
         // 不自动设置合格，保持原状态
       };
       console.log('[BarcodeScan] Updated barcodeItems index:', targetIndex, 'codes:', updated[targetIndex].barcodeCodes);
@@ -1915,14 +1918,18 @@ export default function InspectionDetailScreen() {
   const saveBarcodeToBackend = async (recordId: string, code: string) => {
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-      // 获取当前条码列表
+      // 获取当前条码列表和格式列表
       const item = inspection?.checklist_items?.find(i => String(i.record_id) === recordId);
       const currentCodes = item?.barcodeCodes || [];
+      const currentFormats = item?.barcodeFormats || [];
       
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items/${recordId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ barcodeCodes: [...currentCodes, code] }),
+        body: JSON.stringify({ 
+          barcodeCodes: [...currentCodes, code],
+          barcode_formats: [...currentFormats, scannedFormat] 
+        }),
       });
       
       if (!response.ok) {
@@ -1938,7 +1945,12 @@ export default function InspectionDetailScreen() {
     const item = inspection?.checklist_items?.find(i => i.id === itemId);
     if (!item) return;
     
+    // 找到要删除的条码索引，以同步删除对应格式
+    const deleteIndex = item.barcodeCodes?.indexOf(codeToDelete) ?? -1;
     const newCodes = item.barcodeCodes?.filter(c => c !== codeToDelete) || [];
+    const newFormats = deleteIndex >= 0 
+      ? (item.barcodeFormats || []).filter((_, idx) => idx !== deleteIndex)
+      : (item.barcodeFormats || []);
     
     // 乐观更新：先更新本地状态，立即显示效果
     setInspection(prev => {
@@ -1946,7 +1958,7 @@ export default function InspectionDetailScreen() {
       return {
         ...prev,
         checklist_items: prev.checklist_items?.map(i => 
-          i.id === itemId ? { ...i, barcodeCodes: newCodes } : i
+          i.id === itemId ? { ...i, barcodeCodes: newCodes, barcodeFormats: newFormats } : i
         ),
       };
     });
@@ -1956,7 +1968,7 @@ export default function InspectionDetailScreen() {
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${itemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ barcodeCodes: newCodes }),
+        body: JSON.stringify({ barcodeCodes: newCodes, barcode_formats: newFormats }),
       });
       
       console.log("[BarcodeDelete] Response:", response.status, response.statusText);
