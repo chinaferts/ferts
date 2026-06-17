@@ -181,6 +181,16 @@ interface InspectionDetail {
   accept_count?: number;
   reject_count?: number;
   inspection_number?: string;
+  // 外箱尺寸
+  outer_carton_length?: number;
+  outer_carton_width?: number;
+  outer_carton_height?: number;
+  outer_carton_weight?: number;
+  // 内盒尺寸
+  inner_carton_length?: number;
+  inner_carton_width?: number;
+  inner_carton_height?: number;
+  inner_carton_weight?: number;
   checklist_items: ChecklistItem[];
   defects: Defect[];
 }
@@ -438,6 +448,15 @@ export default function InspectionDetailScreen() {
   // 严重程度选择弹窗状态
   const [severityModalVisible, setSeverityModalVisible] = useState(false);
   const [selectedIssueIndex, setSelectedIssueIndex] = useState<number | null>(null);
+  // 外箱尺寸状态
+  const [outerDimensions, setOuterDimensions] = useState({ length: '', width: '', height: '', weight: '' });
+  // 内盒尺寸状态
+  const [innerDimensions, setInnerDimensions] = useState({ length: '', width: '', height: '', weight: '' });
+  // 使用 ref 跟踪最新尺寸值（解决闭包问题）
+  const outerDimensionsRef = useRef({ length: '', width: '', height: '', weight: '' });
+  const innerDimensionsRef = useRef({ length: '', width: '', height: '', weight: '' });
+  // 尺寸防抖定时器
+  const dimensionTimeoutRef = useRef<{ outer?: ReturnType<typeof setTimeout>; inner?: ReturnType<typeof setTimeout> }>({});
   // 条码类型选择弹窗状态
   const [barcodeTypeModalVisible, setBarcodeTypeModalVisible] = useState(false);
   const [selectedBarcodeIndex, setSelectedBarcodeIndex] = useState<number | null>(null);
@@ -924,6 +943,25 @@ export default function InspectionDetailScreen() {
           checkedCount,
           defectCount,
         });
+        
+        // 初始化外箱尺寸数据
+        const outerDims = {
+          length: data.outer_carton_length != null ? String(data.outer_carton_length) : '',
+          width: data.outer_carton_width != null ? String(data.outer_carton_width) : '',
+          height: data.outer_carton_height != null ? String(data.outer_carton_height) : '',
+          weight: data.outer_carton_weight != null ? String(data.outer_carton_weight) : '',
+        };
+        setOuterDimensions(outerDims);
+        outerDimensionsRef.current = outerDims;
+        // 初始化内盒尺寸数据
+        const innerDims = {
+          length: data.inner_carton_length != null ? String(data.inner_carton_length) : '',
+          width: data.inner_carton_width != null ? String(data.inner_carton_width) : '',
+          height: data.inner_carton_height != null ? String(data.inner_carton_height) : '',
+          weight: data.inner_carton_weight != null ? String(data.inner_carton_weight) : '',
+        };
+        setInnerDimensions(innerDims);
+        innerDimensionsRef.current = innerDims;
       }
     } catch (error) {
       console.error('Failed to fetch inspection:', error);
@@ -2119,6 +2157,63 @@ export default function InspectionDetailScreen() {
     isScanningRef.current = false;
   };
 
+  // 尺寸输入变化处理（防抖保存）
+  const handleDimensionChange = (type: 'outer' | 'inner', field: 'length' | 'width' | 'height' | 'weight', value: string) => {
+    // 验证数值
+    if (value !== '' && isNaN(parseFloat(value))) return;
+    
+    // 先更新本地状态，同时更新 ref（解决闭包问题）
+    if (type === 'outer') {
+      const next = { ...outerDimensionsRef.current, [field]: value };
+      outerDimensionsRef.current = next;
+      setOuterDimensions(next);
+    } else {
+      const next = { ...innerDimensionsRef.current, [field]: value };
+      innerDimensionsRef.current = next;
+      setInnerDimensions(next);
+    }
+    
+    // 同时更新 inspection 对象（用于 UI 显示）
+    const fieldMap: Record<string, string> = {
+      length: type === 'outer' ? 'outer_carton_length' : 'inner_carton_length',
+      width: type === 'outer' ? 'outer_carton_width' : 'inner_carton_width',
+      height: type === 'outer' ? 'outer_carton_height' : 'inner_carton_height',
+      weight: type === 'outer' ? 'outer_carton_weight' : 'inner_carton_weight',
+    };
+    const backendField = fieldMap[field];
+    setInspection(prev => prev ? { ...prev, [backendField]: value } : prev);
+    
+    // 防抖保存到后端（500ms）
+    const key = type === 'outer' ? 'outer' : 'inner';
+    if (dimensionTimeoutRef.current[key]) {
+      clearTimeout(dimensionTimeoutRef.current[key]);
+    }
+    dimensionTimeoutRef.current[key] = setTimeout(async () => {
+      // 使用 ref 获取最新值（解决闭包问题）
+      const dims = type === 'outer' ? outerDimensionsRef.current : innerDimensionsRef.current;
+      const currentValue = value;
+      try {
+        const updateData: Record<string, number | null> = {};
+        const fields = ['length', 'width', 'height', 'weight'] as const;
+        fields.forEach(f => {
+          const bf = f === 'length' ? (type === 'outer' ? 'outer_carton_length' : 'inner_carton_length')
+            : f === 'width' ? (type === 'outer' ? 'outer_carton_width' : 'inner_carton_width')
+            : f === 'height' ? (type === 'outer' ? 'outer_carton_height' : 'inner_carton_height')
+            : (type === 'outer' ? 'outer_carton_weight' : 'inner_carton_weight');
+          const v = f === field ? currentValue : dims[f];
+          updateData[bf] = v === '' ? null : parseFloat(v);
+        });
+        await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData),
+        });
+      } catch (error) {
+        console.error('[Dimensions] Save error:', error);
+      }
+    }, 500);
+  };
+
   if (loading || !inspection) {
     return (
       <Screen>
@@ -2542,6 +2637,94 @@ export default function InspectionDetailScreen() {
                           </View>
                         ) : null;
                       })()}
+
+                      {/* 外箱箱唛尺寸统计表 */}
+                      {item.category === '外箱箱唛以及尺寸重量拍照' && (
+                        <View style={styles.dimensionTable}>
+                          <Text style={styles.dimensionTableTitle}>尺寸重量统计表 / Dimensional Table</Text>
+                          <View style={styles.dimensionTableRow}>
+                            <Text style={[styles.dimensionTableCell, styles.dimensionTableHeaderCell]}></Text>
+                            <Text style={[styles.dimensionTableCell, styles.dimensionTableHeaderCell, styles.dimensionTableMasterCell]}>Master Carton{'\n'}外箱</Text>
+                            <Text style={[styles.dimensionTableCell, styles.dimensionTableHeaderCell, styles.dimensionTableInnerCell]}>Inner Carton{'\n'}内盒</Text>
+                          </View>
+                          <View style={styles.dimensionTableRow}>
+                            <Text style={[styles.dimensionTableCell, styles.dimensionTableLabelCell]}>L 长(CM)</Text>
+                            <TextInput
+                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
+                              value={String(inspection.outer_carton_length ?? '') || outerDimensions.length || ''}
+                              onChangeText={(v) => handleDimensionChange('outer', 'length', v)}
+                              placeholder="-"
+                              keyboardType="decimal-pad"
+                              editable={inspection.status !== 'completed'}
+                            />
+                            <TextInput
+                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
+                              value={String(inspection.inner_carton_length ?? '') || innerDimensions.length || ''}
+                              onChangeText={(v) => handleDimensionChange('inner', 'length', v)}
+                              placeholder="-"
+                              keyboardType="decimal-pad"
+                              editable={inspection.status !== 'completed'}
+                            />
+                          </View>
+                          <View style={styles.dimensionTableRow}>
+                            <Text style={[styles.dimensionTableCell, styles.dimensionTableLabelCell]}>W 宽(CM)</Text>
+                            <TextInput
+                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
+                              value={String(inspection.outer_carton_width ?? '') || outerDimensions.width || ''}
+                              onChangeText={(v) => handleDimensionChange('outer', 'width', v)}
+                              placeholder="-"
+                              keyboardType="decimal-pad"
+                              editable={inspection.status !== 'completed'}
+                            />
+                            <TextInput
+                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
+                              value={String(inspection.inner_carton_width ?? '') || innerDimensions.width || ''}
+                              onChangeText={(v) => handleDimensionChange('inner', 'width', v)}
+                              placeholder="-"
+                              keyboardType="decimal-pad"
+                              editable={inspection.status !== 'completed'}
+                            />
+                          </View>
+                          <View style={styles.dimensionTableRow}>
+                            <Text style={[styles.dimensionTableCell, styles.dimensionTableLabelCell]}>H 高(CM)</Text>
+                            <TextInput
+                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
+                              value={String(inspection.outer_carton_height ?? '') || outerDimensions.height || ''}
+                              onChangeText={(v) => handleDimensionChange('outer', 'height', v)}
+                              placeholder="-"
+                              keyboardType="decimal-pad"
+                              editable={inspection.status !== 'completed'}
+                            />
+                            <TextInput
+                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
+                              value={String(inspection.inner_carton_height ?? '') || innerDimensions.height || ''}
+                              onChangeText={(v) => handleDimensionChange('inner', 'height', v)}
+                              placeholder="-"
+                              keyboardType="decimal-pad"
+                              editable={inspection.status !== 'completed'}
+                            />
+                          </View>
+                          <View style={styles.dimensionTableRow}>
+                            <Text style={[styles.dimensionTableCell, styles.dimensionTableLabelCell]}>G.W. 重量(KG)</Text>
+                            <TextInput
+                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
+                              value={String(inspection.outer_carton_weight ?? '') || outerDimensions.weight || ''}
+                              onChangeText={(v) => handleDimensionChange('outer', 'weight', v)}
+                              placeholder="-"
+                              keyboardType="decimal-pad"
+                              editable={inspection.status !== 'completed'}
+                            />
+                            <TextInput
+                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
+                              value={String(inspection.inner_carton_weight ?? '') || innerDimensions.weight || ''}
+                              onChangeText={(v) => handleDimensionChange('inner', 'weight', v)}
+                              placeholder="-"
+                              keyboardType="decimal-pad"
+                              editable={inspection.status !== 'completed'}
+                            />
+                          </View>
+                        </View>
+                      )}
 
                       {item.status === 'unchecked' && inspection.status !== 'completed' && (
                         <View style={styles.actionButtons}>
@@ -4857,6 +5040,106 @@ const styles = StyleSheet.create({
   severityModalCancelText: {
     fontSize: 15,
     color: '#666',
+    textAlign: 'center',
+  },
+  // 箱唛尺寸表格样式
+  dimensionTableContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  dimensionTableTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+  },
+  dimensionTable: {
+    gap: 4,
+  },
+  dimensionTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F0FF',
+    borderRadius: 6,
+    paddingVertical: 8,
+  },
+  dimensionTableHeaderCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  dimensionTableHeaderText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  dimensionTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  dimensionTableLabel: {
+    flex: 1,
+    paddingHorizontal: 4,
+  },
+  dimensionTableLabelText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  dimensionTableCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  dimensionTableMasterCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  dimensionTableInnerCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  dimensionTableLabelCell: {
+    flex: 1,
+    paddingHorizontal: 4,
+  },
+  dimensionTableInputCell: {
+    flex: 1,
+    height: 32,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    paddingHorizontal: 6,
+    fontSize: 13,
+    color: '#333',
+    textAlign: 'center' as const,
+  },
+  dimensionTableInput: {
+    width: '100%',
+    height: 32,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    paddingHorizontal: 6,
+    fontSize: 13,
+    color: '#333',
+    textAlign: 'center',
+  },
+  dimensionTableUnit: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
+  },
+  dimensionTableDisplay: {
+    fontSize: 13,
+    color: '#333',
     textAlign: 'center',
   },
 });

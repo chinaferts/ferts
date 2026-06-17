@@ -142,6 +142,82 @@ def draw_summary(c, width, margin, y, data):
     
     return y
 
+def draw_dimensions_table(c, width, margin, y, data):
+    """绘制外箱内盒尺寸重量统计表"""
+    outer_l = data.get('outer_carton_length')
+    outer_w = data.get('outer_carton_width')
+    outer_h = data.get('outer_carton_height')
+    outer_g = data.get('outer_carton_weight')
+    inner_l = data.get('inner_carton_length')
+    inner_w = data.get('inner_carton_width')
+    inner_h = data.get('inner_carton_height')
+    inner_g = data.get('inner_carton_weight')
+
+    # 如果所有尺寸都为空，不绘制
+    if all(v is None for v in [outer_l, outer_w, outer_h, outer_g, inner_l, inner_w, inner_h, inner_g]):
+        return y
+
+    c.setFont('ChineseFont', 11)
+    c.setFillColor(colors.HexColor('#4F46E5'))
+    c.drawString(margin, y, '【 尺寸重量统计表 / Dimensional Table 】')
+    y -= 6 * mm
+
+    # 表格配置
+    table_x = margin
+    row_h = 7 * mm
+    header_h = 9 * mm
+    col_widths = [38*mm, 32*mm, 32*mm]
+    total_w = sum(col_widths)
+
+    def fmt(v):
+        return f"{v}" if v is not None else "-"
+
+    # 标题行
+    header_y = y - header_h
+    c.setFillColor(colors.HexColor('#EEF2FF'))
+    c.rect(table_x, header_y, total_w, header_h, fill=1, stroke=1)
+    c.setStrokeColor(colors.HexColor('#E5E7EB'))
+    c.setLineWidth(0.5)
+    c.rect(table_x, header_y, total_w, header_h, fill=0, stroke=1)
+    c.setFillColor(colors.HexColor('#1F2937'))
+    c.setFont('ChineseFont', 8)
+    headers = ['', 'Master Carton\n外箱 (CM/KG)', 'Inner Carton\n内盒 (CM/KG)']
+    x_pos = [table_x, table_x + col_widths[0], table_x + col_widths[0] + col_widths[1]]
+    for i, h in enumerate(headers):
+        c.drawCentredString(x_pos[i] + col_widths[i]/2, header_y + 2*mm, h)
+
+    y = header_y
+
+    # 数据行
+    rows = [
+        ('L 长 (CM)', fmt(outer_l), fmt(inner_l)),
+        ('W 宽 (CM)', fmt(outer_w), fmt(inner_w)),
+        ('H 高 (CM)', fmt(outer_h), fmt(inner_h)),
+        ('G.W. 重量 (KG)', fmt(outer_g), fmt(inner_g)),
+    ]
+
+    for label, outer_val, inner_val in rows:
+        row_y = y - row_h
+        # 斑马纹
+        bg = colors.HexColor('#F9FAFB') if rows.index((label, outer_val, inner_val)) % 2 == 0 else colors.white
+        c.setFillColor(bg)
+        c.rect(table_x, row_y, total_w, row_h, fill=1, stroke=1)
+        # 边框
+        c.setStrokeColor(colors.HexColor('#E5E7EB'))
+        c.setLineWidth(0.5)
+        c.rect(table_x, row_y, total_w, row_h, fill=0, stroke=1)
+
+        c.setFillColor(colors.HexColor('#374151'))
+        c.setFont('ChineseFont', 8)
+        c.drawString(table_x + 3*mm, row_y + 2*mm, label)
+        c.drawCentredString(table_x + col_widths[0] + col_widths[1]/2, row_y + 2*mm, outer_val)
+        c.drawCentredString(table_x + col_widths[0] + col_widths[1] + col_widths[2]/2, row_y + 2*mm, inner_val)
+
+        y = row_y
+
+    y -= 5 * mm
+    return y
+
 def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=40*mm):
     """绘制单张照片，保持1600x1200分辨率，96DPI"""
     try:
@@ -640,7 +716,10 @@ def generate_inspection_pdf(data, output_path):
     
     # 绘制汇总
     y = draw_summary(c, width, margin, y, data)
-    
+
+    # 绘制尺寸重量统计表
+    y = draw_dimensions_table(c, width, margin, y, data)
+
     # 绘制检查项（包含照片）
     y = draw_checklist(c, width, margin, y, height, data)
     
