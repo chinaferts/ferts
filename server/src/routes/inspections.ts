@@ -30,8 +30,11 @@ import {
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// 确保上传目录存在
-const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
+// 上传目录 - 生产环境使用 /tmp，本地开发使用项目目录
+const isProduction = process.env.NODE_ENV === 'production' || process.env.IS_PROD === 'true';
+const uploadsDir = isProduction 
+  ? '/tmp/uploads/photos'
+  : path.join(process.cwd(), 'uploads', 'photos');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -1033,7 +1036,9 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
     }
 
     // 保存照片到本地文件系统
-    const uploadDir = path.join(process.cwd(), 'uploads', 'photos');
+    const uploadDir = isProduction 
+      ? '/tmp/uploads/photos'
+      : path.join(process.cwd(), 'uploads', 'photos');
     const fileName = `${Date.now()}-${file.originalname}`;
     const filePath = path.join(uploadDir, fileName);
     

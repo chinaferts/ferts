@@ -26,8 +26,8 @@ check_command() {
 
 # ============== 创建上传目录 ======================
 info "创建上传目录..."
-mkdir -p "$ROOT_DIR/server/uploads/photos"
-mkdir -p "$ROOT_DIR/server/uploads/qrcode"
+mkdir -p "/tmp/uploads/photos"
+mkdir -p "/tmp/uploads/qrcode"
 info "上传目录创建完成"
 
 # ============== 启动服务 ======================
