@@ -2392,7 +2392,7 @@ export default function InspectionDetailScreen() {
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: '#00B894' }]}>
-                  {inspection.checklist_items.length - inspection.checkedCount}
+                  {inspection.checklist_items.filter(i => i.category !== '问题统计以及拍照并描述').length - inspection.checkedCount}
                 </Text>
                 <Text style={styles.statLabel}>待检查 / Pending</Text>
               </View>
