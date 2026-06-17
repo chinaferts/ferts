@@ -918,13 +918,23 @@ export default function InspectionDetailScreen() {
       
       // 从当前状态中获取最新的检查项数据（包含最新添加的照片）
       const currentInspection = inspectionRef.current;
+      // 对于条码扫描项，使用 record_id 来匹配；对于模板检查项，使用 id 来匹配
       const currentItem = currentInspection?.checklist_items.find(
-        (i: any) => String(i.id) === String(item.id)
+        (i: any) => {
+          // 如果有 record_id，优先使用 record_id 匹配
+          if (item.record_id && item.record_id > 0) {
+            return String(i.record_id) === String(item.record_id);
+          }
+          // 否则使用 id 匹配
+          return String(i.id) === String(item.id);
+        }
       );
       let photosToSave = currentItem?.photos || item.photos || [];
+      // 去重：移除重复的照片 URL
+      photosToSave = Array.from(new Set(photosToSave));
       const barcodeCodesToSave = currentItem?.barcodeCodes || item.barcodeCodes || [];
       
-      console.log('[PUT_REQUEST] record_id:', recordId, 'item.id:', item.id, 'item.record_id:', item.record_id);
+      console.log('[PUT_REQUEST] record_id:', recordId, 'item.id:', item.id, 'item.record_id:', item.record_id, 'currentItem photos:', photosToSave.length);
       
       // 如果有本地照片（file:// 开头），需要先上传到服务器获取URL
       const localPhotos = photosToSave.filter((p: string) => typeof p === 'string' && (p.startsWith('file:') || p.startsWith('content:')));
@@ -1124,13 +1134,15 @@ export default function InspectionDetailScreen() {
     // 如果有新上传的照片，用服务器 URL 替换本地路径
     let allPhotos: string[];
     if (uploadedUrls.length > 0) {
-      // 有服务器 URL，使用服务器 URL
-      allPhotos = [...previousPhotos, ...uploadedUrls];
-      console.log('[CompletePhotos] Using server URLs:', allPhotos);
+      // 有服务器 URL，使用服务器 URL，并去重
+      const combinedPhotos = [...previousPhotos, ...uploadedUrls];
+      // 使用 Set 去重，保留顺序
+      allPhotos = Array.from(new Set(combinedPhotos));
+      console.log('[CompletePhotos] Using server URLs with deduplication:', allPhotos);
     } else if (tempPhotos.length > 0) {
       // 上传全部失败，保留本地路径（用于调试，但这些路径可能失效）
       console.log('[CompletePhotos] Upload failed, keeping local paths');
-      allPhotos = tempPhotos;
+      allPhotos = Array.from(new Set(tempPhotos));
     } else {
       allPhotos = previousPhotos;
     }
@@ -1177,26 +1189,26 @@ export default function InspectionDetailScreen() {
           saveRecordId = realRecordId;
           console.log('[CompletePhotos] Created new record with id:', realRecordId);
           
-          // 更新前端状态中的 record_id
+          // 更新前端状态中的 record_id，同时保留照片
           const tempTargetRecordId = String(tempPhotoTarget.record_id || tempPhotoTarget.id);
           
-          // 更新 inspection.checklist_items 中的 record_id
+          // 更新 inspection.checklist_items 中的 record_id，保留照片
           setInspection(prev => {
             if (!prev) return null;
             return {
               ...prev,
               checklist_items: prev.checklist_items.map(i =>
                 String(i.record_id) === tempTargetRecordId
-                  ? { ...i, record_id: parseInt(realRecordId!) }
+                  ? { ...i, record_id: parseInt(realRecordId!), photos: allPhotos }
                   : i
               )
             };
           });
           
-          // 更新 barcodeItems 中的 record_id
+          // 更新 barcodeItems 中的 record_id，保留照片
           setBarcodeItems(prev => prev.map(i =>
             String(i.record_id) === tempTargetRecordId
-              ? { ...i, record_id: parseInt(realRecordId!) }
+              ? { ...i, record_id: parseInt(realRecordId!), photos: allPhotos }
               : i
           ));
         } else {

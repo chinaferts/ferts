@@ -846,12 +846,16 @@ router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
     
     // 如果提供了 photos 或 barcode_codes，也更新它们
     if (photos !== undefined) {
-      updateData.photos = photos;
-      console.log('[PUT_RECORDS] Updating photos:', photos);
+      // 去重：移除重复的照片 URL，保留顺序
+      const uniquePhotos = [...new Set(photos)];
+      updateData.photos = uniquePhotos;
+      console.log('[PUT_RECORDS] Updating photos:', uniquePhotos, '(deduplicated from', photos.length, ')');
     }
     if (barcode_codes !== undefined) {
-      updateData.barcode_codes = barcode_codes;
-      console.log('[PUT_RECORDS] Updating barcode_codes:', barcode_codes);
+      // 去重
+      const uniqueBarcodes = [...new Set(barcode_codes)];
+      updateData.barcode_codes = uniqueBarcodes;
+      console.log('[PUT_RECORDS] Updating barcode_codes:', uniqueBarcodes);
     }
     
     let query = client
