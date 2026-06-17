@@ -1209,16 +1209,18 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     overall_result: inspection.overall_result,
     status: inspection.status,
     summary: { pass: passCount, fail: failCount, na: naCount, pending: pendingCount },
-    checklist_items: Array.from(categoriesMap.values()).flat().map(item => {
-      const record = recordsMap.get(item.id);
-      const photos = record ? (photosByRecordId.get(record.id) || []) : [];
+    checklist_items: records.map((record: any) => {
+      // 直接使用 record 的原始顺序，保持与验货详情一致
+      const photos = photosByRecordId.get(record.id) || [];
       return {
-        item_number: item.item_number,
-        item_name: item.item_name || item.name,
-        description: item.description,  // 添加检验标准描述
-        category: item.category,
-        result: record?.status || record?.result || 'pending',
-        photos: photos
+        item_number: record.item_number || record.checklist_item_id,
+        item_name: record.item_name,
+        description: record.item_description,  // 添加检验标准描述
+        category: record.item_category,
+        result: record.result || 'pending',
+        photos: photos,
+        barcodeCodes: record.barcode_codes || [],
+        notes: record.notes
       };
     }),
     defects: defects || [],

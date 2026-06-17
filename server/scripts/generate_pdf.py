@@ -209,29 +209,6 @@ def draw_checklist(c, width, margin, y, height, data):
     
     checklist_items = data.get('checklist_items', [])
     
-    # 调整检查项顺序：将"彩盒/彩卡信息以及其规格重量拍照"从第10位移动到第5位
-    # 目标顺序：[0,1,2,3,4,9,5,6,7,8,10] 即第10项(索引9)移动到第5项(索引4)之后
-    caiba_index = None
-    for i, item in enumerate(checklist_items):
-        item_name = item.get('name', item.get('item_name', ''))
-        if '彩盒' in item_name or '彩卡' in item_name:
-            caiba_index = i
-            break
-    
-    if caiba_index is not None and caiba_index > 4:
-        # 把彩盒检查项移动到第5位（替换原第5位，原第5位及之后的项后移）
-        caiba_item = checklist_items.pop(caiba_index)
-        checklist_items.insert(4, caiba_item)
-    
-    # 将"问题统计以及拍照并描述"移到末尾
-    for i, item in enumerate(checklist_items):
-        item_name = item.get('name', item.get('item_name', ''))
-        if '问题统计' in item_name:
-            problem_item = checklist_items.pop(i)
-            checklist_items.append(problem_item)
-            print(f"[PDF] 移动检查项: {item_name} 到末尾")
-            break
-    
     categories = data.get('categories', [])
     
     # 照片配置
@@ -299,6 +276,9 @@ def draw_checklist(c, width, margin, y, height, data):
                 y -= 4 * mm
             
             # 绘制照片
+            barcode_codes = item.get('barcodeCodes', []) or []
+            notes = item.get('notes', '') or ''
+            
             if photos:
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#4F46E5'))
@@ -322,6 +302,24 @@ def draw_checklist(c, width, margin, y, height, data):
                 
                 y = photo_y - 5 * mm
             
+            # 绘制条码
+            if barcode_codes:
+                c.setFont('ChineseFont', 8)
+                c.setFillColor(colors.HexColor('#059669'))
+                codes_text = ', '.join(barcode_codes[:5])
+                if len(barcode_codes) > 5:
+                    codes_text += f' ... (+{len(barcode_codes) - 5})'
+                c.drawString(margin + 10*mm, y, f'📱 条码: {codes_text}')
+                y -= 4 * mm
+            
+            # 绘制备注
+            if notes:
+                c.setFont('ChineseFont', 8)
+                c.setFillColor(colors.HexColor('#6B7280'))
+                notes_text = notes[:60] + '...' if len(notes) > 60 else notes
+                c.drawString(margin + 10*mm, y, f'📝 备注: {notes_text}')
+                y -= 4 * mm
+            
             y -= 3 * mm
     else:
         # 无分类，直接显示
@@ -330,6 +328,8 @@ def draw_checklist(c, width, margin, y, height, data):
             description = item.get('description', '')
             result = item.get('status', item.get('result', 'pending'))
             photos = item.get('photos', []) or []
+            barcode_codes = item.get('barcodeCodes', []) or []
+            notes = item.get('notes', '') or ''
             
             required = 8 * mm
             if photos:
