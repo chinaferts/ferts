@@ -2505,14 +2505,20 @@ export default function InspectionDetailScreen() {
                   {item.photos && item.photos.length > 0 && (
                     <View style={styles.issuePhotosContainer}>
                       {item.photos.map((photo, idx) => (
-                        <TouchableOpacity key={idx} style={styles.issuePhotoItem}
-                          onPress={() => {
-                            setEditingPhoto({ uri: photo, recordId: item.record_id, index: idx });
-                            setTempPhotos([]);
-                            setTempPhotoTarget(item);
-                            setCameraVisible(true);
-                          }}>
-                          <Image source={{ uri: getImageUrl(photo) }} style={styles.issuePhoto} />
+                        <View key={idx} style={styles.issuePhotoItem}>
+                          <TouchableOpacity
+                            style={styles.issuePhotoTouchable}
+                            onPress={() => {
+                              router.push('/photo-edit' as any, {
+                                photos: item.photos,
+                                initialIndex: idx,
+                                inspectionId: id,
+                                itemRecordId: item.record_id,
+                                itemId: item.id,
+                              });
+                            }}>
+                            <Image source={{ uri: getImageUrl(photo) }} style={styles.issuePhoto} />
+                          </TouchableOpacity>
                           {/* 删除按钮 - 显示编号 */}
                           <TouchableOpacity style={styles.removeIssuePhotoButton}
                             onPress={() => {
@@ -2526,7 +2532,7 @@ export default function InspectionDetailScreen() {
                             }}>
                             <Text style={styles.removeIssuePhotoText}>{idx + 1}</Text>
                           </TouchableOpacity>
-                        </TouchableOpacity>
+                        </View>
                       ))}
                     </View>
                   )}
@@ -4458,6 +4464,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
     overflow: 'hidden',
+  },
+  issuePhotoTouchable: {
+    flex: 1,
   },
   issuePhoto: {
     width: '100%',
