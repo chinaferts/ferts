@@ -430,6 +430,8 @@ export default function InspectionDetailScreen() {
     serious: 0,     // 严重缺陷
     minor: 0,       // 轻微缺陷
   });
+  // 问题统计照片是否已上传完成
+  const [issuePhotosUploaded, setIssuePhotosUploaded] = useState(false);
   // 当前拍照的问题索引
   const [cameraIssueIndex, setCameraIssueIndex] = useState<number | null>(null);
   const [issueCameraVisible, setIssueCameraVisible] = useState(false);
@@ -629,6 +631,108 @@ export default function InspectionDetailScreen() {
     setIssueCameraVisible(false);
     setCameraIssueIndex(null);
   };
+
+  // 上传问题统计照片并标记为完成
+  const handleCompleteIssuePhotos = async () => {
+    if (issues.length === 0 || issuePhotosUploaded) return;
+    
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const problemItem = inspection?.checklist_items?.find(
+        item => item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述'
+      );
+      const problemRecordId = problemItem?.record_id || problemItem?.id;
+      
+      if (!problemRecordId) {
+        Alert.alert('错误', '未找到问题统计检查项记录');
+        return;
+      }
+      
+      // 收集所有本地照片
+      const localPhotos: { uri: string; index: number; photoIndex: number }[] = [];
+      issues.forEach((issue, issueIndex) => {
+        issue.photos.forEach((photo: string, photoIndex) => {
+          if (photo.startsWith('file:') || photo.startsWith('content:')) {
+            localPhotos.push({ uri: photo, index: issueIndex, photoIndex });
+          }
+        });
+      });
+      
+      if (localPhotos.length === 0) {
+        Alert.alert('提示', '没有问题照片需要上传');
+        return;
+      }
+      
+      Alert.alert('上传中', `正在上传 ${localPhotos.length} 张照片...`);
+      
+      const newIssues = [...issues];
+      let uploadedCount = 0;
+      
+      for (const { uri, index, photoIndex } of localPhotos) {
+        try {
+          const FileSystemAny = FileSystem as any;
+          const fileInfo = await FileSystemAny.getInfoAsync(uri);
+          if (!fileInfo.exists) continue;
+          
+          const filename = uri.split('/').pop() || `issue_photo_${Date.now()}.jpg`;
+          
+          const formData = new FormData();
+          formData.append('file', {
+            uri: uri,
+            name: filename,
+            type: 'image/jpeg',
+          } as any);
+          formData.append('recordId', String(problemRecordId));
+          
+          const uploadRes = await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            let serverPath = uploadData.photo_url || uploadData.url || uploadData.path;
+            
+            if (serverPath && !serverPath.startsWith('http') && !serverPath.startsWith('/uploads')) {
+              serverPath = `/uploads/photos/${serverPath}`;
+            }
+            
+            // 替换本地路径为服务器路径
+            newIssues[index].photos[photoIndex] = serverPath;
+            uploadedCount++;
+          }
+        } catch (uploadError) {
+          console.error('[handleCompleteIssuePhotos] Upload error:', uploadError);
+        }
+      }
+      
+      setIssues(newIssues);
+      
+      // 同时更新检查项中的照片路径
+      const allServerPaths = newIssues.flatMap(issue => issue.photos).filter(p => !p.startsWith('file:') && !p.startsWith('content:'));
+      if (allServerPaths.length > 0) {
+        setInspection(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            checklist_items: prev.checklist_items.map(item => {
+              if (item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述') {
+                return { ...item, photos: allServerPaths };
+              }
+              return item;
+            })
+          };
+        });
+      }
+      
+      setIssuePhotosUploaded(true);
+      Alert.alert('完成', `已上传 ${uploadedCount} 张问题照片`);
+      
+    } catch (error) {
+      console.error('[handleCompleteIssuePhotos] Error:', error);
+      Alert.alert('错误', '上传问题照片失败');
+    }
+  };
   
   // CustomCamera 拍照完成回调
   const handleIssueCameraComplete = (photos: Array<{ uri: string; timestamp: number }>) => {
@@ -797,6 +901,22 @@ export default function InspectionDetailScreen() {
         
         const checkedCount = checklistItems.filter((i: ChecklistItem) => i.status !== 'unchecked').length;
         const defectCount = checklistItems.filter((i: ChecklistItem) => i.status === 'fail').length;
+        
+        // 设置 issuePhotosUploaded：如果问题统计检查项有照片，说明照片已上传
+        const problemItem = checklistItems.find(
+          (i: ChecklistItem) => i.category === '问题统计以及拍照并描述' || i.name === '问题统计以及拍照并描述'
+        );
+        const hasIssuePhotos = (problemItem?.photos || []).some((p: string) => 
+          p && !p.startsWith('file:') && !p.startsWith('content://') && !p.startsWith('ph://')
+        );
+        if (hasIssuePhotos) {
+          setIssuePhotosUploaded(true);
+          // 初始化 issues 数组，包含服务器上的照片
+          const issuePhotos = problemItem?.photos || [];
+          if (issuePhotos.length > 0) {
+            setIssues([{ text: '', photos: issuePhotos, severity: '' }]);
+          }
+        }
         
         setInspection({
           ...data,
@@ -1911,24 +2031,25 @@ export default function InspectionDetailScreen() {
     }
 
     // 保存条码到数据库
-    saveBarcodeToBackend(targetRecordId, scannedCode);
+    saveBarcodeToBackend(targetRecordId, scannedCode, scannedFormat);
   };
 
   // 保存条码到后端
-  const saveBarcodeToBackend = async (recordId: string, code: string) => {
+  const saveBarcodeToBackend = async (recordId: string, code: string, format?: string) => {
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       // 获取当前条码列表和格式列表
       const item = inspection?.checklist_items?.find(i => String(i.record_id) === recordId);
       const currentCodes = item?.barcodeCodes || [];
       const currentFormats = item?.barcodeFormats || [];
+      const formatToSave = format || 'UNKNOWN';
       
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items/${recordId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           barcodeCodes: [...currentCodes, code],
-          barcode_formats: [...currentFormats, scannedFormat] 
+          barcode_formats: [...currentFormats, formatToSave] 
         }),
       });
       
@@ -2883,12 +3004,31 @@ export default function InspectionDetailScreen() {
                     })}
                   </View>
                 )}
-                {/* 拍照按钮 - 仅在未完成时显示 */}
+                {/* 拍照按钮和完成按钮 - 仅在未完成时显示 */}
                 {inspection.status !== 'completed' && (
-                  <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
-                    <Feather name="camera" size={18} color="#FFFFFF" />
-                    <Text style={styles.issueCameraText}>拍照 / Camera</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                    <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
+                      <Feather name="camera" size={18} color="#FFFFFF" />
+                      <Text style={styles.issueCameraText}>拍照 / Camera</Text>
+                    </TouchableOpacity>
+                    {/* 完成按钮 - 拍照后显示 */}
+                    {issues[index].photos.length > 0 && !issuePhotosUploaded && (
+                      <TouchableOpacity 
+                        style={[styles.issueCameraButton, { backgroundColor: '#10B981' }]} 
+                        onPress={handleCompleteIssuePhotos}
+                      >
+                        <Feather name="check-circle" size={18} color="#FFFFFF" />
+                        <Text style={styles.issueCameraText}>完成 / Complete</Text>
+                      </TouchableOpacity>
+                    )}
+                    {/* 已完成状态指示 */}
+                    {issuePhotosUploaded && (
+                      <View style={[styles.issueCameraButton, { backgroundColor: '#6B7280' }]}>
+                        <Feather name="check-circle" size={18} color="#FFFFFF" />
+                        <Text style={styles.issueCameraText}>已上传 / Uploaded</Text>
+                      </View>
+                    )}
+                  </View>
                 )}
               </View>
             ))}
