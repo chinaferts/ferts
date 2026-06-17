@@ -1025,6 +1025,21 @@ export default function InspectionDetailScreen() {
           defectCount,
           status: 'in_progress',
         });
+
+        // 如果是条码扫描项，同时更新 barcodeItems 状态
+        if (item.type === 'barcode' || item.barcodeCodes || item.record_id) {
+          setBarcodeItems(prev => prev.map(barcodeItem => {
+            // 使用 record_id 匹配（优先），或使用 id 匹配
+            const recordIdMatch = item.record_id && barcodeItem.record_id && 
+              String(barcodeItem.record_id) === String(item.record_id);
+            const idMatch = String(barcodeItem.id) === targetId;
+            
+            if (recordIdMatch || idMatch) {
+              return { ...barcodeItem, status };
+            }
+            return barcodeItem;
+          }));
+        }
       } else {
         Alert.alert(t('error'), t('updateFailed'));
       }
