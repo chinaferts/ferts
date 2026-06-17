@@ -372,22 +372,39 @@ export default function InspectionDetailScreen() {
   // 条码扫描项状态 (默认显示一条，用户点击添加时才新增)
   const [barcodeItems, setBarcodeItems] = useState<ChecklistItem[]>([]);
   
-  // 初始化条码扫描项（默认只显示一条空项）
+  // 初始化条码扫描项
   // 只有当 barcodeItems 为空时才初始化，避免覆盖用户添加的项
   useEffect(() => {
     if (!inspection?.checklist_items || barcodeItems.length > 0) return;
     
+    const isCompleted = inspection.status === 'completed';
     const originalBarcodeItems = inspection.checklist_items
       .filter(item => item.category === '条码扫描以及拍照')
       .map(item => ({ ...item, barcodeType: 'box' as const, type: 'barcode' as const }));
-    // 显示所有条码扫描项，如果有的话；否则创建一条空项用于新建
-    if (originalBarcodeItems.length > 0) {
-      setBarcodeItems(originalBarcodeItems); // 显示所有条码项
-    } else {
-      // 创建一条默认的条码扫描项
+    
+    // 如果验货已完成，显示所有已保存的条码项
+    if (isCompleted && originalBarcodeItems.length > 0) {
+      setBarcodeItems(originalBarcodeItems);
+    } else if (originalBarcodeItems.length > 0) {
+      // 验货进行中，只显示一条空项，等待用户点击"添加条码扫描"按钮
       const defaultItem: ChecklistItem = {
         id: Date.now(),
-        record_id: Date.now(), // 使用 Date.now() 作为临时 ID，方便后续识别新增项
+        record_id: Date.now(),
+        name: t('barcodeScan'),
+        description: t('barcodeScan'),
+        category: '条码扫描以及拍照',
+        status: 'unchecked',
+        photos: [],
+        barcodeCodes: [],
+        barcodeType: 'box' as const,
+        type: 'barcode' as const,
+      };
+      setBarcodeItems([defaultItem]);
+    } else {
+      // 没有任何条码项，创建一条默认的条码扫描项
+      const defaultItem: ChecklistItem = {
+        id: Date.now(),
+        record_id: Date.now(),
         name: t('barcodeScan'),
         description: t('barcodeScan'),
         category: '条码扫描以及拍照',
@@ -399,7 +416,7 @@ export default function InspectionDetailScreen() {
       };
       setBarcodeItems([defaultItem]);
     }
-  }, [inspection?.checklist_items]);
+  }, [inspection?.checklist_items, inspection?.status]);
   // 严重程度选项
   const severityOptions = [
     { label: t('criticalDefect'), value: 'critical', color: '#DC3545', bgColor: 'rgba(220,53,69,0.1)' },
