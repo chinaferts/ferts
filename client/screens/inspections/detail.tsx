@@ -2516,13 +2516,13 @@ export default function InspectionDetailScreen() {
                     </View>
                   )}
                   
-                  {/* 已保存的照片预览 - 与普通检查项一致 */}
+                  {/* 已保存的照片预览 - 与普通检查项一致，带删除功能 */}
                   {item.photos && item.photos.length > 0 && (
-                    <View style={styles.photoContainer}>
+                    <View style={styles.photoGridContainer}>
                       {item.photos.map((photo, idx) => (
                         <TouchableOpacity
                           key={idx}
-                          style={styles.photoItem}
+                          style={styles.photoContainer}
                           onPress={() => {
                             router.push('/photo-edit' as any, {
                               photos: item.photos,
@@ -2533,6 +2533,20 @@ export default function InspectionDetailScreen() {
                             });
                           }}>
                           <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
+                          {item.status !== 'pass' && (
+                            <TouchableOpacity style={styles.photoDeleteButton}
+                              onPress={() => {
+                                const updatedItems = barcodeItems.map(barcodeItem => {
+                                  if (barcodeItem.record_id === item.record_id) {
+                                    return { ...barcodeItem, photos: (barcodeItem.photos || []).filter((_: any, pi: number) => pi !== idx) };
+                                  }
+                                  return barcodeItem;
+                                });
+                                setBarcodeItems(updatedItems);
+                              }}>
+                              <Text style={styles.photoDeleteText}>X</Text>
+                            </TouchableOpacity>
+                          )}
                         </TouchableOpacity>
                       ))}
                     </View>
