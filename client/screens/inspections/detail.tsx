@@ -1167,8 +1167,10 @@ export default function InspectionDetailScreen() {
     let allPhotos: string[];
     if (uploadedUrls.length > 0) {
       // 有服务器 URL，使用服务器 URL，并去重
-      const combinedPhotos = [...previousPhotos, ...uploadedUrls];
-      // 使用 Set 去重，保留顺序
+      // 先对 previousPhotos 去重，防止同一张照片被添加多次
+      const uniquePreviousPhotos = Array.from(new Set(previousPhotos));
+      const combinedPhotos = [...uniquePreviousPhotos, ...uploadedUrls];
+      // 再对整个数组去重
       allPhotos = Array.from(new Set(combinedPhotos));
       console.log('[CompletePhotos] Using server URLs with deduplication:', allPhotos);
     } else if (tempPhotos.length > 0) {
@@ -1176,7 +1178,8 @@ export default function InspectionDetailScreen() {
       console.log('[CompletePhotos] Upload failed, keeping local paths');
       allPhotos = Array.from(new Set(tempPhotos));
     } else {
-      allPhotos = previousPhotos;
+      // 没有任何新照片，保留 previousPhotos（去重后）
+      allPhotos = Array.from(new Set(previousPhotos));
     }
     console.log('[CompletePhotos] Previous photos:', previousPhotos, 'All photos:', allPhotos);
     
@@ -1766,7 +1769,7 @@ export default function InspectionDetailScreen() {
               const item = inspection.checklist_items.find(i => i.id === Number(recordId));
               if (item && item.photos) {
                 // 合并服务器路径和本地路径
-                const updatedPhotos = [...item.photos];
+                let updatedPhotos = [...item.photos];
                 serverPaths.forEach(serverPath => {
                   // 移除对应的本地路径，添加服务器路径
                   const localIndex = updatedPhotos.findIndex(p => 
@@ -1776,6 +1779,9 @@ export default function InspectionDetailScreen() {
                     updatedPhotos.splice(localIndex, 1, serverPath);
                   }
                 });
+                
+                // 去重：只保留唯一的照片路径
+                updatedPhotos = Array.from(new Set(updatedPhotos));
                 
                 // 更新到服务器
                 await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items/${recordId}`, {
