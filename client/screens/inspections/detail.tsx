@@ -3439,11 +3439,13 @@ const styles = StyleSheet.create({
   },
   scanButton: {
     backgroundColor: '#8B7FF5',
+    minWidth: 0,
   },
   scanButtonText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '500',
+    flexShrink: 1,
   },
   categoryPhotosPreview: {
     backgroundColor: '#F8F9FA',
@@ -3656,43 +3658,52 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
     gap: 4,
     flexShrink: 1,
+    minWidth: 0,
   },
   passButton: {
     backgroundColor: 'rgba(0,184,148,0.15)',
+    minWidth: 0,
   },
   passButtonText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#00B894',
+    flexShrink: 1,
   },
   failButton: {
     backgroundColor: 'rgba(255,107,107,0.15)',
+    minWidth: 0,
   },
   failButtonText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#FF6B6B',
+    flexShrink: 1,
   },
   naButton: {
     backgroundColor: 'rgba(128,128,128,0.15)',
+    minWidth: 0,
   },
   naButtonText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#808080',
+    flexShrink: 1,
   },
   photoButton: {
     backgroundColor: '#8B7FF5',
+    minWidth: 0,
   },
   photoButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#FFFFFF',
+    flexShrink: 1,
   },
   photoRow: {
     marginTop: 8,
@@ -4401,19 +4412,22 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   removeIssueButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
     backgroundColor: 'rgba(255,107,107,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+    minWidth: 0,
+    flexShrink: 1,
   },
   removeIssueText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#FF6B6B',
     marginLeft: 4,
+    flexShrink: 1,
   },
   issueContent: {
     flexDirection: 'row',
@@ -4482,6 +4496,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginLeft: 44,
     gap: 8,
+    width: '100%',
+    maxWidth: Dimensions.get('window').width - 120,
   },
   issueSection: {
     marginTop: 16,
