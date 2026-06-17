@@ -442,11 +442,42 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
         c.showPage()
         y = height - margin
     
+    # 获取AQL信息
+    aql = data.get('aql', '2.5')
+    sample_size = data.get('sample_size', 0)
+    
+    # AQL允收数表（根据AQL等级）
+    aql_accept_table = {
+        '0.40': {'ac': 0, 're': 1},
+        '0.65': {'ac': 1, 're': 2},
+        '1.0': {'ac': 1, 're': 2},
+        '1.5': {'ac': 2, 're': 3},
+        '2.5': {'ac': 3, 're': 4},
+        '4.0': {'ac': 5, 're': 6},
+    }
+    
+    # 严重缺陷允收数固定为0（不允许任何严重缺陷）
+    critical_ac = 0
+    critical_re = 1
+    
+    # 主要/轻微缺陷根据AQL等级确定
+    aql_info = aql_accept_table.get(str(aql), {'ac': 3, 're': 4})
+    major_ac = aql_info['ac']
+    major_re = aql_info['re']
+    minor_ac = aql_info['ac']
+    minor_re = aql_info['re']
+    
     # 标题
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#EF4444'))
     c.drawString(margin, y, '【 问题统计表 / Defect Statistics 】')
     y -= 8 * mm
+    
+    # 显示AQL信息
+    c.setFont('ChineseFont', 9)
+    c.setFillColor(colors.HexColor('#6B7280'))
+    c.drawString(margin, y, f'AQL: {aql} | 抽样数量: {sample_size} | 允收数(Critical: {critical_ac}, Major: {major_ac}, Minor: {minor_ac})')
+    y -= 6 * mm
     
     c.setFillColor(colors.black)
     
@@ -460,8 +491,8 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
     c.rect(table_x, y - row_height, table_width, row_height, fill=1, stroke=1)
     c.setFillColor(colors.HexColor('#991B1B'))
     c.setFont('ChineseFont', 9)
-    headers = ['缺陷类型 / Defect Type', '数量 / Qty', '严重程度 / Severity', '检验结果 / Result']
-    col_widths = [table_width * 0.35, table_width * 0.15, table_width * 0.25, table_width * 0.25]
+    headers = ['缺陷类型 / Defect Type', '数量 / Qty', '严重程度 / Severity', '允收数 / Ac', '检验结果 / Result']
+    col_widths = [table_width * 0.28, table_width * 0.12, table_width * 0.20, table_width * 0.12, table_width * 0.28]
     x_pos = table_x + 2 * mm
     for i, header in enumerate(headers):
         c.drawString(x_pos, y - row_height + 2.5 * mm, header)
@@ -476,15 +507,36 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
     critical_count = defect_item.get('critical_count', defect_item.get('critical', 0))
     major_count = defect_item.get('major_count', defect_item.get('major', 0))
     minor_count = defect_item.get('minor_count', defect_item.get('minor', 0))
-    result = defect_item.get('status', defect_item.get('result', 'unchecked'))
+    status = defect_item.get('status', defect_item.get('result', 'unchecked'))
+    
+    # 计算每种缺陷的合格/不合格状态
+    # 如果有任何严重缺陷，直接不合格；否则根据允收数判断
+    if status == 'pass':
+        # 已提交合格 - 使用提交时的结果
+        critical_result = 'pass'
+        major_result = 'pass'
+        minor_result = 'pass'
+    elif status == 'fail':
+        # 已提交不合格 - 使用提交时的结果
+        critical_result = 'fail'
+        major_result = 'fail'
+        minor_result = 'fail'
+    else:
+        # 未提交 - 根据缺陷数量和允收数判断
+        # Critical: 允收数为0，超过0即不合格
+        critical_result = 'fail' if critical_count > critical_ac else 'pass'
+        # Major: 超过允收数即不合格
+        major_result = 'fail' if major_count > major_ac else 'pass'
+        # Minor: 超过允收数即不合格
+        minor_result = 'fail' if minor_count > minor_ac else 'pass'
     
     defect_rows = [
-        ('严重缺陷 Critical', str(critical_count), '严重 Critical', ''),
-        ('主要缺陷 Major', str(major_count), '主要 Major', ''),
-        ('轻微缺陷 Minor', str(minor_count), '轻微 Minor', ''),
+        ('严重缺陷 Critical', str(critical_count), '严重 Critical', str(critical_ac), critical_result),
+        ('主要缺陷 Major', str(major_count), '主要 Major', str(major_ac), major_result),
+        ('轻微缺陷 Minor', str(minor_count), '轻微 Minor', str(minor_ac), minor_result),
     ]
     
-    for idx, (defect_type, qty, severity, _) in enumerate(defect_rows):
+    for idx, (defect_type, qty, severity, ac, result) in enumerate(defect_rows):
         # 交替背景色
         if idx % 2 == 0:
             c.setFillColor(colors.HexColor('#FEF2F2'))
@@ -492,23 +544,19 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
             c.setFillColor(colors.white)
         c.rect(table_x, y - row_height, table_width, row_height, fill=1, stroke=0)
         
-        c.setFillColor(colors.black)
         c.setFont('ChineseFont', 9)
         x_pos = table_x + 2 * mm
-        values = [defect_type, qty, severity, result]
+        values = [defect_type, qty, severity, ac, '']  # 最后一列根据result判断
         for i, val in enumerate(values):
-            if i == 3:  # 结果列，根据状态显示不同颜色
+            if i == 4:  # 结果列，根据result状态显示不同颜色和文字
                 if result == 'pass':
                     c.setFillColor(colors.HexColor('#059669'))
-                    c.drawString(x_pos, y - row_height + 2.5 * mm, '✓ 通过')
-                elif result == 'fail':
-                    c.setFillColor(colors.HexColor('#EF4444'))
-                    c.drawString(x_pos, y - row_height + 2.5 * mm, '✗ 不通过')
+                    c.drawString(x_pos, y - row_height + 2.5 * mm, '✓ 合格')
                 else:
-                    c.setFillColor(colors.HexColor('#6B7280'))
-                    c.drawString(x_pos, y - row_height + 2.5 * mm, '待检')
-                c.setFillColor(colors.black)
+                    c.setFillColor(colors.HexColor('#EF4444'))
+                    c.drawString(x_pos, y - row_height + 2.5 * mm, '✗ 不合格')
             else:
+                c.setFillColor(colors.black)
                 c.drawString(x_pos, y - row_height + 2.5 * mm, val)
             x_pos += col_widths[i]
         
