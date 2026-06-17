@@ -201,13 +201,15 @@ def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=
         return 0
 
 def draw_checklist(c, width, margin, y, height, data):
-    """绘制检查项列表（包含照片）"""
+    """绘制检查项列表（包含照片），排除问题统计项"""
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#4F46E5'))
     c.drawString(margin, y, '【 检验项目 / Inspection Items 】')
     y -= 6 * mm
     
-    checklist_items = data.get('checklist_items', [])
+    # 过滤掉问题统计项（将在单独的表格中显示）
+    checklist_items = [item for item in data.get('checklist_items', []) 
+                       if '问题统计' not in (item.get('item_name', '') or item.get('name', ''))]
     
     categories = data.get('categories', [])
     
@@ -421,6 +423,137 @@ def draw_defects(c, width, margin, y, height, data):
     y -= 5 * mm
     return y
 
+def draw_defect_statistics_table(c, width, margin, y, height, data):
+    """绘制问题统计表格（在报告最后显示）"""
+    # 从checklist_items中找到问题统计项
+    checklist_items = data.get('checklist_items', [])
+    defect_item = None
+    for item in checklist_items:
+        item_name = item.get('item_name', '') or item.get('name', '')
+        if '问题统计' in item_name:
+            defect_item = item
+            break
+    
+    if not defect_item:
+        return y
+    
+    # 如果y位置不够，换页
+    if y < margin + 50 * mm:
+        c.showPage()
+        y = height - margin
+    
+    # 标题
+    c.setFont('ChineseFont', 11)
+    c.setFillColor(colors.HexColor('#EF4444'))
+    c.drawString(margin, y, '【 问题统计表 / Defect Statistics 】')
+    y -= 8 * mm
+    
+    c.setFillColor(colors.black)
+    
+    # 绘制表格
+    table_x = margin
+    table_width = width - 2 * margin
+    row_height = 8 * mm
+    
+    # 表头
+    c.setFillColor(colors.HexColor('#FEE2E2'))
+    c.rect(table_x, y - row_height, table_width, row_height, fill=1, stroke=1)
+    c.setFillColor(colors.HexColor('#991B1B'))
+    c.setFont('ChineseFont', 9)
+    headers = ['缺陷类型 / Defect Type', '数量 / Qty', '严重程度 / Severity', '检验结果 / Result']
+    col_widths = [table_width * 0.35, table_width * 0.15, table_width * 0.25, table_width * 0.25]
+    x_pos = table_x + 2 * mm
+    for i, header in enumerate(headers):
+        c.drawString(x_pos, y - row_height + 2.5 * mm, header)
+        x_pos += col_widths[i]
+    y -= row_height
+    
+    # 表格边框
+    c.setStrokeColor(colors.HexColor('#EF4444'))
+    c.setLineWidth(1)
+    
+    # 获取缺陷统计数据
+    critical_count = defect_item.get('critical_count', defect_item.get('critical', 0))
+    major_count = defect_item.get('major_count', defect_item.get('major', 0))
+    minor_count = defect_item.get('minor_count', defect_item.get('minor', 0))
+    result = defect_item.get('status', defect_item.get('result', 'unchecked'))
+    
+    defect_rows = [
+        ('严重缺陷 Critical', str(critical_count), '严重 Critical', ''),
+        ('主要缺陷 Major', str(major_count), '主要 Major', ''),
+        ('轻微缺陷 Minor', str(minor_count), '轻微 Minor', ''),
+    ]
+    
+    for idx, (defect_type, qty, severity, _) in enumerate(defect_rows):
+        # 交替背景色
+        if idx % 2 == 0:
+            c.setFillColor(colors.HexColor('#FEF2F2'))
+        else:
+            c.setFillColor(colors.white)
+        c.rect(table_x, y - row_height, table_width, row_height, fill=1, stroke=0)
+        
+        c.setFillColor(colors.black)
+        c.setFont('ChineseFont', 9)
+        x_pos = table_x + 2 * mm
+        values = [defect_type, qty, severity, result]
+        for i, val in enumerate(values):
+            if i == 3:  # 结果列，根据状态显示不同颜色
+                if result == 'pass':
+                    c.setFillColor(colors.HexColor('#059669'))
+                    c.drawString(x_pos, y - row_height + 2.5 * mm, '✓ 通过')
+                elif result == 'fail':
+                    c.setFillColor(colors.HexColor('#EF4444'))
+                    c.drawString(x_pos, y - row_height + 2.5 * mm, '✗ 不通过')
+                else:
+                    c.setFillColor(colors.HexColor('#6B7280'))
+                    c.drawString(x_pos, y - row_height + 2.5 * mm, '待检')
+                c.setFillColor(colors.black)
+            else:
+                c.drawString(x_pos, y - row_height + 2.5 * mm, val)
+            x_pos += col_widths[i]
+        
+        # 画行边框
+        c.setStrokeColor(colors.HexColor('#FECACA'))
+        c.line(table_x, y - row_height, table_x + table_width, y - row_height)
+        y -= row_height
+    
+    # 画表格底部边框
+    c.line(table_x, y, table_x + table_width, y)
+    
+    # 画表格左右边框
+    c.line(table_x, y, table_x, y + len(defect_rows) * row_height)
+    c.line(table_x + table_width, y, table_x + table_width, y + len(defect_rows) * row_height)
+    
+    # 绘制问题照片（如果有）
+    photos = defect_item.get('photos', []) or []
+    if photos:
+        y -= 5 * mm
+        c.setFont('ChineseFont', 9)
+        c.setFillColor(colors.HexColor('#6B7280'))
+        c.drawString(margin, y, f'问题照片 ({len(photos)}张):')
+        y -= 5 * mm
+        
+        photo_max_width = 40 * mm
+        photo_max_height = 35 * mm
+        photo_x = margin
+        photos_per_row = 4
+        
+        for i, photo in enumerate(photos):
+            if i > 0 and i % photos_per_row == 0:
+                y -= photo_max_height + 3 * mm
+                photo_x = margin
+            
+            photo_path = get_full_photo_path(photo.get('url', ''))
+            if photo_path and os.path.exists(photo_path):
+                try:
+                    draw_photo(c, photo_x, y - photo_max_height, photo_path, photo_max_width, photo_max_height)
+                    photo_x += photo_max_width + 3 * mm
+                except Exception as e:
+                    print(f"绘制问题照片失败: {e}")
+    
+    y -= 10 * mm
+    return y
+
 def draw_footer(c, width, margin, y, data):
     """绘制页脚"""
     c.setStrokeColor(colors.HexColor('#E5E7EB'))
@@ -456,6 +589,9 @@ def generate_inspection_pdf(data, output_path):
     
     # 绘制缺陷记录
     y = draw_defects(c, width, margin, y, height, data)
+    
+    # 绘制问题统计表（报告最后）
+    y = draw_defect_statistics_table(c, width, margin, y, height, data)
     
     # 绘制页脚
     draw_footer(c, width, margin, margin, data)
