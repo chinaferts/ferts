@@ -3006,26 +3006,26 @@ export default function InspectionDetailScreen() {
                 )}
                 {/* 拍照按钮和完成按钮 - 仅在未完成时显示 */}
                 {inspection.status !== 'completed' && (
-                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 10, alignItems: 'center' }}>
                     <TouchableOpacity style={styles.issueCameraButton} onPress={() => handleOpenCamera(index)}>
                       <Feather name="camera" size={18} color="#FFFFFF" />
                       <Text style={styles.issueCameraText}>拍照 / Camera</Text>
                     </TouchableOpacity>
-                    {/* 完成按钮 - 拍照后显示 */}
+                    {/* 完成按钮 - 有照片时显示 */}
                     {issues[index].photos.length > 0 && !issuePhotosUploaded && (
                       <TouchableOpacity 
-                        style={[styles.issueCameraButton, { backgroundColor: '#10B981' }]} 
+                        style={[styles.issueCameraButton, { backgroundColor: '#10B981', minWidth: 100 }]} 
                         onPress={handleCompleteIssuePhotos}
                       >
                         <Feather name="check-circle" size={18} color="#FFFFFF" />
-                        <Text style={styles.issueCameraText}>完成 / Complete</Text>
+                        <Text style={[styles.issueCameraText, { fontWeight: '600' }]}>完成上传</Text>
                       </TouchableOpacity>
                     )}
                     {/* 已完成状态指示 */}
                     {issuePhotosUploaded && (
-                      <View style={[styles.issueCameraButton, { backgroundColor: '#6B7280' }]}>
+                      <View style={[styles.issueCameraButton, { backgroundColor: '#6B7280', minWidth: 100 }]}>
                         <Feather name="check-circle" size={18} color="#FFFFFF" />
-                        <Text style={styles.issueCameraText}>已上传 / Uploaded</Text>
+                        <Text style={styles.issueCameraText}>已上传</Text>
                       </View>
                     )}
                   </View>
