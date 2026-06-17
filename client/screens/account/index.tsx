@@ -10,8 +10,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { Screen } from '@/components/Screen';
 import { Feather } from '@expo/vector-icons';
 import { useAuth, User, UserRole } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -337,7 +336,7 @@ export default function AccountScreen() {
 
   if (!isAdmin) {
     return (
-      <SafeAreaView style={styles.container}>
+      <Screen>
         <View style={styles.centerContent}>
           <View style={styles.lockIcon}>
             <Feather name="lock" size={48} color="#B2BEC3" />
@@ -345,12 +344,12 @@ export default function AccountScreen() {
           <Text style={styles.noPermissionTitle}>{t('noPermission')}</Text>
           <Text style={styles.noPermissionText}>{t('adminOnlyAccess')}</Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <Screen>
       {/* Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerInfo}>
@@ -579,7 +578,7 @@ export default function AccountScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
