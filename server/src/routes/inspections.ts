@@ -10,6 +10,27 @@ const require = createRequire(import.meta.url);
 import PDFDocument from 'pdfkit';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 
+// 从 session token 获取用户信息
+async function getUserFromSession(req: Request): Promise<{ id: string; name: string } | null> {
+  const sessionToken = req.headers['x-session'] as string;
+  if (!sessionToken) return null;
+  
+  const supabase = getSupabaseClient(sessionToken);
+  if (!supabase) return null;
+  
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(sessionToken);
+    if (error || !user) return null;
+    
+    // 获取用户名称（优先 display_name，其次 email）
+    const name = user.user_metadata?.display_name || user.email || user.id;
+    return { id: user.id, name };
+  } catch (err) {
+    console.error('[getUserFromSession] Error:', err);
+    return null;
+  }
+}
+
 // ES Module 中获取 __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -713,12 +734,21 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Invalid inspection ID' });
     }
     
+    // 获取当前用户
+    const currentUser = await getUserFromSession(req);
+    
     // 构建更新对象
     const updateData: any = {
       status: 'completed',
       overall_result: result,
       notes
     };
+    
+    // 如果有用户信息，记录提交人
+    if (currentUser) {
+      updateData.submitted_by = currentUser.id;
+      updateData.inspector_name = currentUser.name; // 更新验货员名称
+    }
 
     const { data, error } = await client
       .from('inspections')
@@ -1121,6 +1151,18 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       }
       inspection = data;
       
+      // 如果有 submitted_by，获取提交者信息并设置为 inspector_name
+      if (inspection.submitted_by) {
+        const { data: userData } = await client
+          .from('users')
+          .select('name')
+          .eq('id', inspection.submitted_by)
+          .single();
+        if (userData) {
+          inspection.inspector_name = userData.name;
+        }
+      }
+      
       // 从数据库获取 inspection_records
       const { data: recordsData } = await client
         .from('inspection_records')
@@ -1214,7 +1256,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     style_number: inspection.style_number,
     inspection_date: inspection.inspection_date || (inspection.created_at ? String(inspection.created_at).substring(0, 10) : null),
     created_at: inspection.created_at,
-    inspector_name: inspection.inspector_name || inspection.inspector_id || inspection.created_by,
+    inspector_name: inspection.inspector_name || inspection.inspector_id || inspection.created_by || (inspection.submitted_by_name ? `提交人: ${inspection.submitted_by_name}` : null),
     overall_result: inspection.overall_result,
     status: inspection.status,
     summary: { pass: passCount, fail: failCount, na: naCount, pending: pendingCount },
