@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image, Platform, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image, Platform, TouchableWithoutFeedback, ActivityIndicator, Dimensions } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
