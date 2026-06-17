@@ -380,9 +380,9 @@ export default function InspectionDetailScreen() {
     const originalBarcodeItems = inspection.checklist_items
       .filter(item => item.category === '条码扫描以及拍照')
       .map(item => ({ ...item, barcodeType: 'box' as const, type: 'barcode' as const }));
-    // 默认只显示一条，如果已有数据则显示第一条，否则创建一条空项
+    // 显示所有条码扫描项，如果有的话；否则创建一条空项用于新建
     if (originalBarcodeItems.length > 0) {
-      setBarcodeItems([originalBarcodeItems[0]]);
+      setBarcodeItems(originalBarcodeItems); // 显示所有条码项
     } else {
       // 创建一条默认的条码扫描项
       const defaultItem: ChecklistItem = {
@@ -2414,10 +2414,12 @@ export default function InspectionDetailScreen() {
                 <Text style={styles.sectionTitle}>条码扫描以及拍照</Text>
                 <Text style={styles.sectionTitleEnglish}>Barcode Scan</Text>
               </View>
-              <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
-                <Feather name="plus" size={18} color="#6C63FF" />
-                <Text style={styles.addIssueText}>添加条码扫描</Text>
-              </TouchableOpacity>
+              {inspection.status !== 'completed' && (
+                <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
+                  <Feather name="plus" size={18} color="#6C63FF" />
+                  <Text style={styles.addIssueText}>添加条码扫描</Text>
+                </TouchableOpacity>
+              )}
             </View>
             
             {/* 条码扫描列表（包括原始项和新增项） */}
