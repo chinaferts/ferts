@@ -4,7 +4,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const pkg = require('./package.json');
 const dependencies = pkg.dependencies || {};
-const externalList = Object.keys(dependencies).filter(dep => dep !== 'dayjs');
+const externalList = Object.keys(dependencies).filter(dep => dep !== 'dayjs' && !dep.includes('coze-coding'));
 const outDir = process.env.NODE_ENV === 'production' ? '/tmp/server_dist' : 'dist';
 try {
   await esbuild.build({
