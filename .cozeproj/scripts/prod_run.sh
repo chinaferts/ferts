@@ -57,7 +57,7 @@ check_command "npm"
 # 构建服务端代码
 info "构建服务端代码..."
 cd "$ROOT_DIR/server"
-pnpm run build || error "服务端构建失败"
+NODE_ENV=production pnpm run build || error "服务端构建失败"
 cd "$ROOT_DIR"
 
 info "开始执行：pnpm run start (server)"
