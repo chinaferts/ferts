@@ -1,6 +1,7 @@
 import express from "express";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import * as fs from "fs";
 import cors from "cors";
 import path from "path";
 import checklistsRouter from "./routes/checklists.js";
