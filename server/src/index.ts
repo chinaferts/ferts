@@ -36,7 +36,6 @@ if (fs.existsSync(clientDistPath)) {
 }
 
 // Serve uploaded files as static
-const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction) {
   // Production: use /tmp as writable directory
   app.use('/uploads', express.static('/tmp/uploads'));
