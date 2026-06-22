@@ -40,6 +40,15 @@ mkdir -p "/tmp/uploads/photos"
 mkdir -p "/tmp/uploads/qrcode"
 info "上传目录创建完成"
 
+# ============== 构建客户端（如果未构建）======================
+if [ ! -d "$ROOT_DIR/client/dist" ]; then
+  info "客户端未构建，开始构建..."
+  if command -v npx &> /dev/null; then
+    (cd "$ROOT_DIR/client" && npx expo export --platform web) || warn "客户端构建失败"
+  fi
+fi
+info "客户端构建检查完成"
+
 # ============== 启动服务 ======================
 # 检查核心命令
 check_command "pnpm"

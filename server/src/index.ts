@@ -20,9 +20,20 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Serve web app static files (works from both server/ and project root)
-const clientDistPath = path.join(__dirname, '..', '..', 'client', 'dist');
-app.use(express.static(clientDistPath));
+// Serve web app static files
+// Production: /opt/bytefaas/client/dist, Development: relative path from __dirname
+const isProduction = process.env.NODE_ENV === 'production' || !process.env.NODE_ENV;
+const clientDistPath = isProduction
+  ? '/opt/bytefaas/client/dist'
+  : path.join(__dirname, '..', '..', 'client', 'dist');
+console.log('[Static Files] Using path:', clientDistPath, 'isProd:', isProduction);
+
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  console.log('[Static Files] Served from:', clientDistPath);
+} else {
+  console.warn('[Static Files] Client dist not found at:', clientDistPath);
+}
 
 // Serve uploaded files as static
 const isProduction = process.env.NODE_ENV === 'production';
