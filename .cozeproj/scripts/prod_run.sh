@@ -54,6 +54,12 @@ info "客户端构建检查完成"
 check_command "pnpm"
 check_command "npm"
 
+# 构建服务端代码
+info "构建服务端代码..."
+cd "$ROOT_DIR/server"
+pnpm run build || error "服务端构建失败"
+cd "$ROOT_DIR"
+
 info "开始执行：pnpm run start (server)"
 (pushd "$ROOT_DIR/server" > /dev/null && PORT="$PORT" pnpm run start; popd > /dev/null) || error "服务启动失败"
 info "服务启动完成！\n"
