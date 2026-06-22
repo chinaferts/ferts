@@ -20,8 +20,8 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Serve web app static files
-const clientDistPath = path.join(process.cwd(), '..', 'client', 'dist');
+// Serve web app static files (works from both server/ and project root)
+const clientDistPath = path.join(__dirname, '..', '..', 'client', 'dist');
 app.use(express.static(clientDistPath));
 
 // Serve uploaded files as static
