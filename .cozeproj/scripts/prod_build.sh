@@ -39,6 +39,16 @@ else
 fi
 info "==================== 依赖安装完成！====================\n"
 
+info "==================== 安装 Python 依赖 ===================="
+info "检查 Python 依赖..."
+if command -v python3 &> /dev/null; then
+  if [ -f "$ROOT_DIR/server/requirements.txt" ]; then
+    info "安装 Python 依赖: pip3 install -r server/requirements.txt"
+    pip3 install -r "$ROOT_DIR/server/requirements.txt" --quiet || warn "Python 依赖安装失败，继续构建..."
+  fi
+fi
+info "==================== Python 依赖安装完成！===================="
+
 info "==================== dist打包 ===================="
 info "开始执行：pnpm run build (server)"
 (pushd "$ROOT_DIR/server" > /dev/null && pnpm run build; popd > /dev/null) || error "dist打包失败"

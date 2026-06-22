@@ -24,6 +24,16 @@ check_command() {
   fi
 }
 
+# ============== 安装 Python 依赖 ======================
+info "检查 Python 依赖..."
+if command -v python3 &> /dev/null; then
+  if [ -f "$ROOT_DIR/server/requirements.txt" ]; then
+    info "安装 Python 依赖..."
+    pip3 install -r "$ROOT_DIR/server/requirements.txt" --quiet || warn "Python 依赖安装失败，继续..."
+  fi
+fi
+info "Python 依赖检查完成"
+
 # ============== 创建上传目录 ======================
 info "创建上传目录..."
 mkdir -p "/tmp/uploads/photos"
