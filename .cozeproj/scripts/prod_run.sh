@@ -36,20 +36,14 @@ info "构建服务端代码..."
 cd "$ROOT_DIR/server"
 NODE_ENV=production pnpm run build || error "服务端构建失败"
 cd "$ROOT_DIR"
-
-# ============== 复制 node_modules 到 /tmp ======================
-info "复制 node_modules..."
-if [ ! -d "/tmp/server_node_modules" ]; then
-  cp -r "$ROOT_DIR/server/node_modules" "/tmp/server_node_modules" || warn "node_modules 复制失败"
-fi
-info "node_modules 复制完成"
+info "服务端构建完成"
 
 # ============== 启动服务 ======================
 info "开始启动服务..."
 cd /tmp/server_dist
-NODE_ENV=production PORT="$PORT" NODE_PATH="/tmp/server_node_modules" node index.cjs &
-sleep 2
-if pgrep -f "index.cjs" > /dev/null; then
+NODE_ENV=production PORT="$PORT" node index.mjs &
+sleep 3
+if pgrep -f "node index.js" > /dev/null; then
   info "服务启动成功！"
 else
   error "服务启动失败"
