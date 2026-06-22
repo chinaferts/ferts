@@ -34,6 +34,14 @@ def get_full_photo_path(photo_path):
     full_path = os.path.join(UPLOADS_BASE_PATH, clean_path)
     return full_path
 
+def get_logo_path():
+    """获取logo路径"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(script_dir, 'logo.png')
+    if os.path.exists(logo_path):
+        return logo_path
+    return None
+
 def draw_header(c, width, margin, data):
     """绘制报告头部区域"""
     y = height - margin
@@ -48,6 +56,15 @@ def draw_header(c, width, margin, data):
     c.setLineWidth(2)
     c.line(margin, y, width - margin, y)
     y -= 8 * mm
+    
+    # 添加 FEATS LOGO 在右侧
+    logo_path = get_logo_path()
+    if logo_path:
+        logo_w = 35 * mm
+        logo_h = 12 * mm
+        logo_x = width - margin - logo_w
+        logo_y = y - logo_h + 5 * mm
+        c.drawImage(logo_path, logo_x, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
     
     return y
 
