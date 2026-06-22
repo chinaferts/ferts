@@ -4,6 +4,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const pkg = require('./package.json');
 const dependencies = pkg.dependencies || {};
+// 只排除 Node.js 内置模块
 const externalList = [
   'fs', 'path', 'os', 'http', 'https', 'url', 'querystring',
   'crypto', 'util', 'stream', 'events', 'buffer', 'net', 'tls',
@@ -18,9 +19,13 @@ try {
     entryPoints: ['src/index.ts'],
     bundle: true,
     platform: 'node',
-    format: 'esm',
+    format: 'cjs',
     outdir: outDir,
+    outExtension: { '.js': '.cjs' },
     external: externalList,
+    banner: {
+      js: '#!/usr/bin/env node',
+    },
   });
   console.log('⚡ Build complete!');
 } catch (e) {
