@@ -194,30 +194,53 @@ router.get('/download', async (req: Request, res: Response) => {
         return;
       }
       
-      if (!fs.existsSync(normalizedPath)) {
-        console.error('[Photo Download] 本地文件不存在:', normalizedPath);
-        res.status(404).json({ success: false, error: '文件不存在' });
+      // 首先尝试从本地文件读取
+      if (fs.existsSync(normalizedPath)) {
+        const ext = path.extname(normalizedPath).toLowerCase();
+        const mimeTypes: Record<string, string> = {
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.gif': 'image/gif',
+          '.webp': 'image/webp',
+          '.pdf': 'application/pdf',
+        };
+        const contentType = mimeTypes[ext] || 'application/octet-stream';
+        const buffer = fs.readFileSync(normalizedPath);
+        
+        console.log('[Photo Download] 本地文件大小:', buffer.length);
+        
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', buffer.length);
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        res.send(buffer);
         return;
       }
       
-      const ext = path.extname(normalizedPath).toLowerCase();
-      const mimeTypes: Record<string, string> = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.pdf': 'application/pdf',
-      };
-      const contentType = mimeTypes[ext] || 'application/octet-stream';
-      const buffer = fs.readFileSync(normalizedPath);
+      // 如果本地文件不存在，尝试从本地服务器获取（通过 fetch 到本地 /uploads/ 路径）
+      console.log('[Photo Download] 本地文件不存在，尝试从服务器获取:', url);
+      try {
+        const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+        const fetchUrl = `${baseUrl}${url}`;
+        const response = await fetch(fetchUrl);
+        
+        if (response.ok) {
+          const buffer = await response.arrayBuffer();
+          const contentType = response.headers.get('content-type') || 'image/jpeg';
+          
+          console.log('[Photo Download] 从服务器获取成功，大小:', buffer.byteLength);
+          
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Length', buffer.byteLength);
+          res.setHeader('Cache-Control', 'public, max-age=31536000');
+          res.send(Buffer.from(buffer));
+          return;
+        }
+      } catch (fetchError) {
+        console.error('[Photo Download] 从服务器获取失败:', fetchError);
+      }
       
-      console.log('[Photo Download] 本地文件大小:', buffer.length);
-      
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', buffer.length);
-      res.setHeader('Cache-Control', 'public, max-age=31536000');
-      res.send(buffer);
+      res.status(404).json({ success: false, error: '文件不存在' });
       return;
     }
 
