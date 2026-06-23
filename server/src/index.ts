@@ -1,6 +1,4 @@
 import express from "express";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
 import * as fs from "fs";
 import cors from "cors";
 import path from "path";
@@ -9,9 +7,6 @@ import inspectionsRouter from "./routes/inspections.js";
 import defectsRouter from "./routes/defects.js";
 import photosRouter from "./routes/photos.js";
 import usersRouter from "./routes/users.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -22,11 +17,11 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve web app static files
-// Production: /opt/bytefaas/client/dist, Development: relative path from __dirname
-const isProduction = process.env.NODE_ENV === 'production' || !process.env.NODE_ENV;
+// Production: /opt/bytefaas/client/dist, Development: relative path
+const isProduction = process.env.NODE_ENV === 'production';
 const clientDistPath = isProduction
   ? '/opt/bytefaas/client/dist'
-  : path.join(__dirname, '..', '..', 'client', 'dist');
+  : path.join(process.cwd(), '..', 'client', 'dist');
 console.log('[Static Files] Using path:', clientDistPath, 'isProd:', isProduction);
 
 if (fs.existsSync(clientDistPath)) {
@@ -59,18 +54,22 @@ app.use('/api/v1/photos', photosRouter);
 app.use('/api/v1/users', usersRouter);
 app.use('/api/v1/auth', usersRouter);
 
-// Serve web app static files (SPA fallback)
-app.use(express.static(clientDistPath));
+// Catch-all: serve index.html for client-side routing
 app.get('*', (req, res) => {
-  res.sendFile(path.join(clientDistPath, 'index.html'));
+  if (isProduction && fs.existsSync(path.join(clientDistPath, 'index.html'))) {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  } else {
+    res.status(404).json({ error: 'Not found' });
+  }
 });
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({ success: false, error: err.message || 'Internal server error' });
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(port, () => {
-  console.log(`Server listening at http://localhost:${port}/`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${port}`);
+  console.log(`[Env] NODE_ENV=${process.env.NODE_ENV}`);
 });

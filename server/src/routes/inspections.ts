@@ -2,11 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
 import * as fs from 'fs';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
 import { execSync } from 'child_process';
-const require = createRequire(import.meta.url);
-// PDFKit 不需要 fontkit
 import PDFDocument from 'pdfkit';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 
@@ -31,9 +27,6 @@ async function getUserFromSession(req: Request): Promise<{ id: string; name: str
   }
 }
 
-// ES Module 中获取 __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 import {
   mockGetInspections,
   mockGetInspection,
