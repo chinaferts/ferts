@@ -1237,7 +1237,10 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     }
 
   // 使用 Python reportlab 生成 PDF（支持中文）
-  const pdfScriptPath = path.join(process.cwd(), 'scripts', 'generate_pdf.py');
+  const isProduction = process.env.NODE_ENV === 'production';
+  const pdfScriptPath = isProduction 
+    ? '/opt/bytefaas/server/scripts/generate_pdf.py'
+    : path.join(process.cwd(), 'scripts', 'generate_pdf.py');
   
   // 准备PDF数据 - 包含完整的表头信息
   const pdfData = {
