@@ -43,7 +43,7 @@ const getPhotoUrl = (photo: string): string => {
 const savePhotoUpdates = async (inspectionId: string | number, itemRecordId: string | number, photos: string[]) => {
   try {
     const response = await fetch(
-      `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${inspectionId}/records/${itemRecordId}`,
+      `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || ''}/api/v1/inspections/${inspectionId}/records/${itemRecordId}`,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

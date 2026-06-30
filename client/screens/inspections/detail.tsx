@@ -339,7 +339,7 @@ export default function InspectionDetailScreen() {
         formData.append("category", item.category || item.name);
         formData.append("item_name", item.name);
         
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || ''}/api/v1/inspections/${id}/photos`, {
           method: "POST",
           body: formData,
         });
@@ -361,7 +361,7 @@ export default function InspectionDetailScreen() {
             setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
             
             // 同时更新数据库中的 photos 字段
-            await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${targetRecordId}`, {
+            await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || ''}/api/v1/inspections/${id}/checklist-items/${targetRecordId}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ photos: [...(updatedItems.find(i => i.record_id === targetRecordId)?.photos || [])] }),
@@ -520,7 +520,7 @@ export default function InspectionDetailScreen() {
           const base64WithPrefix = `data:${mimeType};base64,${base64Data}`;
 
           // 调用后端导入接口
-          const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/import-photo`, {
+          const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || ''}/api/v1/inspections/import-photo`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -656,7 +656,7 @@ export default function InspectionDetailScreen() {
     if (issues.length === 0 || issuePhotosUploaded) return;
     
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       const problemItem = inspection?.checklist_items?.find(
         item => item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述'
       );
@@ -884,7 +884,7 @@ export default function InspectionDetailScreen() {
   const fetchInspection = async () => {
     if (!id) return;
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}`);
       if (response.ok) {
         const result = await response.json();
@@ -1037,7 +1037,7 @@ export default function InspectionDetailScreen() {
           formData.append('category', updatedItems[itemIndex].category || updatedItems[itemIndex].name);
           formData.append('item_name', updatedItems[itemIndex].name);
 
-          const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
+          const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || ''}/api/v1/inspections/${id}/photos`, {
             method: 'POST',
             body: formData,
           });
@@ -1047,7 +1047,7 @@ export default function InspectionDetailScreen() {
             const serverUrl = result.data?.photo_url;
             if (serverUrl) {
               updatedItems[itemIndex].photos[photoIndex] = serverUrl;
-              await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${itemRecordId}`, {
+              await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || ''}/api/v1/inspections/${id}/checklist-items/${itemRecordId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ photos: updatedItems[itemIndex].photos }),
@@ -1077,7 +1077,7 @@ export default function InspectionDetailScreen() {
     console.log('[UpdateStatus] record_id:', item.record_id, 'isNew:', isNewBarcodeItem);
 
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
 
       // 如果是新建的条码扫描项，先保存到数据库
       if (isNewBarcodeItem) {
@@ -1300,7 +1300,7 @@ export default function InspectionDetailScreen() {
         formData.append("category", tempPhotoTarget.category || tempPhotoTarget.name);
         formData.append("item_name", tempPhotoTarget.name);
         
-        const uploadResponse = await fetchWithTimeout(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/photos`, {
+        const uploadResponse = await fetchWithTimeout(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || ''}/api/v1/inspections/${id}/photos`, {
           method: "POST",
           body: formData,
         });
@@ -1358,7 +1358,7 @@ export default function InspectionDetailScreen() {
     // 同时更新inspection_records表的photos字段
     let realRecordId: string | null = null;
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       
       // 检查是否是新建条码项（record_id > 1000000000000 表示 Date.now()）
       const isNewBarcodeItem = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 1000000000000;
@@ -1488,7 +1488,7 @@ export default function InspectionDetailScreen() {
     }
 
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       const response = await fetch(`${baseUrl}/api/v1/defects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1565,7 +1565,7 @@ export default function InspectionDetailScreen() {
       return;
     }
 
-    const serverBaseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+    const serverBaseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
     if (!serverBaseUrl) {
       Alert.alert('错误', '服务器地址未配置');
       return;
@@ -1774,7 +1774,7 @@ export default function InspectionDetailScreen() {
     try {
       setExportingReport(true);
 
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       const pdfUrl = `${baseUrl}/api/v1/inspections/${id}/export-pdf`;
 
       console.log('[Export] Downloading PDF from:', pdfUrl);
@@ -1901,7 +1901,7 @@ export default function InspectionDetailScreen() {
           // 显示上传提示
           Alert.alert(t('uploading'), `${t('uploadingPhotos')} ${allLocalPhotos.length} ${t('count')}`);
           
-          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
           const uploadedPhotos: { [recordId: number]: string[] } = {};
           
           for (const { recordId, localPath } of allLocalPhotos) {
@@ -1989,7 +1989,7 @@ export default function InspectionDetailScreen() {
         }
 
       // 提交验货结果
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2086,7 +2086,7 @@ export default function InspectionDetailScreen() {
   // 保存条码到后端
   const saveBarcodeToBackend = async (recordId: string, code: string, format?: string) => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       // 获取当前条码列表和格式列表
       const item = inspection?.checklist_items?.find(i => String(i.record_id) === recordId);
       const currentCodes = item?.barcodeCodes || [];
@@ -2135,7 +2135,7 @@ export default function InspectionDetailScreen() {
     
     try {
       console.log("[BarcodeDelete] Deleting barcode:", itemId, codeToDelete, "newCodes:", newCodes);
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}/checklist-items/${itemId}`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || ''}/api/v1/inspections/${id}/checklist-items/${itemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcodeCodes: newCodes, barcode_formats: newFormats }),
@@ -2214,7 +2214,7 @@ export default function InspectionDetailScreen() {
           const v = f === field ? currentValue : dims[f];
           updateData[bf] = v === '' ? null : parseFloat(v);
         });
-        await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/${id}`, {
+        await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || ''}/api/v1/inspections/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateData),
@@ -2274,7 +2274,7 @@ export default function InspectionDetailScreen() {
               return;
             }
             
-            const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+            const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
             const photoUris = photos.map(p => p.uri);
             const targetRecordId = tempPhotoTarget?.record_id;
             const targetIssueIndex = tempPhotoTarget?.issueIndex;

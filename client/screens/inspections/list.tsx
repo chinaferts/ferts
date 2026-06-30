@@ -142,7 +142,7 @@ export default function InspectionsListScreen() {
 
   const fetchInspections = useCallback(async () => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       const response = await fetch(`${baseUrl}/api/v1/inspections?status=${activeTab}`);
       if (response.ok) {
         const result = await response.json();

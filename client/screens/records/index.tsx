@@ -96,7 +96,7 @@ export default function RecordsScreen() {
 
   const fetchRecords = useCallback(async () => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       const response = await fetch(`${baseUrl}/api/v1/inspections?status=completed`);
       if (response.ok) {
         const result = await response.json();

@@ -90,7 +90,7 @@ export default function NewInspectionScreen() {
   // 加载模板列表（从API加载）
   const loadTemplates = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/checklists`);
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL || ''}/api/v1/checklists`);
       const result = await response.json();
       if (result.success && result.data) {
         console.log("[NewInspection] Templates loaded:", result.data, "Count:", result.data?.length);
@@ -344,7 +344,7 @@ export default function NewInspectionScreen() {
 
     setLoading(true);
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       
       // 自动生成订单号（如果用户没有输入）
       const finalOrderNo = orderNo.trim() || `AUTO-${Date.now()}`;
