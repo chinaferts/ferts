@@ -51,9 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
       const apiUrl = `${baseUrl}/api/v1/users/login`;
-      console.log('[LOGIN] Base URL:', process.env.EXPO_PUBLIC_BACKEND_BASE_URL);
-      console.log('[LOGIN] API URL:', apiUrl);
-      console.log('[LOGIN] Request:', { username, password: '***' });
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -61,21 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ username, password }),
       });
 
-      console.log('[LOGIN] Response status:', response.status);
-      
       if (response.ok) {
         const userData = await response.json();
-        console.log('[LOGIN] Success:', userData);
         await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
         setUser(userData);
         return true;
       } else {
-        const errorText = await response.text();
-        console.log('[LOGIN] Error response:', errorText);
         return false;
       }
     } catch (error) {
-      console.error('[LOGIN] Exception:', error);
+      console.error('Login error:', error);
       return false;
     }
   };
