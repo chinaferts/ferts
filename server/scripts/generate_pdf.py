@@ -13,8 +13,17 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
 
-# 注册中文字体
-FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'
+# 注册中文字体 - 优先使用项目自带字体，其次系统字体
+script_dir = os.path.dirname(os.path.abspath(__file__))
+FONT_PATH = os.path.join(script_dir, 'NotoSansSC-Regular.ttf')
+if not os.path.exists(FONT_PATH):
+    # 回退到系统字体
+    FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'
+if not os.path.exists(FONT_PATH):
+    # 再尝试其他系统字体
+    FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
+if not os.path.exists(FONT_PATH):
+    raise FileNotFoundError(f'中文字体文件不存在，请确保字体文件存在')
 pdfmetrics.registerFont(TTFont('ChineseFont', FONT_PATH))
 
 # 服务器uploads目录基础路径（不含uploads子目录）

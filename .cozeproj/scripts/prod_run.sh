@@ -19,6 +19,17 @@ if command -v python3 &> /dev/null; then
 fi
 info "Python 依赖检查完成"
 
+# ============== 安装中文字体 ======================
+info "检查中文字体..."
+FONT_PATH="/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+if [ ! -f "$FONT_PATH" ]; then
+  info "安装中文字体..."
+  apt-get update -qq && apt-get install -y -qq fonts-wqy-microhei 2>/dev/null || \
+  yum install -y -q wqy-microhei-fonts 2>/dev/null || \
+  warn "中文字体安装失败，PDF可能无法显示中文"
+fi
+info "中文字体检查完成"
+
 # ============== 创建上传目录 ======================
 mkdir -p "/tmp/uploads/photos"
 mkdir -p "/tmp/uploads/qrcode"
