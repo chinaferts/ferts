@@ -49,7 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const apiUrl = `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/login`;
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+      const apiUrl = `${baseUrl}/api/v1/users/login`;
+      console.log('[LOGIN] Base URL:', process.env.EXPO_PUBLIC_BACKEND_BASE_URL);
       console.log('[LOGIN] API URL:', apiUrl);
       console.log('[LOGIN] Request:', { username, password: '***' });
       
