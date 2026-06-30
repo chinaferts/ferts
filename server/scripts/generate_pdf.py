@@ -21,8 +21,10 @@ if not os.path.exists(FONT_PATH):
 # TTC 是字体集合，需要指定 subfontIndex（0 是第一个字体）
 pdfmetrics.registerFont(TTFont('ChineseFont', FONT_PATH, subfontIndex=0))
 
-# 服务器uploads目录基础路径（不含uploads子目录）
-UPLOADS_BASE_PATH = '/workspace/projects/server'
+# 服务器uploads目录基础路径
+# 开发环境: /workspace/projects/server
+# 生产环境: /tmp (照片存储在 /tmp/uploads/photos/)
+UPLOADS_BASE_PATH = '/tmp' if os.path.exists('/tmp/uploads') else '/workspace/projects/server'
 
 def get_full_photo_path(photo_path):
     """将相对路径转换为完整路径"""
@@ -30,12 +32,24 @@ def get_full_photo_path(photo_path):
         return None
     
     # 如果是完整路径，直接返回
-    if photo_path.startswith('/workspace') or photo_path.startswith('http'):
+    if photo_path.startswith('/workspace') or photo_path.startswith('/tmp') or photo_path.startswith('http'):
         return photo_path
     
-    # 相对路径（如 /uploads/photos/xxx.jpg），直接拼接
+    # 相对路径（如 /uploads/photos/xxx.jpg）
     clean_path = photo_path.lstrip('/')
     full_path = os.path.join(UPLOADS_BASE_PATH, clean_path)
+    
+    # 如果文件不存在，尝试其他可能的路径
+    if not os.path.exists(full_path):
+        # 尝试 /tmp/uploads/
+        alt_path = os.path.join('/tmp', clean_path)
+        if os.path.exists(alt_path):
+            return alt_path
+        # 尝试 /workspace/projects/server/
+        alt_path = os.path.join('/workspace/projects/server', clean_path)
+        if os.path.exists(alt_path):
+            return alt_path
+    
     return full_path
 
 def get_logo_path():
