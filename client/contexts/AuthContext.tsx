@@ -49,22 +49,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      // 调用登录API
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/login`, {
+      const apiUrl = `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/login`;
+      console.log('[LOGIN] API URL:', apiUrl);
+      console.log('[LOGIN] Request:', { username, password: '***' });
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
 
+      console.log('[LOGIN] Response status:', response.status);
+      
       if (response.ok) {
         const userData = await response.json();
+        console.log('[LOGIN] Success:', userData);
         await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
         setUser(userData);
         return true;
+      } else {
+        const errorText = await response.text();
+        console.log('[LOGIN] Error response:', errorText);
+        return false;
       }
-      return false;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('[LOGIN] Exception:', error);
       return false;
     }
   };
