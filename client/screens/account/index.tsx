@@ -325,7 +325,10 @@ export default function AccountScreen() {
           const newUser = await response.json();
           setUsers([...users, newUser]);
           setEditModalVisible(false);
-          Alert.alert(`${t('success')} / ${t('successEn')}`, `${t('userCreated')} / ${t('userCreatedEn')}`);
+          Alert.alert(
+            `${t('success')} / ${t('successEn')}`,
+            `${t('userCreated')} / ${t('userCreatedEn')}\n${t('username')}: ${newUser.username}\n${t('password')}: ${editForm.password}`
+          );
         }
       }
     } catch (error) {
