@@ -16,7 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth, User, UserRole } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
 
 // 用户统计信息组件
 function UserStats({ users }: { users: User[] }) {
