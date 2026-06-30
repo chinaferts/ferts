@@ -56,10 +56,17 @@ def draw_header(c, width, margin, data):
     """绘制报告头部区域"""
     y = height - margin
     
-    # 标题
-    c.setFont('ChineseFont', 20)
+    # 大标题 - 公司名称
+    c.setFont('ChineseFont', 22)
+    c.setFillColor(colors.HexColor('#333333'))
+    c.drawCentredString(width/2, y, '杭州福致自行车用品有限公司')
+    y -= 10 * mm
+    
+    # 副标题
+    c.setFont('ChineseFont', 12)
+    c.setFillColor(colors.HexColor('#666666'))
     c.drawCentredString(width/2, y, '验货报告 / Inspection Report')
-    y -= 12 * mm
+    y -= 8 * mm
     
     # 分隔线
     c.setStrokeColor(colors.HexColor('#4F46E5'))
