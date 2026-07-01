@@ -1,15 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApiBaseUrl } from '@/utils/api';
+import { Platform } from 'react-native';
 
 export type UserRole = 'admin' | 'inspector';
 
 export interface User {
-  id: string;
+  id: number;
   username: string;
   name: string;
   role: UserRole;
-  password?: string;
   email?: string;
   phone?: string;
 }
@@ -24,8 +23,19 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 const AUTH_STORAGE_KEY = '@auth_user';
+
+/**
+ * 获取 API 基础 URL
+ * - Web: 返回空字符串（使用相对路径，同源请求）
+ * - Native: 使用 EXPO_PUBLIC_BACKEND_BASE_URL 环境变量
+ */
+function getApiBase(): string {
+  if (Platform.OS === 'web') {
+    return '';
+  }
+  return process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -50,21 +60,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      // 调用登录API
-      const apiUrl = `${getApiBaseUrl()}/api/v1/auth/login`;
-      const response = await fetch(apiUrl, {
+      const base = getApiBase();
+      const url = `${base}/api/v1/auth/login`;
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
 
-      if (response.ok) {
-        const userData = await response.json();
-        await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
-        setUser(userData);
-        return true;
+      if (!response.ok) {
+        return false;
       }
-      return false;
+
+      const userData = await response.json();
+      await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+      setUser(userData);
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;
