@@ -15,9 +15,8 @@ import { Screen } from '@/components/Screen';
 import { Feather } from '@expo/vector-icons';
 import { useAuth, User, UserRole } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getApiBaseUrl } from '@/utils/api';
 
-const API_BASE = getApiBaseUrl();
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
 // 用户统计信息组件
 function UserStats({ users }: { users: User[] }) {
@@ -167,8 +166,8 @@ export default function AccountScreen() {
     try {
       // 管理员获取包含密码的用户列表
       const endpoint = isAdmin 
-        ? `${API_BASE}/api/v1/users/all-with-password`
-        : `${API_BASE}/api/v1/users`;
+        ? `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/all-with-password`
+        : `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users`;
       const headers: HeadersInit = {};
       if (isAdmin) {
         headers['x-user-role'] = 'admin';
@@ -214,7 +213,7 @@ export default function AccountScreen() {
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
-      const response = await fetch(`${API_BASE}/api/v1/users/${userId}/role`, {
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/${userId}/role`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRole }),
@@ -251,7 +250,7 @@ export default function AccountScreen() {
 
   const doDeleteUser = async (userId: string) => {
     try {
-      const response = await fetch(`${API_BASE}/api/v1/users/${userId}`, {
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/${userId}`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -301,7 +300,7 @@ export default function AccountScreen() {
       
       if (editingUser) {
         // 更新用户
-        const response = await fetch(`${API_BASE}/api/v1/users/${editingUser.id}`, {
+        const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/${editingUser.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestData),
@@ -317,7 +316,7 @@ export default function AccountScreen() {
         }
       } else {
         // 创建新用户
-        const response = await fetch(`${API_BASE}/api/v1/users`, {
+        const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestData),
@@ -326,10 +325,7 @@ export default function AccountScreen() {
           const newUser = await response.json();
           setUsers([...users, newUser]);
           setEditModalVisible(false);
-          Alert.alert(
-            `${t('success')} / ${t('successEn')}`,
-            `${t('userCreated')} / ${t('userCreatedEn')}\n${t('username')}: ${newUser.username}\n${t('password')}: ${editForm.password}`
-          );
+          Alert.alert(`${t('success')} / ${t('successEn')}`, `${t('userCreated')} / ${t('userCreatedEn')}`);
         }
       }
     } catch (error) {

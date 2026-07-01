@@ -1,4 +1,3 @@
-import { getApiBaseUrl } from '@/utils/api';
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Dimensions, Alert } from 'react-native';
 import { Screen } from '@/components/Screen';
@@ -148,7 +147,7 @@ export default function DashboardScreen() {
 
   const fetchDashboardData = async () => {
     try {
-      const baseUrl = getApiBaseUrl();
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/inspections/dashboard`);
       if (response.ok) {
         const result = await response.json();
@@ -181,7 +180,7 @@ export default function DashboardScreen() {
     useCallback(() => {
       const fetchDashboardDataInner = async () => {
         try {
-          const baseUrl = getApiBaseUrl();
+          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
           const response = await fetch(`${baseUrl}/api/v1/inspections/dashboard`);
           if (response.ok) {
             const result = await response.json();

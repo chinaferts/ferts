@@ -1,4 +1,3 @@
-import { getApiBaseUrl } from '@/utils/api';
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -47,7 +46,7 @@ export default function ChecklistsScreen() {
 
   const fetchTemplates = async () => {
     try {
-      const baseUrl = getApiBaseUrl();
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/checklists`);
       if (response.ok) {
         const result = await response.json();
@@ -84,7 +83,7 @@ export default function ChecklistsScreen() {
     
     setCreating(true);
     try {
-      const baseUrl = getApiBaseUrl();
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/checklists`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -107,7 +106,7 @@ export default function ChecklistsScreen() {
     
     setDeleting(true);
     try {
-      const baseUrl = getApiBaseUrl();
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/checklists/${deletingTemplate.id}`, {
         method: 'DELETE',
       });

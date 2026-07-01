@@ -1,4 +1,3 @@
-import { getApiBaseUrl } from '@/utils/api';
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Dimensions } from 'react-native';
 import { Screen } from '@/components/Screen';
@@ -34,7 +33,7 @@ export default function DefectsScreen() {
     useCallback(() => {
       const fetchDefects = async () => {
         try {
-          const baseUrl = getApiBaseUrl();
+          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
           const response = await fetch(`${baseUrl}/api/v1/defects?status=${activeTab}`);
           if (response.ok) {
             const result = await response.json();
@@ -61,7 +60,7 @@ export default function DefectsScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      const baseUrl = getApiBaseUrl();
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/defects?status=${activeTab}`);
       if (response.ok) {
         const result = await response.json();

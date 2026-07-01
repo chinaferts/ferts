@@ -1,4 +1,3 @@
-import { getApiBaseUrl } from '@/utils/api';
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, RefreshControl, Image } from 'react-native';
 import { Screen } from '@/components/Screen';
@@ -97,7 +96,7 @@ export default function RecordsScreen() {
 
   const fetchRecords = useCallback(async () => {
     try {
-      const baseUrl = getApiBaseUrl();
+      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const response = await fetch(`${baseUrl}/api/v1/inspections?status=completed`);
       if (response.ok) {
         const result = await response.json();
