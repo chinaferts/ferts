@@ -339,11 +339,15 @@ export default function AccountScreen() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestData),
         });
+        const responseText = await response.text();
         if (response.ok) {
-          const newUser = await response.json();
+          const newUser = JSON.parse(responseText);
           setUsers([...users, newUser]);
           setEditModalVisible(false);
           Alert.alert(`${t('success')} / ${t('successEn')}`, `${t('userCreated')} / ${t('userCreatedEn')}`);
+        } else {
+          console.error('Create user failed:', response.status, responseText);
+          Alert.alert(`${t('error')} / ${t('errorEn')}`, `创建失败: ${responseText}`);
         }
       }
     } catch (error) {
