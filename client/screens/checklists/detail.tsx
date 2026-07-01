@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '@/utils/api';
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal } from 'react-native';
 import { Screen } from '@/components/Screen';
@@ -42,7 +43,7 @@ export default function ChecklistDetailScreen() {
 
   const fetchTemplate = async () => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = getApiBaseUrl();
       const response = await fetch(`${baseUrl}/api/v1/checklists/${id}`);
       if (response.ok) {
         const result = await response.json();
@@ -104,7 +105,7 @@ export default function ChecklistDetailScreen() {
     
     setSaving(true);
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = getApiBaseUrl();
       const response = await fetch(`${baseUrl}/api/v1/checklists/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

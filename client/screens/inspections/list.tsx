@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '@/utils/api';
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, RefreshControl } from 'react-native';
 import { Screen } from '@/components/Screen';
@@ -142,7 +143,7 @@ export default function InspectionsListScreen() {
 
   const fetchInspections = useCallback(async () => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const baseUrl = getApiBaseUrl();
       const response = await fetch(`${baseUrl}/api/v1/inspections?status=${activeTab}`);
       if (response.ok) {
         const result = await response.json();
