@@ -31,6 +31,9 @@ export const translations = {
     // Login
     login: '登录',
     username: '用户名',
+    usernameEn: '用户名(英文)',
+    enterUsername: '请输入用户名',
+    enterUsernameEn: '请输入用户英文名',
     password: '密码',
     passwordEn: 'Password',
     loginTitle: '验货系统',
@@ -439,6 +442,9 @@ export const translations = {
     // Login
     login: 'Login',
     username: 'Username',
+    usernameEn: 'Username (English)',
+    enterUsername: 'Enter username',
+    enterUsernameEn: 'Enter English username',
     password: 'Password',
     passwordEn: 'Password',
     loginTitle: 'Inspection System',

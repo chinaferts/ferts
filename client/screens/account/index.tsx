@@ -63,8 +63,8 @@ interface UserItemProps {
   user: User;
   isCurrentUser: boolean;
   isAdmin: boolean;
-  onRoleChange: (userId: string, newRole: UserRole) => void;
-  onDelete: (userId: string, userName: string) => void;
+  onRoleChange: (userId: number, newRole: UserRole) => void;
+  onDelete: (userId: number, userName: string) => void;
   onEdit: (user: User) => void;
 }
 
@@ -158,10 +158,15 @@ export default function AccountScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', password: '', role: 'inspector' as UserRole });
+  const [editForm, setEditForm] = useState({ name: '', username: '', phone: '', password: '', role: 'inspector' as UserRole });
   const [isSaving, setIsSaving] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'inspector'>('all');
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  // 个人资料编辑
+  const [isProfileEditing, setIsProfileEditing] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '', password: '' });
+  const [showProfilePassword, setShowProfilePassword] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -212,7 +217,7 @@ export default function AccountScreen() {
     });
   }, [users, searchKeyword, filterRole]);
 
-  const handleRoleChange = async (userId: string, newRole: UserRole) => {
+  const handleRoleChange = async (userId: number, newRole: UserRole) => {
     try {
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/${userId}/role`, {
         method: 'PUT',
@@ -234,7 +239,7 @@ export default function AccountScreen() {
     }
   };
 
-  const handleDeleteUser = (userId: string, userName: string) => {
+  const handleDeleteUser = (userId: number, userName: string) => {
     if (userId === currentUser?.id) {
       Alert.alert(`${t('tip')} / ${t('tipEn')}`, `${t('cannotDeleteOwn')} / ${t('cannotDeleteOwnEn')}`);
       return;
@@ -249,7 +254,7 @@ export default function AccountScreen() {
     );
   };
 
-  const doDeleteUser = async (userId: string) => {
+  const doDeleteUser = async (userId: number) => {
     try {
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/users/${userId}`, {
         method: 'DELETE',
@@ -267,13 +272,15 @@ export default function AccountScreen() {
 
   const handleAddUser = () => {
     setEditingUser(null);
-    setEditForm({ name: '', phone: '', password: '', role: 'inspector' });
+    setEditForm({ name: '', username: '', phone: '', password: '', role: 'inspector' });
+    setShowEditPassword(true);
     setEditModalVisible(true);
   };
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
-    setEditForm({ name: user.name, phone: user.phone || '', password: user.password || '', role: user.role });
+    setEditForm({ name: user.name, username: user.username, phone: user.phone || '', password: '', role: user.role });
+    setShowEditPassword(false);
     setEditModalVisible(true);
   };
 
@@ -282,21 +289,31 @@ export default function AccountScreen() {
       Alert.alert(`${t('error')} / ${t('errorEn')}`, `${t('enterNameRequired')} / ${t('enterNameRequiredEn')}`);
       return;
     }
-    // 新建用户时必须设置密码
-    if (!editingUser && !editForm.password.trim()) {
-      Alert.alert(`${t('error')} / ${t('errorEn')}`, `${t('enterPwdRequired')} / ${t('enterPwdRequiredEn')}`);
-      return;
+    // 新建用户时必须设置用户名和密码
+    if (!editingUser) {
+      if (!editForm.username.trim()) {
+        Alert.alert(`${t('error')} / ${t('errorEn')}`, '请输入用户名 / Please enter username');
+        return;
+      }
+      if (!editForm.password.trim()) {
+        Alert.alert(`${t('error')} / ${t('errorEn')}`, `${t('enterPwdRequired')} / ${t('enterPwdRequiredEn')}`);
+        return;
+      }
     }
 
     setIsSaving(true);
     try {
-      // 构建请求数据，只包含非空字段
+      // 构建请求数据
       const requestData: any = { name: editForm.name, role: editForm.role };
       if (editForm.phone.trim()) {
         requestData.phone = editForm.phone;
       }
       if (editForm.password.trim()) {
         requestData.password = editForm.password;
+      }
+      // 新建用户时包含用户名
+      if (!editingUser && editForm.username.trim()) {
+        requestData.username = editForm.username;
       }
       
       if (editingUser) {
@@ -463,7 +480,7 @@ export default function AccountScreen() {
         ) : (
           <FlatList
             data={filteredUsers}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             renderItem={({ item }) => (
               <UserItem
                 user={item}
@@ -494,6 +511,17 @@ export default function AccountScreen() {
             </Text>
             <View style={styles.modalForm}>
               <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>{t('username')} / {t('usernameEn')}</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder={`${t('enterUsername')} / ${t('enterUsernameEn')}`}
+                  value={editForm.username}
+                  onChangeText={(text) => setEditForm({ ...editForm, username: text })}
+                  editable={!editingUser || isAdmin}
+                  autoCapitalize="none"
+                />
+              </View>
+              <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>{t('name')} / {t('nameEn')}</Text>
                 <TextInput
                   style={styles.formInput}
@@ -505,13 +533,26 @@ export default function AccountScreen() {
               {isAdmin && (
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>{t('password')} / {t('passwordEn')} {editingUser ? `(${t('optional')} / ${t('optionalEn')})` : ''}</Text>
-                  <TextInput
-                    style={styles.formInput}
-                    placeholder={editingUser ? `${t('enterNewPwd')} / ${t('enterNewPwdEn')}` : `${t('setPwd')} / ${t('setPwdEn')}`}
-                    value={editForm.password}
-                    onChangeText={(text) => setEditForm({ ...editForm, password: text })}
-                    secureTextEntry
-                  />
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[styles.formInput, styles.passwordInput]}
+                      placeholder={editingUser ? `${t('enterNewPwd')} / ${t('enterNewPwdEn')}` : `${t('setPwd')} / ${t('setPwdEn')}`}
+                      value={editForm.password}
+                      onChangeText={(text) => setEditForm({ ...editForm, password: text })}
+                      secureTextEntry={!showEditPassword}
+                      autoCapitalize="none"
+                    />
+                    <TouchableOpacity
+                      style={styles.passwordToggle}
+                      onPress={() => setShowEditPassword(!showEditPassword)}
+                    >
+                      <Feather
+                        name={showEditPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color="#6B7280"
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
               <View style={styles.formGroup}>
@@ -945,6 +986,20 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingRight: 48,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 12,
+    padding: 4,
   },
   modalButtons: {
     flexDirection: 'row',
