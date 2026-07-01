@@ -475,7 +475,7 @@ export default function InspectionDetailScreen() {
 
   // 检查是否有本地路径照片需要同步
   const localPhotosCount = inspection?.checklist_items?.reduce((count: number, item: ChecklistItem) => {
-    return count + (item.photos?.filter((p: string) => p.startsWith('file:') || p.startsWith('content://')).length || 0);
+    return count + (item.photos?.filter((p: string) => p && (p.startsWith('file:') || p.startsWith('content://'))).length || 0);
   }, 0) || 0;
 
   // 同步本地照片到服务器（自动调用，静默同步）
@@ -486,7 +486,7 @@ export default function InspectionDetailScreen() {
     const photosToSync: Array<{ itemRecordId: number; photoUri: string; itemIndex: number; photoIndex: number }> = [];
     inspection.checklist_items.forEach((item: ChecklistItem, itemIndex: number) => {
       (item.photos || []).forEach((photo: string, photoIndex: number) => {
-        if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
+        if (photo && (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://'))) {
           photosToSync.push({ itemRecordId: item.record_id, photoUri: photo, itemIndex, photoIndex });
         }
       });
@@ -672,7 +672,7 @@ export default function InspectionDetailScreen() {
       const localPhotos: { uri: string; index: number; photoIndex: number }[] = [];
       issues.forEach((issue, issueIndex) => {
         issue.photos.forEach((photo: string, photoIndex) => {
-          if (photo.startsWith('file:') || photo.startsWith('content:')) {
+          if (photo && (photo.startsWith('file:') || photo.startsWith('content:'))) {
             localPhotos.push({ uri: photo, index: issueIndex, photoIndex });
           }
         });
@@ -729,7 +729,7 @@ export default function InspectionDetailScreen() {
       setIssues(newIssues);
       
       // 同时更新检查项中的照片路径
-      const allServerPaths = newIssues.flatMap(issue => issue.photos).filter(p => !p.startsWith('file:') && !p.startsWith('content:'));
+      const allServerPaths = newIssues.flatMap(issue => issue.photos).filter(p => p && !p.startsWith('file:') && !p.startsWith('content:'));
       if (allServerPaths.length > 0) {
         setInspection(prev => {
           if (!prev) return prev;
@@ -1001,7 +1001,7 @@ export default function InspectionDetailScreen() {
     const photosToSync: Array<{ itemRecordId: number; photoUri: string; itemIndex: number; photoIndex: number }> = [];
     (inspection.checklist_items || []).forEach((item: ChecklistItem, itemIndex: number) => {
       (item.photos || []).forEach((photo: string, photoIndex: number) => {
-        if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
+        if (photo && (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://'))) {
           photosToSync.push({ itemRecordId: item.record_id, photoUri: photo, itemIndex, photoIndex });
         }
       });
@@ -1613,6 +1613,7 @@ export default function InspectionDetailScreen() {
       let successCount = 0;
       for (let i = 0; i < allPhotos.length; i++) {
         const photo = allPhotos[i];
+        if (!photo) continue;
         try {
           const photoUrl = photo.startsWith('/') 
             ? `${serverBaseUrl}${photo}` 
@@ -1691,6 +1692,7 @@ export default function InspectionDetailScreen() {
 
       for (let i = 0; i < allPhotos.length; i++) {
         const photo = allPhotos[i];
+        if (!photo) continue;
         try {
           // 使用后端代理下载照片，避免跨域和认证问题
           let originalPhotoUrl: string;
@@ -1860,7 +1862,7 @@ export default function InspectionDetailScreen() {
       (inspection?.checklist_items || []).forEach(item => {
         if (item.photos && item.photos.length > 0) {
           item.photos.forEach((photo: string) => {
-            if (photo.startsWith('file:') || photo.startsWith('content:')) {
+            if (photo && (photo.startsWith('file:') || photo.startsWith('content:'))) {
               allLocalPhotos.push({ recordId: item.id, localPath: photo });
             }
           });
@@ -1871,7 +1873,7 @@ export default function InspectionDetailScreen() {
       barcodeItems.forEach(item => {
         if (item.photos && item.photos.length > 0) {
           item.photos.forEach((photo: string) => {
-            if (photo.startsWith('file:') || photo.startsWith('content:')) {
+            if (photo && (photo.startsWith('file:') || photo.startsWith('content:'))) {
               allLocalPhotos.push({ recordId: item.record_id, localPath: photo });
             }
           });
@@ -1889,7 +1891,7 @@ export default function InspectionDetailScreen() {
         issues.forEach((issue, issueIndex) => {
           if (issue.photos && issue.photos.length > 0) {
             issue.photos.forEach((photo: string) => {
-              if (photo.startsWith('file:') || photo.startsWith('content:')) {
+              if (photo && (photo.startsWith('file:') || photo.startsWith('content:'))) {
                 allLocalPhotos.push({ recordId: Number(problemRecordId), localPath: photo });
               }
             });
@@ -1968,7 +1970,7 @@ export default function InspectionDetailScreen() {
                 serverPaths.forEach(serverPath => {
                   // 移除对应的本地路径，添加服务器路径
                   const localIndex = updatedPhotos.findIndex(p => 
-                    p.startsWith('file:') || p.startsWith('content:')
+                    p && (p.startsWith('file:') || p.startsWith('content:'))
                   );
                   if (localIndex !== -1) {
                     updatedPhotos.splice(localIndex, 1, serverPath);
