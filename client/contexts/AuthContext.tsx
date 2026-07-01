@@ -49,8 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
-      const apiUrl = `${baseUrl}/api/v1/users/login`;
+      // 使用相对路径，Metro proxy / Express 会自动处理
+      const apiUrl = `/api/v1/users/login`;
       
       const response = await fetch(apiUrl, {
         method: 'POST',

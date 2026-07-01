@@ -9,7 +9,7 @@ import photosRouter from "./routes/photos.js";
 import usersRouter from "./routes/users.js";
 
 const app = express();
-const port = process.env.PORT || 9091;
+const port = parseInt(process.env.PORT || '9091', 10);
 
 // Middleware
 app.use(cors());

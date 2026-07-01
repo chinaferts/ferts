@@ -46,7 +46,7 @@ export default function ChecklistsScreen() {
 
   const fetchTemplates = async () => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+      const baseUrl = '';
       const response = await fetch(`${baseUrl}/api/v1/checklists`);
       if (response.ok) {
         const result = await response.json();
@@ -83,7 +83,7 @@ export default function ChecklistsScreen() {
     
     setCreating(true);
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+      const baseUrl = '';
       const response = await fetch(`${baseUrl}/api/v1/checklists`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,7 +106,7 @@ export default function ChecklistsScreen() {
     
     setDeleting(true);
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+      const baseUrl = '';
       const response = await fetch(`${baseUrl}/api/v1/checklists/${deletingTemplate.id}`, {
         method: 'DELETE',
       });

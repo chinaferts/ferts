@@ -147,7 +147,7 @@ export default function DashboardScreen() {
 
   const fetchDashboardData = async () => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+      const baseUrl = '';
       const response = await fetch(`${baseUrl}/api/v1/inspections/dashboard`);
       if (response.ok) {
         const result = await response.json();
@@ -180,7 +180,7 @@ export default function DashboardScreen() {
     useCallback(() => {
       const fetchDashboardDataInner = async () => {
         try {
-          const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+          const baseUrl = '';
           const response = await fetch(`${baseUrl}/api/v1/inspections/dashboard`);
           if (response.ok) {
             const result = await response.json();

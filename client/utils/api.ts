@@ -1,13 +1,15 @@
 /**
  * API 工具函数
  * 统一处理 API 基础 URL
+ * 
+ * 开发和生产环境均使用相对路径：
+ * - 开发环境：Metro proxy 自动转发 /api/v1/* 到 Express 后端
+ * - 生产环境：Express 同时提供静态文件和 API 服务
  */
 
-// 获取 API 基础 URL
-// 在生产环境中，EXPO_PUBLIC_BACKEND_BASE_URL 由系统注入
-// 在开发环境中，使用相对路径（空字符串）
+// 获取 API 基础 URL（始终使用相对路径）
 export const getApiBaseUrl = (): string => {
-  return process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+  return '';
 };
 
 // 构建完整的 API URL

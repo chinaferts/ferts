@@ -66,7 +66,7 @@ export default function PhotoPreviewScreen() {
     }
     
     // 如果是相对路径，拼接到服务器 URL
-    const baseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+    const baseUrl = '';
     return photo.startsWith('/') ? `${baseUrl}${photo}` : `${baseUrl}/${photo}`;
   };
 
