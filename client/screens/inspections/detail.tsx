@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '@/utils/api';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, Image, Platform, TouchableWithoutFeedback, ActivityIndicator, Dimensions } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
@@ -38,7 +39,7 @@ const getImageUrl = (photo: string): string => {
   }
   
   // 如果是相对路径，拼接到服务器 URL
-  const baseUrl = '';
+  const baseUrl = getApiBaseUrl();
   const result = photo.startsWith('/') ? `${baseUrl}${photo}` : `${baseUrl}/${photo}`;
   console.log('[getImageUrl] 相对路径转换:', result);
   return result;
@@ -656,7 +657,7 @@ export default function InspectionDetailScreen() {
     if (issues.length === 0 || issuePhotosUploaded) return;
     
     try {
-      const baseUrl = '';
+      const baseUrl = getApiBaseUrl();
       const problemItem = inspection?.checklist_items?.find(
         item => item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述'
       );
@@ -884,7 +885,7 @@ export default function InspectionDetailScreen() {
   const fetchInspection = async () => {
     if (!id) return;
     try {
-      const baseUrl = '';
+      const baseUrl = getApiBaseUrl();
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}`);
       if (response.ok) {
         const result = await response.json();
@@ -1077,7 +1078,7 @@ export default function InspectionDetailScreen() {
     console.log('[UpdateStatus] record_id:', item.record_id, 'isNew:', isNewBarcodeItem);
 
     try {
-      const baseUrl = '';
+      const baseUrl = getApiBaseUrl();
 
       // 如果是新建的条码扫描项，先保存到数据库
       if (isNewBarcodeItem) {
@@ -1358,7 +1359,7 @@ export default function InspectionDetailScreen() {
     // 同时更新inspection_records表的photos字段
     let realRecordId: string | null = null;
     try {
-      const baseUrl = '';
+      const baseUrl = getApiBaseUrl();
       
       // 检查是否是新建条码项（record_id > 1000000000000 表示 Date.now()）
       const isNewBarcodeItem = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 1000000000000;
@@ -1488,7 +1489,7 @@ export default function InspectionDetailScreen() {
     }
 
     try {
-      const baseUrl = '';
+      const baseUrl = getApiBaseUrl();
       const response = await fetch(`${baseUrl}/api/v1/defects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1774,7 +1775,7 @@ export default function InspectionDetailScreen() {
     try {
       setExportingReport(true);
 
-      const baseUrl = '';
+      const baseUrl = getApiBaseUrl();
       const pdfUrl = `${baseUrl}/api/v1/inspections/${id}/export-pdf`;
 
       console.log('[Export] Downloading PDF from:', pdfUrl);
@@ -1901,7 +1902,7 @@ export default function InspectionDetailScreen() {
           // 显示上传提示
           Alert.alert(t('uploading'), `${t('uploadingPhotos')} ${allLocalPhotos.length} ${t('count')}`);
           
-          const baseUrl = '';
+          const baseUrl = getApiBaseUrl();
           const uploadedPhotos: { [recordId: number]: string[] } = {};
           
           for (const { recordId, localPath } of allLocalPhotos) {
@@ -1989,7 +1990,7 @@ export default function InspectionDetailScreen() {
         }
 
       // 提交验货结果
-      const baseUrl = '';
+      const baseUrl = getApiBaseUrl();
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2086,7 +2087,7 @@ export default function InspectionDetailScreen() {
   // 保存条码到后端
   const saveBarcodeToBackend = async (recordId: string, code: string, format?: string) => {
     try {
-      const baseUrl = '';
+      const baseUrl = getApiBaseUrl();
       // 获取当前条码列表和格式列表
       const item = inspection?.checklist_items?.find(i => String(i.record_id) === recordId);
       const currentCodes = item?.barcodeCodes || [];
@@ -2274,7 +2275,7 @@ export default function InspectionDetailScreen() {
               return;
             }
             
-            const baseUrl = '';
+            const baseUrl = getApiBaseUrl();
             const photoUris = photos.map(p => p.uri);
             const targetRecordId = tempPhotoTarget?.record_id;
             const targetIssueIndex = tempPhotoTarget?.issueIndex;

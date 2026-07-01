@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '@/utils/api';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -35,7 +36,7 @@ const getPhotoUrl = (photo: string): string => {
   if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
     return photo;
   }
-  const baseUrl = '';
+  const baseUrl = getApiBaseUrl();
   return photo.startsWith('/') ? `${baseUrl}${photo}` : `${baseUrl}/${photo}`;
 };
 

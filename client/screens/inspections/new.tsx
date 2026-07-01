@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '@/utils/api';
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Modal, Keyboard } from 'react-native';
 import { Screen } from '@/components/Screen';
@@ -344,7 +345,7 @@ export default function NewInspectionScreen() {
 
     setLoading(true);
     try {
-      const baseUrl = '';
+      const baseUrl = getApiBaseUrl();
       
       // 自动生成订单号（如果用户没有输入）
       const finalOrderNo = orderNo.trim() || `AUTO-${Date.now()}`;

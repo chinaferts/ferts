@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '@/utils/api';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -66,7 +67,7 @@ export default function PhotoPreviewScreen() {
     }
     
     // 如果是相对路径，拼接到服务器 URL
-    const baseUrl = '';
+    const baseUrl = getApiBaseUrl();
     return photo.startsWith('/') ? `${baseUrl}${photo}` : `${baseUrl}/${photo}`;
   };
 

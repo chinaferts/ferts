@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getApiBaseUrl } from '@/utils/api';
 
 export type UserRole = 'admin' | 'inspector';
 
@@ -49,8 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      // 使用相对路径，Metro proxy / Express 会自动处理
-      const apiUrl = `/api/v1/users/login`;
+      // Web 端使用相对路径，Native 端使用 Metro 服务器地址
+      const apiUrl = `${getApiBaseUrl()}/api/v1/users/login`;
       
       const response = await fetch(apiUrl, {
         method: 'POST',
