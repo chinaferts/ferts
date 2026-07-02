@@ -35,12 +35,12 @@ if (fs.existsSync(clientDistPath)) {
 }
 
 // Serve uploaded files as static
+// 同时使用项目目录和 /tmp 目录，确保已有照片和新上传的照片都能访问
+const projectUploadsPath = path.join(process.cwd(), 'uploads');
+app.use('/uploads', express.static(projectUploadsPath));
 if (isProduction) {
-  // Production: use /tmp as writable directory
+  // Production: also serve from /tmp/uploads for newly uploaded files
   app.use('/uploads', express.static('/tmp/uploads'));
-} else {
-  // Development: use project uploads directory
-  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 }
 
 // Health check

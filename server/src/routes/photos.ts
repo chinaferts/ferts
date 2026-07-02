@@ -179,24 +179,29 @@ router.get('/download', async (req: Request, res: Response) => {
       const fs = await import('fs');
       const path = await import('path');
       
-      // 根据环境确定上传目录
-      const isProduction = process.env.NODE_ENV === 'production';
-      const baseUploadsDir = isProduction ? '/tmp/uploads' : path.join(process.cwd(), 'uploads');
+      // 同时检查项目目录和 /tmp 目录
+      const projectUploadsDir = path.join(process.cwd(), 'uploads');
+      const tmpUploadsDir = '/tmp/uploads';
       
       // 构造本地文件绝对路径
       const relativePath = url.startsWith('/uploads/') ? url.substring('/uploads/'.length) : url;
-      const filePath = path.join(baseUploadsDir, relativePath);
       
-      // 安全检查：确保路径在 uploads 目录下
-      const normalizedPath = path.normalize(filePath);
-      if (!normalizedPath.startsWith(path.normalize(baseUploadsDir))) {
+      // 安全检查：确保路径不包含 .. 等危险字符
+      const normalizedRelative = path.normalize(relativePath);
+      if (normalizedRelative.startsWith('..') || path.isAbsolute(normalizedRelative)) {
         res.status(403).json({ success: false, error: '路径访问被拒绝' });
         return;
       }
       
+      // 优先从项目目录读取，其次从 /tmp 读取
+      let filePath = path.join(projectUploadsDir, normalizedRelative);
+      if (!fs.existsSync(filePath)) {
+        filePath = path.join(tmpUploadsDir, normalizedRelative);
+      }
+      
       // 首先尝试从本地文件读取
-      if (fs.existsSync(normalizedPath)) {
-        const ext = path.extname(normalizedPath).toLowerCase();
+      if (fs.existsSync(filePath)) {
+        const ext = path.extname(filePath).toLowerCase();
         const mimeTypes: Record<string, string> = {
           '.jpg': 'image/jpeg',
           '.jpeg': 'image/jpeg',
@@ -206,7 +211,7 @@ router.get('/download', async (req: Request, res: Response) => {
           '.pdf': 'application/pdf',
         };
         const contentType = mimeTypes[ext] || 'application/octet-stream';
-        const buffer = fs.readFileSync(normalizedPath);
+        const buffer = fs.readFileSync(filePath);
         
         console.log('[Photo Download] 本地文件大小:', buffer.length);
         
