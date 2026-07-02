@@ -1863,7 +1863,7 @@ export default function InspectionDetailScreen() {
         if (item.photos && item.photos.length > 0) {
           item.photos.forEach((photo: string) => {
             if (photo && (photo.startsWith('file:') || photo.startsWith('content:'))) {
-              allLocalPhotos.push({ recordId: item.id, localPath: photo });
+              allLocalPhotos.push({ recordId: item.record_id, localPath: photo });
             }
           });
         }
@@ -1963,7 +1963,7 @@ export default function InspectionDetailScreen() {
           // 更新数据库中的照片路径
           for (const [recordId, serverPaths] of Object.entries(uploadedPhotos)) {
             if (serverPaths.length > 0 && inspection) {
-              const item = inspection.checklist_items.find(i => i.id === Number(recordId));
+              const item = inspection.checklist_items.find(i => i.record_id === Number(recordId));
               if (item && item.photos) {
                 // 合并服务器路径和本地路径
                 let updatedPhotos = [...item.photos];
@@ -1980,8 +1980,8 @@ export default function InspectionDetailScreen() {
                 // 去重：只保留唯一的照片路径
                 updatedPhotos = Array.from(new Set(updatedPhotos));
                 
-                // 更新到服务器
-                await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items/${recordId}`, {
+                // 更新到服务器 (使用 record_id)
+                await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items/${item.record_id}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ photos: updatedPhotos }),
