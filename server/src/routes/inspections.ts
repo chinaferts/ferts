@@ -363,6 +363,9 @@ router.get('/:id', async (req: Request, res: Response) => {
         .select('record_id, photo_url')
         .eq('inspection_id', id);
       
+      // 获取未关联到具体记录的照片
+      const unlinkedInspPhotos = (inspectionPhotos || []).filter((p: any) => !p.record_id);
+      
       // 先在数据库中创建 inspection_records 记录，确保后续更新操作正常
       const universalItems = UNIVERSAL_CHECKLIST_ITEMS.map(async (item, index) => {
         // 使用 item.name 作为唯一标识（因为数据库 item_id 是 integer 类型，不能存储 'u1' 这样的字符串）
@@ -426,7 +429,14 @@ router.get('/:id', async (req: Request, res: Response) => {
             .select()
             .single();
           // 从 inspection_photos 表获取该记录的照片
-          const recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === newRecord?.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
+          let recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === newRecord?.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
+          // 如果没有匹配的照片且有未关联的照片，且是拍照相关项，则分配未关联的照片
+          if (recordPhotosFromTable.length === 0 && unlinkedInspPhotos.length > 0) {
+            const itemNameLower = (item.name || '').toLowerCase();
+            if (itemNameLower.includes('拍照') || itemNameLower.includes('photo') || itemNameLower.includes('条码扫描以及拍照')) {
+              recordPhotosFromTable = unlinkedInspPhotos.map((p: any) => toFullUrl(req, p.photo_url));
+            }
+          }
           return {
             id: item.name,  // 使用 item_name 作为 id
             record_id: newRecord?.id || 0,
@@ -442,7 +452,14 @@ router.get('/:id', async (req: Request, res: Response) => {
         }
         
         // 从 inspection_photos 表获取该记录的照片
-        const recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === existingRecord.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
+        let recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === existingRecord.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
+        // 如果没有匹配的照片且有未关联的照片，且是拍照相关项，则分配未关联的照片
+        if (recordPhotosFromTable.length === 0 && unlinkedInspPhotos.length > 0) {
+          const itemNameLower = (item.name || '').toLowerCase();
+          if (itemNameLower.includes('拍照') || itemNameLower.includes('photo') || itemNameLower.includes('条码扫描以及拍照')) {
+            recordPhotosFromTable = unlinkedInspPhotos.map((p: any) => toFullUrl(req, p.photo_url));
+          }
+        }
         // 合并 inspection_records.photos 字段和 inspection_photos 表的照片
         const photosFromRecord = (existingRecord.photos || []).filter((p: string) => 
           p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://')
@@ -492,11 +509,25 @@ router.get('/:id', async (req: Request, res: Response) => {
       .select('*')
       .eq('inspection_id', id);
 
+    // 获取未关联到具体记录的照片（record_id为空的照片）
+    const unlinkedPhotos = (photos || []).filter((p: any) => !p.record_id);
+    
     // 组合数据
     const checklist_items = (records || []).map((record: any) => {
       const item = record.checklist_items;
       // 从 inspection_photos 表获取该记录的照片，并转换为完整URL
-      const recordPhotos = photos?.filter((p: any) => p.record_id === record.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
+      // 优先匹配 record_id，如果没有则分配未关联的照片
+      let recordPhotos = photos?.filter((p: any) => p.record_id === record.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
+      
+      // 如果该记录没有照片，且有未关联的照片，且该记录是拍照相关项，则分配未关联的照片
+      if (recordPhotos.length === 0 && unlinkedPhotos.length > 0) {
+        const itemName = (item?.name || record.item_name || '').toLowerCase();
+        const isPhotoRelated = itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照');
+        if (isPhotoRelated) {
+          recordPhotos = unlinkedPhotos.map((p: any) => toFullUrl(req, p.photo_url));
+        }
+      }
+      
       const recordBarcodes = record.barcode_codes || [];
       
       // 合并两个来源的照片：inspection_records.photos 字段 + inspection_photos 表
@@ -575,7 +606,12 @@ router.get('/:id', async (req: Request, res: Response) => {
       checklist_items,
       categories,
       defects: defects || [],
-      photos: photos || [],
+      // 将照片URL转换为完整URL，并确保包含所有验货级别的照片
+      photos: (photos || []).map((p: any) => ({
+        ...p,
+        photo_url: toFullUrl(req, p.photo_url),
+        url: toFullUrl(req, p.url || p.photo_url)
+      })),
       checkedCount: records?.filter((r: any) => r.result !== 'unchecked').length || 0,
       defectCount: defects?.length || 0
     };
