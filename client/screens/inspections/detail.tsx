@@ -697,19 +697,52 @@ export default function InspectionDetailScreen() {
       
       // 同时更新检查项中的照片路径
       const allServerPaths = newIssues.flatMap(issue => issue.photos).filter(p => p && !p.startsWith('file:') && !p.startsWith('content:'));
-      if (allServerPaths.length > 0) {
+      
+      // 收集问题描述作为 notes
+      const issueNotes = newIssues
+        .filter(issue => issue.text.trim())
+        .map((issue, idx) => `问题${idx + 1}: ${issue.text}`)
+        .join('\n');
+      
+      if (allServerPaths.length > 0 || issueNotes) {
+        // 更新本地状态
         setInspection(prev => {
           if (!prev) return prev;
           return {
             ...prev,
             checklist_items: prev.checklist_items.map(item => {
               if (item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述') {
-                return { ...item, photos: allServerPaths };
+                return { ...item, photos: allServerPaths, status: 'pass', notes: issueNotes || item.notes };
               }
               return item;
-            })
+            }),
+            checkedCount: prev.checkedCount + (problemItem?.status === 'unchecked' ? 1 : 0),
           };
         });
+        
+        // 同步更新服务端：标记为已检查并保存照片和描述
+        try {
+          /**
+           * 服务端文件：server/src/routes/inspections.ts
+           * 接口：PUT /api/v1/inspections/:id/records/:recordId
+           * Body 参数：result: string, notes: string, photos: string[]
+           */
+          const updateRes = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${problemRecordId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              result: 'pass',
+              notes: issueNotes || null,
+              photos: allServerPaths,
+            }),
+          });
+          
+          if (!updateRes.ok) {
+            console.error('[handleCompleteIssuePhotos] Failed to update record status');
+          }
+        } catch (updateError) {
+          console.error('[handleCompleteIssuePhotos] Update error:', updateError);
+        }
       }
       
       if (uploadedCount === 0 && localPhotos.length > 0) {
@@ -719,7 +752,7 @@ export default function InspectionDetailScreen() {
       
       setIssuePhotosUploaded(true);
       const failCount = localPhotos.length - uploadedCount;
-      Alert.alert('完成', failCount > 0 ? `已上传 ${uploadedCount} 张，失败 ${failCount} 张` : `已上传 ${uploadedCount} 张问题照片`);
+      Alert.alert('完成', failCount > 0 ? `已上传 ${uploadedCount} 张，失败 ${failCount} 张` : `已上传 ${uploadedCount} 张问题照片，已标记为已检查`);
       
     } catch (error: any) {
       console.error('[handleCompleteIssuePhotos] Error:', error);
@@ -2974,6 +3007,12 @@ export default function InspectionDetailScreen() {
                           <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
                         </TouchableOpacity>
                       ))}
+                    </View>
+                  )}
+                  {/* 检查项描述显示 */}
+                  {item.notes && (
+                    <View style={{ marginTop: 8, paddingHorizontal: 4 }}>
+                      <Text style={{ fontSize: 13, color: '#4B5563', lineHeight: 18 }}>{item.notes}</Text>
                     </View>
                   )}
                   {/* 检查项条码显示 */}
