@@ -540,10 +540,31 @@ router.get('/:id', async (req: Request, res: Response) => {
     // 按分类分组
     const categories = [...new Set(checklist_items.map((item: any) => item.category))];
 
+    // 如果 inspector_name 为空，从 profiles 表获取验货员姓名
+    let resolvedInspectorName = inspection.inspector_name;
+    if (!resolvedInspectorName) {
+      const userId = inspection.submitted_by || inspection.created_by;
+      if (userId) {
+        try {
+          const { data: profileData } = await client
+            .from('profiles')
+            .select('name, email, username')
+            .eq('id', userId)
+            .single();
+          if (profileData) {
+            resolvedInspectorName = profileData.name || profileData.email || profileData.username || null;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
     const result = {
       ...inspection,
       // 字段映射：数据库字段名 -> 前端期望的字段名
-      inspector: inspection.inspector_name || inspection.inspector,
+      inspector: resolvedInspectorName || inspection.inspector,
+      inspector_name: resolvedInspectorName || inspection.inspector_name,
       inspection_date: inspection.scheduled_date || inspection.inspection_date,
       // 新增字段映射
       orderNo: inspection.order_number,
@@ -616,6 +637,19 @@ router.post('/', async (req: Request, res: Response) => {
 
     // 嵌入式模板使用 checklist_id=11（数据库中已存在的模板ID），但不复制其清单项
     // 获取详情时会使用嵌入式 UNIVERSAL_CHECKLIST_ITEMS
+    // 如果前端未提供 inspector，尝试从当前登录用户获取
+    let resolvedInspector = inspector;
+    if (!resolvedInspector) {
+      try {
+        const currentUser = await getUserFromSession(req);
+        if (currentUser) {
+          resolvedInspector = currentUser.name || null;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     const { data: inspection, error: inspectionError } = await client
       .from('inspections')
       .insert({
@@ -630,7 +664,7 @@ router.post('/', async (req: Request, res: Response) => {
         aql: aql ? parseFloat(aql) : null,
         style_number: productNo || null,
         status: 'pending',
-        inspector_name: inspector,
+        inspector_name: resolvedInspector,
         notes,
         scheduled_date: inspection_date
       })
@@ -1219,15 +1253,18 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       }
       inspection = data;
       
-      // 如果有 submitted_by，获取提交者信息并设置为 inspector_name
-      if (inspection.submitted_by) {
-        const { data: userData } = await client
-          .from('users')
-          .select('name')
-          .eq('id', inspection.submitted_by)
-          .single();
-        if (userData) {
-          inspection.inspector_name = userData.name;
+      // 获取验货员姓名：优先使用 inspector_name，否则从 profiles 表获取
+      if (!inspection.inspector_name) {
+        const userId = inspection.submitted_by || inspection.created_by;
+        if (userId) {
+          const { data: userData } = await client
+            .from('profiles')
+            .select('name, email, username')
+            .eq('id', userId)
+            .single();
+          if (userData) {
+            inspection.inspector_name = userData.name || userData.email || userData.username || null;
+          }
         }
       }
       
