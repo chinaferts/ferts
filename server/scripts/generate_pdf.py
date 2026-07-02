@@ -56,15 +56,6 @@ def draw_header(c, width, margin, data):
     """绘制报告头部区域"""
     y = height - margin
     
-    # LOGO - 放在主标题前面
-    logo_path = os.path.join(os.path.dirname(__file__), 'feats_logo.png')
-    if os.path.exists(logo_path):
-        logo_width = 40 * mm
-        logo_height = 12 * mm
-        logo_x = (width - logo_width) / 2
-        c.drawImage(logo_path, logo_x, y - logo_height, width=logo_width, height=logo_height, mask='auto', preserveAspectRatio=True)
-        y -= logo_height + 3 * mm
-    
     # 大标题 - 公司名称
     c.setFont('ChineseFont', 22)
     c.setFillColor(colors.HexColor('#333333'))
