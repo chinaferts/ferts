@@ -385,34 +385,40 @@ export default function InspectionDetailScreen() {
   const [barcodeItems, setBarcodeItems] = useState<ChecklistItem[]>([]);
   
   // 初始化条码扫描项
-  // 只有当 barcodeItems 为空时才初始化，避免覆盖用户添加的项
+  // 始终显示3条，如果有已保存的数据则合并到前3条中
   useEffect(() => {
     if (!inspection?.checklist_items || barcodeItems.length > 0) return;
     
-    const isCompleted = inspection.status === 'completed';
     const originalBarcodeItems = inspection.checklist_items
       .filter(item => item.category === '条码扫描以及拍照' || item.name?.includes('条码'))
-      .map(item => ({ ...item, barcodeType: 'box' as const, type: 'barcode' as const }));
+      .map(item => ({ ...item, barcodeType: (item.barcodeType || 'box') as const, type: 'barcode' as const }));
     
-    // 如果验货已完成或有已保存的条码项，显示所有已保存的条码项
-    if ((isCompleted || originalBarcodeItems.length > 0) && originalBarcodeItems.length > 0) {
-      setBarcodeItems(originalBarcodeItems);
-    } else {
-      // 默认创建3条条码扫描项
-      const defaultItems: ChecklistItem[] = Array.from({ length: 3 }, (_, i) => ({
-        id: Date.now() + i,
-        record_id: Date.now() + i,
-        name: t('barcodeScan'),
-        description: t('barcodeScan'),
-        category: '条码扫描以及拍照',
-        status: 'unchecked' as const,
-        photos: [],
-        barcodeCodes: [],
-        barcodeType: 'box' as const,
-        type: 'barcode' as const,
-      }));
-      setBarcodeItems(defaultItems);
+    // 始终显示3条：如果有已保存的数据，取前3条并合并数据；否则创建3条空项
+    const BARCODE_COUNT = 3;
+    const items: ChecklistItem[] = [];
+    
+    for (let i = 0; i < BARCODE_COUNT; i++) {
+      if (i < originalBarcodeItems.length) {
+        // 使用已保存的数据
+        items.push(originalBarcodeItems[i]);
+      } else {
+        // 创建空项
+        items.push({
+          id: Date.now() + i,
+          record_id: Date.now() + i,
+          name: t('barcodeScan'),
+          description: t('barcodeScan'),
+          category: '条码扫描以及拍照',
+          status: 'unchecked' as const,
+          photos: [],
+          barcodeCodes: [],
+          barcodeType: 'box' as const,
+          type: 'barcode' as const,
+        });
+      }
     }
+    
+    setBarcodeItems(items);
   }, [inspection?.checklist_items, inspection?.status]);
   // 严重程度选项
   const severityOptions = [
