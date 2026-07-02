@@ -462,7 +462,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         }
         // 合并 inspection_records.photos 字段和 inspection_photos 表的照片
         const photosFromRecord = (existingRecord.photos || []).filter((p: string) => 
-          p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://')
+          p && (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://'))
         ).map((p: string) => toFullUrl(req, p));
         const allPhotos = [...new Set([...photosFromRecord, ...recordPhotosFromTable])];
         
@@ -540,7 +540,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         return validImageExtensions.some(ext => lower.endsWith(ext));
       };
       const photosFromRecord = (record.photos || []).filter((p: string) => 
-        (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || p.startsWith('file://') || p.startsWith('content://')) && isValidImage(p)
+        p && (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || p.startsWith('file://') || p.startsWith('content://')) && isValidImage(p)
       ).map((p: string) => toFullUrl(req, p));
       const photosFromTable = recordPhotos.filter((p: string) => isValidImage(p));
       // 合并去重
