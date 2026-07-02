@@ -394,39 +394,24 @@ export default function InspectionDetailScreen() {
       .filter(item => item.category === '条码扫描以及拍照' || item.name?.includes('条码'))
       .map(item => ({ ...item, barcodeType: 'box' as const, type: 'barcode' as const }));
     
-    // 如果验货已完成，显示所有已保存的条码项
-    if (isCompleted && originalBarcodeItems.length > 0) {
+    // 如果验货已完成或有已保存的条码项，显示所有已保存的条码项
+    if ((isCompleted || originalBarcodeItems.length > 0) && originalBarcodeItems.length > 0) {
       setBarcodeItems(originalBarcodeItems);
-    } else if (originalBarcodeItems.length > 0) {
-      // 验货进行中，只显示一条空项，等待用户点击"添加条码扫描"按钮
-      const defaultItem: ChecklistItem = {
-        id: Date.now(),
-        record_id: Date.now(),
-        name: t('barcodeScan'),
-        description: t('barcodeScan'),
-        category: '条码扫描以及拍照',
-        status: 'unchecked',
-        photos: [],
-        barcodeCodes: [],
-        barcodeType: 'box' as const,
-        type: 'barcode' as const,
-      };
-      setBarcodeItems([defaultItem]);
     } else {
-      // 没有任何条码项，创建一条默认的条码扫描项
-      const defaultItem: ChecklistItem = {
-        id: Date.now(),
-        record_id: Date.now(),
+      // 默认创建3条条码扫描项
+      const defaultItems: ChecklistItem[] = Array.from({ length: 3 }, (_, i) => ({
+        id: Date.now() + i,
+        record_id: Date.now() + i,
         name: t('barcodeScan'),
         description: t('barcodeScan'),
         category: '条码扫描以及拍照',
-        status: 'unchecked',
+        status: 'unchecked' as const,
         photos: [],
         barcodeCodes: [],
         barcodeType: 'box' as const,
         type: 'barcode' as const,
-      };
-      setBarcodeItems([defaultItem]);
+      }));
+      setBarcodeItems(defaultItems);
     }
   }, [inspection?.checklist_items, inspection?.status]);
   // 严重程度选项
@@ -559,30 +544,6 @@ export default function InspectionDetailScreen() {
     setIssues([...issues, { text: '', photos: [], severity: '' }]);
   };
   
-  // 添加条码扫描项
-  const handleAddBarcode = () => {
-    const newItem: ChecklistItem = {
-      id: Date.now(),
-      record_id: Date.now(),
-      name: t('barcodeScan'),
-      description: t('barcodeScan'),
-      category: '条码扫描以及拍照',
-      status: 'unchecked',
-      photos: [],
-      barcodeCodes: [],
-      barcodeType: 'box', // 默认外箱条码
-    };
-    setBarcodeItems([...barcodeItems, newItem]);
-    // 同时添加到 inspection.checklist_items，确保扫码时能找到
-    setInspection(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        checklist_items: [...(prev.checklist_items || []), { ...newItem }]
-      };
-    });
-  };
-
   // 更新条码扫描项的类型
   const updateBarcodeItemType = (recordId: number, type: string) => {
     setBarcodeItems(items => items.map(i => 
@@ -2788,26 +2749,18 @@ export default function InspectionDetailScreen() {
           );
         })}
 
-        {/* 条码扫描分类 - 问题描述格式 */}
-        {categories.includes('条码扫描以及拍照') && (
+        {/* 条码扫描分类 - 始终显示3条 */}
+        {(categories.includes('条码扫描以及拍照') || barcodeItems.length > 0) && (
           <View style={styles.section}>
             <View style={styles.categoryHeader}>
               <View>
                 <Text style={styles.sectionTitle}>条码扫描以及拍照</Text>
                 <Text style={styles.sectionTitleEnglish}>Barcode Scan</Text>
               </View>
-              {inspection.status !== 'completed' && (
-                <TouchableOpacity style={styles.addIssueButton} onPress={handleAddBarcode}>
-                  <Feather name="plus" size={18} color="#6C63FF" />
-                  <Text style={styles.addIssueText}>添加条码扫描</Text>
-                </TouchableOpacity>
-              )}
             </View>
             
             {/* 条码扫描列表（包括原始项和新增项） */}
             {barcodeItems.map((item, index) => {
-              // 判断是否是新增的条码扫描项
-              const isExtraItem = item.record_id > 1000000000000;
               return (
                 <View key={item.record_id} style={styles.issueItem}>
                   <View style={styles.issueHeader}>
@@ -2963,9 +2916,8 @@ export default function InspectionDetailScreen() {
                         <Feather name="slash" size={14} color="#808080" />
                         <Text style={styles.naButtonText}>不适用</Text>
                       </TouchableOpacity>
-                      {/* 删除按钮 - 仅对新增的条码扫描项显示 */}
-                      {isExtraItem && (
-                        <TouchableOpacity 
+                      {/* 删除按钮 */}
+                      <TouchableOpacity 
                           style={[styles.actionButton, styles.removeIssueButton]}
                           onPress={() => {
                             setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
@@ -2974,7 +2926,6 @@ export default function InspectionDetailScreen() {
                           <Feather name="trash-2" size={14} color="#FF6B6B" />
                           <Text style={styles.removeIssueText}>删除</Text>
                         </TouchableOpacity>
-                      )}
                     </View>
                   )}
                 </View>
