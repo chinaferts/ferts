@@ -5,6 +5,9 @@ const projectId = process.env.COZE_PROJECT_ID || process.env.EXPO_PUBLIC_COZE_PR
 const slugAppName = projectId ? `app${projectId}` : 'myapp';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
+  // 使用 COZE_PROJECT_DOMAIN_DEFAULT 作为后端 URL 的兜底值
+  const backendBaseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || process.env.COZE_PROJECT_DOMAIN_DEFAULT || '';
+  
   return {
     ...config,
     "name": appName,
@@ -15,6 +18,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "extra": {
+      ...config.extra,
+      backendBaseUrl,
+    },
     "ios": {
       "supportsTablet": true
     },
