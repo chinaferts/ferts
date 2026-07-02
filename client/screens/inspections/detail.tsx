@@ -1567,7 +1567,8 @@ export default function InspectionDetailScreen() {
     }
 
     const serverBaseUrl = getApiBaseUrl();
-    if (!serverBaseUrl) {
+    // Web 端使用相对路径（空字符串），Native 端需要完整的服务器地址
+    if (Platform.OS !== 'web' && !serverBaseUrl) {
       Alert.alert('错误', '服务器地址未配置');
       return;
     }

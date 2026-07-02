@@ -318,12 +318,12 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     // 获取检查记录及其关联的清单项
-    // 优先按 checklist_items.item_order 排序（保持模板顺序），fallback 到 created_at
+    // 注意：PostgREST 不支持按关联表字段排序，改为按 inspection_records.id 排序
     const { data: records } = await client
       .from('inspection_records')
       .select('*, checklist_items(*)')
       .eq('inspection_id', id)
-      .order('checklist_items.item_order', { ascending: true });
+      .order('id', { ascending: true });
 
     // 如果是嵌入式模板(checklist_id=11 且没有记录，或 checklist_id=0)
     // 使用 UNIVERSAL_CHECKLIST_ITEMS
@@ -331,6 +331,12 @@ router.get('/:id', async (req: Request, res: Response) => {
                                 String(inspection.checklist_id) === '0' ||
                                 (inspection.checklist_id === 11 && (!records || records.length === 0));
     if (isEmbeddedTemplate || !records || records.length === 0) {
+      // 先从 inspection_photos 表获取该验货的所有照片
+      const { data: inspectionPhotos } = await client
+        .from('inspection_photos')
+        .select('record_id, photo_url')
+        .eq('inspection_id', id);
+      
       // 先在数据库中创建 inspection_records 记录，确保后续更新操作正常
       const universalItems = UNIVERSAL_CHECKLIST_ITEMS.map(async (item, index) => {
         // 使用 item.name 作为唯一标识（因为数据库 item_id 是 integer 类型，不能存储 'u1' 这样的字符串）
@@ -393,6 +399,8 @@ router.get('/:id', async (req: Request, res: Response) => {
             })
             .select()
             .single();
+          // 从 inspection_photos 表获取该记录的照片
+          const recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === newRecord?.id).map((p: any) => p.photo_url) || [];
           return {
             id: item.name,  // 使用 item_name 作为 id
             record_id: newRecord?.id || 0,
@@ -401,11 +409,19 @@ router.get('/:id', async (req: Request, res: Response) => {
             description: item.description,
             category: item.category,
             result: 'unchecked',
-            photos: [],
+            photos: recordPhotosFromTable,
             barcodeCodes: [],
             barcode_codes: []
           };
         }
+        
+        // 从 inspection_photos 表获取该记录的照片
+        const recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === existingRecord.id).map((p: any) => p.photo_url) || [];
+        // 合并 inspection_records.photos 字段和 inspection_photos 表的照片
+        const photosFromRecord = (existingRecord.photos || []).filter((p: string) => 
+          p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://')
+        );
+        const allPhotos = [...new Set([...photosFromRecord, ...recordPhotosFromTable])];
         
         return {
           id: itemName,  // 使用 item_name 作为 id
@@ -415,7 +431,7 @@ router.get('/:id', async (req: Request, res: Response) => {
           description: item.description,
           category: item.category,
           result: 'unchecked',
-          photos: existingRecord.photos || [],
+          photos: allPhotos,
           barcodeCodes: existingRecord.barcode_codes || [],
           barcode_codes: existingRecord.barcode_codes || []
         };
