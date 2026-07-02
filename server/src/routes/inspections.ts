@@ -697,6 +697,33 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// PATCH 更新验货记录（部分更新，如尺寸重量等）
+router.patch('/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id as string, 10);
+    const updateData = req.body;
+
+    if (!isSupabaseConfigured()) {
+      return res.status(500).json({ success: false, error: '数据库未配置' });
+    }
+
+    const client = requireSupabaseClient();
+    const { data, error } = await client
+      .from('inspections')
+      .update(updateData)
+      .eq('id', id)
+      .select();
+
+    const updatedInspectionData = Array.isArray(data) ? data[0] : data;
+
+    if (error) throw error;
+    res.json({ success: true, data: updatedInspectionData });
+  } catch (err: any) {
+    console.error('PATCH更新验货记录失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 提交验货记录（完成验货）
 router.post('/:id/submit', async (req: Request, res: Response) => {
   try {
@@ -1279,7 +1306,16 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     status: inspection.status,
     summary: { pass: passCount, fail: failCount, na: naCount, pending: pendingCount },
     defects: defects || [],
-    generated_time: new Date().toLocaleString('zh-CN')
+    generated_time: new Date().toLocaleString('zh-CN'),
+    // 尺寸重量统计表
+    outer_carton_length: inspection.outer_carton_length,
+    outer_carton_width: inspection.outer_carton_width,
+    outer_carton_height: inspection.outer_carton_height,
+    outer_carton_weight: inspection.outer_carton_weight,
+    inner_carton_length: inspection.inner_carton_length,
+    inner_carton_width: inspection.inner_carton_width,
+    inner_carton_height: inspection.inner_carton_height,
+    inner_carton_weight: inspection.inner_carton_weight,
   };
   
   // 构建检查项列表，将相同名称的条码扫描项合并
