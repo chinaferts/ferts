@@ -298,9 +298,9 @@ function getServerBaseUrl(req: Request): string {
   if (process.env.COZE_PROJECT_DOMAIN_DEFAULT) {
     return process.env.COZE_PROJECT_DOMAIN_DEFAULT.replace(/\/$/, '');
   }
-  // 其次使用请求头
-  const protocol = req.protocol;
-  const host = req.get('host') || req.headers.host;
+  // 其次使用请求头（支持反向代理）
+  const protocol = (req.get('x-forwarded-proto') || req.protocol || 'https').toString().split(',')[0].trim();
+  const host = req.get('x-forwarded-host') || req.get('host') || req.headers.host;
   if (host) {
     return `${protocol}://${host}`;
   }
