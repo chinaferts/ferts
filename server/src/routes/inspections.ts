@@ -169,13 +169,18 @@ router.get('/', async (req: Request, res: Response) => {
     // 获取通用模板的 mock 数据（checklist_id=0）
     const mockUniversalData = mockGetInspections({ checklist_id: '0' });
     
-    // 如果查询失败或返回空，使用 mock 数据兜底
-    if (error || !data || data.length === 0) {
+    // 如果查询失败，使用 mock 数据兜底（但查询成功且为空时返回空列表）
+    if (error) {
       const filters: any = {};
       if (status && status !== 'all') filters.status = status as string;
       if (checklist_id) filters.checklist_id = checklist_id as string;
       const mockData = mockGetInspections(filters);
       return res.json({ success: true, data: mockData });
+    }
+
+    // 查询成功但为空，直接返回空列表
+    if (!data || data.length === 0) {
+      return res.json({ success: true, data: [] });
     }
     
     // 获取所有验货的照片信息
@@ -335,12 +340,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       .single();
 
     if (error || !inspection) {
-      // 如果 Supabase 查询失败或没有数据，尝试使用 mock 数据
-      const mockInspection = mockGetInspection(id);
-      if (!mockInspection) {
-        return res.status(404).json({ success: false, error: '验货记录不存在' });
-      }
-      return res.json({ success: true, data: mockInspection });
+      return res.status(404).json({ success: false, error: '验货记录不存在' });
     }
 
     // 获取检查记录及其关联的清单项
