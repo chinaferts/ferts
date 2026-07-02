@@ -287,6 +287,32 @@ router.get('/dashboard', async (req: Request, res: Response) => {
 });
 
 // 获取单个验货详情
+// 辅助函数：从请求中获取服务器基础URL，用于将相对路径转换为完整URL
+function getServerBaseUrl(req: Request): string {
+  // 优先使用项目域名环境变量（部署环境）
+  if (process.env.COZE_PROJECT_DOMAIN_DEFAULT) {
+    return process.env.COZE_PROJECT_DOMAIN_DEFAULT.replace(/\/$/, '');
+  }
+  // 其次使用请求头
+  const protocol = req.protocol;
+  const host = req.get('host') || req.headers.host;
+  if (host) {
+    return `${protocol}://${host}`;
+  }
+  // 兜底：使用环境变量
+  return process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+}
+
+// 辅助函数：将相对路径转换为完整URL
+function toFullUrl(req: Request, path: string): string {
+  if (!path) return path;
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('file://') || path.startsWith('content://') || path.startsWith('data:')) {
+    return path;
+  }
+  const baseUrl = getServerBaseUrl(req);
+  return path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+}
+
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
@@ -400,7 +426,7 @@ router.get('/:id', async (req: Request, res: Response) => {
             .select()
             .single();
           // 从 inspection_photos 表获取该记录的照片
-          const recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === newRecord?.id).map((p: any) => p.photo_url) || [];
+          const recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === newRecord?.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
           return {
             id: item.name,  // 使用 item_name 作为 id
             record_id: newRecord?.id || 0,
@@ -416,11 +442,11 @@ router.get('/:id', async (req: Request, res: Response) => {
         }
         
         // 从 inspection_photos 表获取该记录的照片
-        const recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === existingRecord.id).map((p: any) => p.photo_url) || [];
+        const recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === existingRecord.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
         // 合并 inspection_records.photos 字段和 inspection_photos 表的照片
         const photosFromRecord = (existingRecord.photos || []).filter((p: string) => 
           p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://')
-        );
+        ).map((p: string) => toFullUrl(req, p));
         const allPhotos = [...new Set([...photosFromRecord, ...recordPhotosFromTable])];
         
         return {
@@ -469,8 +495,8 @@ router.get('/:id', async (req: Request, res: Response) => {
     // 组合数据
     const checklist_items = (records || []).map((record: any) => {
       const item = record.checklist_items;
-      // 从 inspection_photos 表获取该记录的照片
-      const recordPhotos = photos?.filter((p: any) => p.record_id === record.id).map((p: any) => p.photo_url) || [];
+      // 从 inspection_photos 表获取该记录的照片，并转换为完整URL
+      const recordPhotos = photos?.filter((p: any) => p.record_id === record.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
       const recordBarcodes = record.barcode_codes || [];
       
       // 合并两个来源的照片：inspection_records.photos 字段 + inspection_photos 表
@@ -484,7 +510,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       };
       const photosFromRecord = (record.photos || []).filter((p: string) => 
         (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || p.startsWith('file://') || p.startsWith('content://')) && isValidImage(p)
-      );
+      ).map((p: string) => toFullUrl(req, p));
       const photosFromTable = recordPhotos.filter((p: string) => isValidImage(p));
       // 合并去重
       const allPhotos = [...new Set([...photosFromRecord, ...photosFromTable])];
