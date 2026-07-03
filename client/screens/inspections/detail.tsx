@@ -952,21 +952,22 @@ export default function InspectionDetailScreen() {
           }
         }
         
-        // 从 defects 数据初始化 issues（用于已完成的验货详情显示）
-        if (data.defects && Array.isArray(data.defects) && data.defects.length > 0) {
-          const issuesFromDefects = data.defects.map((defect: any) => ({
-            text: defect.description || '',
-            photos: defect.photos || defect.photo_urls || [],
-            severity: defect.severity || '',
-          }));
-          setIssues(issuesFromDefects);
-        } else if (data.status === 'completed') {
-          // 如果没有 defects 数据，从"问题统计以及拍照并描述"检查项获取照片
-          const problemItem = checklistItems.find(
+        // 从"问题统计以及拍照并描述"检查项获取照片用于问题描述列表显示
+        // 无论是否有 defects 数据，都优先使用问题统计检查项的照片
+        if (data.status === 'completed' || data.status === 'failed') {
+          const completedProblemItem = checklistItems.find(
             item => item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述'
           );
-          if (problemItem && problemItem.photos && problemItem.photos.length > 0) {
-            setIssues([{ text: '', photos: problemItem.photos, severity: '' }]);
+          if (completedProblemItem && completedProblemItem.photos && completedProblemItem.photos.length > 0) {
+            setIssues([{ text: completedProblemItem.notes || '', photos: completedProblemItem.photos, severity: '' }]);
+          } else if (data.defects && Array.isArray(data.defects) && data.defects.length > 0) {
+            // 如果问题统计检查项没有照片，则从 defects 获取
+            const issuesFromDefects = data.defects.map((defect: any) => ({
+              text: defect.description || '',
+              photos: defect.photos || defect.photo_urls || [],
+              severity: defect.severity || '',
+            }));
+            setIssues(issuesFromDefects);
           }
         }
         
