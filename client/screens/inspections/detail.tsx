@@ -927,6 +927,7 @@ export default function InspectionDetailScreen() {
                 notes: record.notes,
                 photos: record.photos || record.photo_urls || [],
                 barcodeCodes: record.barcodeCodes || record.barcode_codes || [],
+                barcodeFormats: record.barcodeFormats || record.barcode_formats || [],
               };
               console.log('[DEBUG] Mapped item:', item.name, 'id:', item.id, 'record_id:', item.record_id);
               return item;
@@ -2704,12 +2705,16 @@ export default function InspectionDetailScreen() {
                           <View style={styles.barcodePreviewSection}>
                             <Text style={styles.barcodePreviewLabel}>已扫描条码 ({item.barcodeCodes.length})</Text>
                             <View style={styles.barcodeCodesRow}>
-                              {item.barcodeCodes.map((code, idx) => (
-                                <View key={idx} style={styles.barcodeCodeItem}>
-                                  <Feather name="code" size={14} color="#6C63FF" />
-                                  <Text style={styles.barcodeCodeText}>{code}</Text>
-                                </View>
-                              ))}
+                              {item.barcodeCodes.map((code, idx) => {
+                                const format = item.barcodeFormats?.[idx] || '';
+                                const displayText = format ? `${code} [${format}]` : code;
+                                return (
+                                  <View key={idx} style={styles.barcodeCodeItem}>
+                                    <Feather name="code" size={14} color="#6C63FF" />
+                                    <Text style={styles.barcodeCodeText}>{displayText}</Text>
+                                  </View>
+                                );
+                              })}
                             </View>
                           </View>
                         ) : null;
@@ -3024,17 +3029,21 @@ export default function InspectionDetailScreen() {
                   {item.barcodeCodes && item.barcodeCodes.length > 0 && (
                     <View style={styles.barcodePreviewSection}>
                       <View style={styles.barcodeCodesRow}>
-                        {item.barcodeCodes.map((code, idx) => (
-                          <View key={idx} style={styles.barcodeCodeItem}>
-                            <Feather name="code" size={14} color="#6C63FF" />
-                            <Text style={styles.barcodeCodeText}>{code}</Text>
-                            {inspection?.status !== 'completed' && (
-                              <TouchableOpacity onPress={() => handleDeleteBarcodeCode(item.id, code)}>
-                                <Feather name="x-circle" size={16} color="#FF5252" />
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        ))}
+                        {item.barcodeCodes.map((code, idx) => {
+                          const format = item.barcodeFormats?.[idx] || '';
+                          const displayText = format ? `${code} [${format}]` : code;
+                          return (
+                            <View key={idx} style={styles.barcodeCodeItem}>
+                              <Feather name="code" size={14} color="#6C63FF" />
+                              <Text style={styles.barcodeCodeText}>{displayText}</Text>
+                              {inspection?.status !== 'completed' && (
+                                <TouchableOpacity onPress={() => handleDeleteBarcodeCode(item.id, code)}>
+                                  <Feather name="x-circle" size={16} color="#FF5252" />
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          );
+                        })}
                       </View>
                     </View>
                   )}

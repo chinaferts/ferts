@@ -525,6 +525,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       }
       
       const recordBarcodes = record.barcode_codes || [];
+      const recordBarcodeFormats = record.barcode_formats || [];
       
       // 合并两个来源的照片：inspection_records.photos 字段 + inspection_photos 表
       // 只保留服务器可访问的照片（/uploads/ 或 http/https）
@@ -564,7 +565,8 @@ router.get('/:id', async (req: Request, res: Response) => {
         score: record.score,
         record_id: record.id,
         photos: allPhotos,
-        barcodeCodes: recordBarcodes
+        barcodeCodes: recordBarcodes,
+        barcodeFormats: recordBarcodeFormats
       };
     });
 
