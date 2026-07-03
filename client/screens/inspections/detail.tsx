@@ -1915,8 +1915,12 @@ export default function InspectionDetailScreen() {
       // 收集所有本地照片（包括 checklist_items、barcodeItems 和 issues 中的照片）
       const allLocalPhotos: { recordId: number; localPath: string }[] = [];
       
-      // 从 inspection.checklist_items 收集本地照片
+      // 从 inspection.checklist_items 收集本地照片（排除"问题统计以及拍照并描述"项，因为其照片从 issues 收集）
       (inspection?.checklist_items || []).forEach(item => {
+        // 跳过"问题统计以及拍照并描述"项，其照片从 issues 数组收集
+        if (item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述') {
+          return;
+        }
         if (item.photos && item.photos.length > 0) {
           item.photos.forEach((photo: string) => {
             if (photo && (photo.startsWith('file:') || photo.startsWith('content:'))) {
