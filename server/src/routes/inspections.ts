@@ -183,11 +183,17 @@ router.get('/', async (req: Request, res: Response) => {
       return res.json({ success: true, data: [] });
     }
     
-    // 获取所有验货的照片信息
+    // 获取所有验货的照片信息（从 inspection_records.photos 字段）
     const inspectionIds = data.map((item: any) => item.id);
     const { data: recordsData } = await client!
       .from('inspection_records')
       .select('inspection_id, photos')
+      .in('inspection_id', inspectionIds);
+    
+    // 同时从 inspection_photos 表获取照片
+    const { data: inspectionPhotosData } = await client!
+      .from('inspection_photos')
+      .select('inspection_id, photo_url')
       .in('inspection_id', inspectionIds);
     
     // 整理照片信息
@@ -199,6 +205,21 @@ router.get('/', async (req: Request, res: Response) => {
             photosMap[record.inspection_id] = [];
           }
           photosMap[record.inspection_id].push(...record.photos);
+        }
+      }
+    }
+    // 合并 inspection_photos 表的照片
+    if (inspectionPhotosData) {
+      for (const photo of inspectionPhotosData) {
+        if (photo.photo_url) {
+          if (!photosMap[photo.inspection_id]) {
+            photosMap[photo.inspection_id] = [];
+          }
+          // 转换为完整 URL
+          const fullUrl = toFullUrl(req, photo.photo_url);
+          if (!photosMap[photo.inspection_id].includes(fullUrl)) {
+            photosMap[photo.inspection_id].push(fullUrl);
+          }
         }
       }
     }
@@ -408,7 +429,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         // 检查是否已存在检查记录（通过 item_name 匹配）
         const { data: existingRecord } = await client
           .from('inspection_records')
-          .select('id, photos, barcode_codes')
+          .select('id, photos, barcode_codes, result')
           .eq('inspection_id', id)
           .eq('item_name', itemName)
           .single();
@@ -453,10 +474,14 @@ router.get('/:id', async (req: Request, res: Response) => {
         
         // 从 inspection_photos 表获取该记录的照片
         let recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === existingRecord.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
-        // 如果没有匹配的照片且有未关联的照片，且是拍照相关项，则分配未关联的照片
-        if (recordPhotosFromTable.length === 0 && unlinkedInspPhotos.length > 0) {
+        // 如果没有匹配的照片且有未关联的照片，且是拍照相关项且已检查，则分配未关联的照片
+        // 只有已检查的记录（result != 'unchecked'）才能分配照片
+        // 排除"问题统计以及拍照并描述"和"问题描述"，这些项的照片在问题列表中单独显示
+        if (recordPhotosFromTable.length === 0 && unlinkedInspPhotos.length > 0 && existingRecord.result && existingRecord.result !== 'unchecked') {
           const itemNameLower = (item.name || '').toLowerCase();
-          if (itemNameLower.includes('拍照') || itemNameLower.includes('photo') || itemNameLower.includes('条码扫描以及拍照')) {
+          const isProblemItem = itemNameLower.includes('问题统计') || itemNameLower.includes('问题描述');
+          const isPhotoRelated = !isProblemItem && (itemNameLower.includes('拍照') || itemNameLower.includes('photo') || itemNameLower.includes('条码扫描以及拍照'));
+          if (isPhotoRelated) {
             recordPhotosFromTable = unlinkedInspPhotos.map((p: any) => toFullUrl(req, p.photo_url));
           }
         }
@@ -519,10 +544,13 @@ router.get('/:id', async (req: Request, res: Response) => {
       // 优先匹配 record_id，如果没有则分配未关联的照片
       let recordPhotos = photos?.filter((p: any) => p.record_id === record.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
       
-      // 如果该记录没有照片，且有未关联的照片，且该记录是拍照相关项，则分配未关联的照片
-      if (recordPhotos.length === 0 && unlinkedPhotos.length > 0) {
+      // 如果该记录没有照片，且有未关联的照片，且该记录是拍照相关项且已检查，则分配未关联的照片
+      // 只有已检查的记录（result != 'unchecked'）才能分配照片
+      // 排除"问题统计以及拍照并描述"和"问题描述"，这些项的照片在问题列表中单独显示
+      if (recordPhotos.length === 0 && unlinkedPhotos.length > 0 && record.result && record.result !== 'unchecked') {
         const itemName = (item?.name || record.item_name || '').toLowerCase();
-        const isPhotoRelated = itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照');
+        const isProblemItem = itemName.includes('问题统计') || itemName.includes('问题描述');
+        const isPhotoRelated = !isProblemItem && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照'));
         if (isPhotoRelated) {
           recordPhotos = unlinkedPhotos.map((p: any) => toFullUrl(req, p.photo_url));
         }
