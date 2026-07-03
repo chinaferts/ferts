@@ -2149,12 +2149,20 @@ export default function InspectionDetailScreen() {
   // 保存条码到后端
   const saveBarcodeToBackend = async (recordId: string, code: string, format?: string) => {
     try {
+      // 检查 recordId 是否有效
+      if (!recordId || recordId === 'undefined' || recordId === 'null') {
+        console.error('[SaveBarcode] Invalid recordId:', recordId);
+        return;
+      }
+      
       const baseUrl = getApiBaseUrl();
       // 获取当前条码列表和格式列表
       const item = inspection?.checklist_items?.find(i => String(i.record_id) === recordId);
       const currentCodes = item?.barcodeCodes || [];
       const currentFormats = item?.barcodeFormats || [];
       const formatToSave = format || 'UNKNOWN';
+      
+      console.log('[SaveBarcode] Saving barcode:', { recordId, code, format: formatToSave, inspectionId: id });
       
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items/${recordId}`, {
         method: 'PATCH',
@@ -2166,7 +2174,11 @@ export default function InspectionDetailScreen() {
       });
       
       if (!response.ok) {
-        console.error('[SaveBarcode] Failed to save barcode:', response.statusText);
+        const errorText = await response.text();
+        console.error('[SaveBarcode] Failed to save barcode:', response.status, errorText);
+      } else {
+        const result = await response.json();
+        console.log('[SaveBarcode] Success:', result);
       }
     } catch (error) {
       console.error('[SaveBarcode] Error:', error);
