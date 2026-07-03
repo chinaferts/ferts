@@ -1508,6 +1508,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
           result: record.result || 'unchecked',
           photos: [...photos],
           barcodeCodes: [...(record.barcode_codes || [])],
+          barcodeFormats: [...(record.barcode_formats || [])],
           notes: record.notes || ''
         });
       } else {
@@ -1517,6 +1518,8 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         const allPhotos = [...new Set([...existing.photos, ...photos])];
         // 合并条码（去重）
         const allBarcodes = [...new Set([...existing.barcodeCodes, ...(record.barcode_codes || [])])];
+        // 合并条码格式
+        const allFormats = [...new Set([...(existing.barcodeFormats || []), ...(record.barcode_formats || [])])];
         // 更新状态：pass > fail > unchecked > na
         const statusPriority: Record<string, number> = { 'pass': 4, 'fail': 3, 'unchecked': 2, 'na': 1 };
         const currentPriority = statusPriority[existing.result] || 0;
@@ -1526,6 +1529,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         }
         existing.photos = allPhotos;
         existing.barcodeCodes = allBarcodes;
+        existing.barcodeFormats = allFormats;
         if (record.notes && record.notes !== existing.notes) {
           existing.notes = existing.notes ? existing.notes + '; ' + record.notes : record.notes;
         }
@@ -1540,6 +1544,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         result: record.result || 'unchecked',
         photos: photos,
         barcodeCodes: record.barcode_codes || [],
+        barcodeFormats: record.barcode_formats || [],
         notes: record.notes || ''
       });
     }

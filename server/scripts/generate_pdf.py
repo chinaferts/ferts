@@ -385,6 +385,7 @@ def draw_checklist(c, width, margin, y, height, data):
             
             # 绘制照片
             barcode_codes = item.get('barcodeCodes', []) or []
+            barcode_formats = item.get('barcodeFormats', []) or []
             notes = item.get('notes', '') or ''
             
             if photos:
