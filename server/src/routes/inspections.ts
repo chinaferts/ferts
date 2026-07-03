@@ -513,11 +513,12 @@ router.get('/:id', async (req: Request, res: Response) => {
       
       // 如果该记录没有照片，且有未关联的照片，且该记录是拍照相关项且已检查，则分配未关联的照片
       // 只有已检查的记录（result != 'unchecked'）才能分配照片
-      // 排除"问题统计以及拍照并描述"和"问题描述"，这些项的照片在问题列表中单独显示
+      // "问题统计以及拍照并描述"项可以获取照片（用于在问题列表中显示）
+      // "问题描述"项不获取照片（纯文字描述项）
       if (recordPhotos.length === 0 && unlinkedPhotos.length > 0 && record.result && record.result !== 'unchecked') {
         const itemName = (item?.name || record.item_name || '').toLowerCase();
-        const isProblemItem = itemName.includes('问题统计') || itemName.includes('问题描述');
-        const isPhotoRelated = !isProblemItem && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照'));
+        const isProblemDescOnly = itemName.includes('问题描述') && !itemName.includes('问题统计');
+        const isPhotoRelated = !isProblemDescOnly && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照') || itemName.includes('问题统计'));
         if (isPhotoRelated) {
           recordPhotos = unlinkedPhotos.map((p: any) => toFullUrl(req, p.photo_url));
         }
