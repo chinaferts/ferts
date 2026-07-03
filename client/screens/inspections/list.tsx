@@ -1,6 +1,6 @@
 import { getApiBaseUrl } from '@/utils/api';
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, RefreshControl, Image } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -23,6 +23,7 @@ interface Inspection {
   orderNo?: string;      // 订单号
   productNo?: string;    // 货号
   quantity?: number;     // 数量
+  photos?: string[];     // 验货照片缩略图
 }
 
 const STATUS_CONFIG = {
@@ -58,6 +59,24 @@ function InspectionCard({ item }: { item: Inspection }) {
       
         <View style={styles.cardBody}>
           <Text style={styles.productName}>{item.product}</Text>
+          {/* 验货照片缩略图 */}
+          {item.photos && item.photos.length > 0 && (
+            <View style={styles.thumbnailRow}>
+              {item.photos.slice(0, 4).map((photo, idx) => (
+                <Image 
+                  key={idx} 
+                  source={{ uri: photo }} 
+                  style={styles.thumbnail}
+                  resizeMode="cover"
+                />
+              ))}
+              {item.photos.length > 4 && (
+                <View style={styles.thumbnailMore}>
+                  <Text style={styles.thumbnailMoreText}>+{item.photos.length - 4}</Text>
+                </View>
+              )}
+            </View>
+          )}
           {/* 订单号、货号、数量 */}
           <View style={styles.orderInfoRow}>
             {item.orderNo && (
@@ -164,6 +183,7 @@ export default function InspectionsListScreen() {
           orderNo: item.order_no || item.order_number || '',
           productNo: item.product_no || '',
           quantity: item.quantity || item.qty || 0,
+          photos: item.photos || [],
         }));
         setInspections(mapped);
       }
@@ -427,6 +447,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#636E72',
     marginBottom: 6,
+  },
+  // 验货照片缩略图样式
+  thumbnailRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  thumbnail: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    backgroundColor: '#F0F0F3',
+  },
+  thumbnailMore: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    backgroundColor: 'rgba(108,99,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  thumbnailMoreText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6C63FF',
   },
   // 订单信息行样式
   orderInfoRow: {
