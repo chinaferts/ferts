@@ -517,7 +517,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       // 只有已检查的记录（result != 'unchecked'）才能分配照片
       // "问题统计以及拍照并描述"项可以获取照片（用于在问题列表中显示）
       // "问题描述"项不获取照片（纯文字描述项）
-      if (recordPhotos.length === 0 && unlinkedPhotos.length > 0 && record.result && record.result !== 'unchecked') {
+      // 不适用的项（result === 'na'）不分配任何照片
+      if (recordPhotos.length === 0 && unlinkedPhotos.length > 0 && record.result && record.result !== 'unchecked' && record.result !== 'na') {
         const itemName = (item?.name || record.item_name || '').toLowerCase();
         const isProblemDescOnly = itemName.includes('问题描述') && !itemName.includes('问题统计');
         const isPhotoRelated = !isProblemDescOnly && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照') || itemName.includes('问题统计'));
