@@ -1015,7 +1015,9 @@ router.get('/:id/records', async (req: Request, res: Response) => {
 // 更新检查记录结果
 router.put('/:id/records/:recordId', async (req: Request, res: Response) => {
   try {
-    const { id, recordId } = req.params;
+    const idParam = req.params.id;
+    const id = Array.isArray(idParam) ? parseInt(idParam[0], 10) : parseInt(idParam, 10);
+    const { recordId } = req.params;
     const { result, notes, photos, barcode_codes, barcode_formats } = req.body;
     
     console.log('[PUT_RECORDS] Received request:', {
