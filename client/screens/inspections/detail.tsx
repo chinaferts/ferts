@@ -3047,65 +3047,6 @@ export default function InspectionDetailScreen() {
           </View>
         )}
 
-        {/* 问题统计以及拍照并描述 - 检查项照片显示 */}
-        {(() => {
-          const rawItems = inspection?.checklist_items || [];
-          const problemCategoryItems = rawItems.filter((item: any) => 
-            (item.category || item.item_category) === '问题统计以及拍照并描述'
-          );
-          return problemCategoryItems.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.categoryHeader}>
-                <View>
-                  <Text style={styles.sectionTitle}>问题统计以及拍照并描述</Text>
-                  <Text style={styles.sectionTitleEnglish}>Problem Statistics</Text>
-                </View>
-              </View>
-              {problemCategoryItems.map((item, idx) => (
-                <View key={item.id || idx} style={styles.checklistItem}>
-                  <View style={styles.checklistTitleRow}>
-                    <Text style={styles.checklistItemName}>{item.name}</Text>
-                  </View>
-                  {/* 检查项照片显示 */}
-                  {item.photos && item.photos.length > 0 && (
-                    <View style={styles.photoContainer}>
-                      {item.photos.map((photo, photoIdx) => (
-                        <TouchableOpacity 
-                          key={photoIdx} 
-                          style={styles.photoItem}
-                          onPress={() => {
-                            setSelectedPhoto(photo);
-                            setPhotoModalVisible(true);
-                          }}
-                        >
-                          <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                  {/* 检查项描述显示 */}
-                  {item.notes && (
-                    <View style={{ marginTop: 8, paddingHorizontal: 4 }}>
-                      <Text style={{ fontSize: 13, color: '#4B5563', lineHeight: 18 }}>{item.notes}</Text>
-                    </View>
-                  )}
-                  {/* 检查项条码显示 */}
-                  {item.barcodeCodes && item.barcodeCodes.length > 0 && (
-                    <View style={styles.barcodeContainer}>
-                      {item.barcodeCodes.map((code, codeIdx) => (
-                        <View key={codeIdx} style={styles.barcodeItem}>
-                          <Feather name="code" size={16} color="#6C63FF" />
-                          <Text style={styles.barcodeText}>{code}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ))}
-            </View>
-          );
-        })()}
-
         {/* 问题描述列表 */}
         {issues.length > 0 && (
           <View style={styles.section}>
