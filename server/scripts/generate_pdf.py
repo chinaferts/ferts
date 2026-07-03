@@ -184,11 +184,13 @@ def draw_dimensions_table(c, width, margin, y, data):
     c.drawString(margin, y, '【 尺寸重量统计表 / Dimensional Table 】')
     y -= 6 * mm
 
-    # 表格配置
+    # 表格配置 - 使用页面全宽（减去左右边距）
     table_x = margin
-    row_h = 7 * mm
-    header_h = 9 * mm
-    col_widths = [38*mm, 32*mm, 32*mm]
+    table_width = width - 2 * margin  # 表格总宽度 = 页面宽度 - 左右边距
+    row_h = 8 * mm
+    header_h = 10 * mm
+    # 按比例分配列宽：第一列30%，第二列35%，第三列35%
+    col_widths = [table_width * 0.30, table_width * 0.35, table_width * 0.35]
     total_w = sum(col_widths)
 
     def fmt(v):
@@ -196,17 +198,14 @@ def draw_dimensions_table(c, width, margin, y, data):
 
     # 标题行
     header_y = y - header_h
-    c.setFillColor(colors.HexColor('#EEF2FF'))
-    c.rect(table_x, header_y, total_w, header_h, fill=1, stroke=1)
-    c.setStrokeColor(colors.HexColor('#E5E7EB'))
-    c.setLineWidth(0.5)
-    c.rect(table_x, header_y, total_w, header_h, fill=0, stroke=1)
-    c.setFillColor(colors.HexColor('#1F2937'))
-    c.setFont('ChineseFont', 8)
-    headers = ['', 'Master Carton\n外箱 (CM/KG)', 'Inner Carton\n内盒 (CM/KG)']
+    c.setFillColor(colors.HexColor('#4F46E5'))
+    c.rect(table_x, header_y, total_w, header_h, fill=1, stroke=0)
+    c.setFillColor(colors.white)
+    c.setFont('ChineseFont', 9)
+    headers = ['', 'Master Carton 外箱 (CM/KG)', 'Inner Carton 内盒 (CM/KG)']
     x_pos = [table_x, table_x + col_widths[0], table_x + col_widths[0] + col_widths[1]]
     for i, h in enumerate(headers):
-        c.drawCentredString(x_pos[i] + col_widths[i]/2, header_y + 2*mm, h)
+        c.drawCentredString(x_pos[i] + col_widths[i]/2, header_y + 3*mm, h)
 
     y = header_y
 
@@ -218,22 +217,26 @@ def draw_dimensions_table(c, width, margin, y, data):
         ('G.W. 重量 (KG)', fmt(outer_g), fmt(inner_g)),
     ]
 
-    for label, outer_val, inner_val in rows:
+    for idx, (label, outer_val, inner_val) in enumerate(rows):
         row_y = y - row_h
-        # 斑马纹
-        bg = colors.HexColor('#F9FAFB') if rows.index((label, outer_val, inner_val)) % 2 == 0 else colors.white
+        # 斑马纹 - 使用更柔和的颜色
+        bg = colors.HexColor('#F9FAFB') if idx % 2 == 0 else colors.white
         c.setFillColor(bg)
-        c.rect(table_x, row_y, total_w, row_h, fill=1, stroke=1)
+        c.rect(table_x, row_y, total_w, row_h, fill=1, stroke=0)
         # 边框
         c.setStrokeColor(colors.HexColor('#E5E7EB'))
         c.setLineWidth(0.5)
         c.rect(table_x, row_y, total_w, row_h, fill=0, stroke=1)
 
+        # 第一列左对齐，加粗
+        c.setFillColor(colors.HexColor('#1F2937'))
+        c.setFont('ChineseFont', 9)
+        c.drawString(table_x + 4*mm, row_y + 2.5*mm, label)
+        # 第二列和第三列居中
         c.setFillColor(colors.HexColor('#374151'))
-        c.setFont('ChineseFont', 8)
-        c.drawString(table_x + 3*mm, row_y + 2*mm, label)
-        c.drawCentredString(table_x + col_widths[0] + col_widths[1]/2, row_y + 2*mm, outer_val)
-        c.drawCentredString(table_x + col_widths[0] + col_widths[1] + col_widths[2]/2, row_y + 2*mm, inner_val)
+        c.setFont('ChineseFont', 9)
+        c.drawCentredString(table_x + col_widths[0] + col_widths[1]/2, row_y + 2.5*mm, outer_val)
+        c.drawCentredString(table_x + col_widths[0] + col_widths[1] + col_widths[2]/2, row_y + 2.5*mm, inner_val)
 
         y = row_y
 
