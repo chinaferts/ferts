@@ -952,6 +952,16 @@ export default function InspectionDetailScreen() {
           }
         }
         
+        // 从 defects 数据初始化 issues（用于已完成的验货详情显示）
+        if (data.defects && Array.isArray(data.defects) && data.defects.length > 0) {
+          const issuesFromDefects = data.defects.map((defect: any) => ({
+            text: defect.description || '',
+            photos: defect.photos || defect.photo_urls || [],
+            severity: defect.severity || '',
+          }));
+          setIssues(issuesFromDefects);
+        }
+        
         setInspection({
           ...data,
           checklist_items: checklistItems,
