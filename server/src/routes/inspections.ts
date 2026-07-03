@@ -377,7 +377,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     const isEmbeddedTemplate = inspection.checklist_id === 0 || 
                                 String(inspection.checklist_id) === '0' ||
                                 (inspection.checklist_id === 11 && (!records || records.length === 0));
-    if (isEmbeddedTemplate || !records || records.length === 0) {
+    if (isEmbeddedTemplate) {
       // 先从 inspection_photos 表获取该验货的所有照片
       const { data: inspectionPhotos } = await client
         .from('inspection_photos')
@@ -435,41 +435,8 @@ router.get('/:id', async (req: Request, res: Response) => {
           .single();
         
         if (!existingRecord) {
-          // 创建新的检查记录（使用 checklist_item_id 作为 item_id，因为 item_id 是 integer）
-          const { data: newRecord } = await client
-            .from('inspection_records')
-            .insert({
-              inspection_id: id,
-              item_id: realChecklistItemId,  // 使用数据库 ID 作为 item_id（integer）
-              checklist_item_id: realChecklistItemId,
-              item_name: item.name,
-              item_description: item.description,
-              item_category: item.category,
-              result: 'unchecked'
-            })
-            .select()
-            .single();
-          // 从 inspection_photos 表获取该记录的照片
-          let recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === newRecord?.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
-          // 如果没有匹配的照片且有未关联的照片，且是拍照相关项，则分配未关联的照片
-          if (recordPhotosFromTable.length === 0 && unlinkedInspPhotos.length > 0) {
-            const itemNameLower = (item.name || '').toLowerCase();
-            if (itemNameLower.includes('拍照') || itemNameLower.includes('photo') || itemNameLower.includes('条码扫描以及拍照')) {
-              recordPhotosFromTable = unlinkedInspPhotos.map((p: any) => toFullUrl(req, p.photo_url));
-            }
-          }
-          return {
-            id: item.name,  // 使用 item_name 作为 id
-            record_id: newRecord?.id || 0,
-            checklist_item_id: realChecklistItemId,
-            name: item.name,
-            description: item.description,
-            category: item.category,
-            result: 'unchecked',
-            photos: recordPhotosFromTable,
-            barcodeCodes: [],
-            barcode_codes: []
-          };
+          // 不自动创建检查记录，只返回已存在的记录
+          return null;
         }
         
         // 从 inspection_photos 表获取该记录的照片
