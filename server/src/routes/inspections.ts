@@ -1173,7 +1173,9 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
 // 更新检查项条码
 router.patch('/:id/checklist-items/:itemId', async (req: Request, res: Response) => {
   try {
-    const { id, itemId } = req.params;
+    const { itemId } = req.params;
+    const idParam = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const id = parseInt(idParam, 10);
     const { barcodeCodes, codes, photos, barcode_formats } = req.body;
 
     if (!isSupabaseConfigured()) {
