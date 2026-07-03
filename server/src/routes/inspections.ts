@@ -835,7 +835,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
 router.post('/:id/submit', async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { notes, result } = req.body;
+    const { notes, result, inspector_name } = req.body;
 
     if (!isSupabaseConfigured()) {
       const records = mockGetInspectionRecords(id);
@@ -891,6 +891,9 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
     if (currentUser) {
       updateData.submitted_by = currentUser.id;
       updateData.inspector_name = currentUser.name; // 更新验货员名称
+    } else if (inspector_name) {
+      // 如果前端传递了验货员名称，也使用它
+      updateData.inspector_name = inspector_name;
     }
 
     const { data, error } = await client
@@ -1411,7 +1414,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     style_number: inspection.style_number,
     inspection_date: inspection.inspection_date || (inspection.created_at ? String(inspection.created_at).substring(0, 10) : null),
     created_at: inspection.created_at,
-    inspector_name: inspection.inspector_name || inspection.inspector_id || inspection.created_by || (inspection.submitted_by_name ? `提交人: ${inspection.submitted_by_name}` : null),
+    inspector_name: inspection.inspector_name || (inspection.submitted_by_name ? `提交人: ${inspection.submitted_by_name}` : null),
     overall_result: inspection.overall_result,
     status: inspection.status,
     summary: { pass: passCount, fail: failCount, na: naCount, pending: pendingCount },

@@ -200,7 +200,7 @@ export default function InspectionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useSafeRouter();
   const { t } = useTranslation();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [inspection, setInspection] = useState<InspectionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [defectModalVisible, setDefectModalVisible] = useState(false);
@@ -2024,7 +2024,7 @@ export default function InspectionDetailScreen() {
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result }),
+        body: JSON.stringify({ result, inspector_name: user?.name || null }),
       });
 
       const successMsg = result === 'pass' ? t('submitPassSuccess') : t('submitFailSuccess');
