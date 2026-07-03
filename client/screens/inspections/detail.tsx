@@ -2655,90 +2655,130 @@ export default function InspectionDetailScreen() {
                         ) : null;
                       })()}
 
-                      {/* 外箱箱唛尺寸统计表 */}
+                      {/* 尺寸重量统计表 - 移动端优化 */}
                       {(item.category === '外箱箱唛以及尺寸重量拍照' || item.name?.includes('外箱')) && (
-                        <View style={styles.dimensionTable}>
-                          <Text style={styles.dimensionTableTitle}>尺寸重量统计表 / Dimensional Table</Text>
-                          <View style={styles.dimensionTableRow}>
-                            <Text style={[styles.dimensionTableCell, styles.dimensionTableHeaderCell]}></Text>
-                            <Text style={[styles.dimensionTableCell, styles.dimensionTableHeaderCell, styles.dimensionTableMasterCell]}>Master Carton{'\n'}外箱</Text>
-                            <Text style={[styles.dimensionTableCell, styles.dimensionTableHeaderCell, styles.dimensionTableInnerCell]}>Inner Carton{'\n'}内盒</Text>
+                        <View style={styles.dimensionTableCard}>
+                          <Text style={styles.dimensionTableTitle}>尺寸重量统计 / Dimension Table</Text>
+                          
+                          {/* 表头 */}
+                          <View style={styles.dimensionTableHeaderRow}>
+                            <View style={styles.dimensionTableHeaderLabel}>
+                              <Text style={styles.dimensionTableHeaderText}>项目</Text>
+                            </View>
+                            <View style={styles.dimensionTableHeaderInput}>
+                              <Text style={styles.dimensionTableHeaderText}>外箱 Master</Text>
+                            </View>
+                            <View style={styles.dimensionTableHeaderInput}>
+                              <Text style={styles.dimensionTableHeaderText}>内盒 Inner</Text>
+                            </View>
                           </View>
+                          
+                          {/* 数据行 - 长 */}
                           <View style={styles.dimensionTableRow}>
-                            <Text style={[styles.dimensionTableCell, styles.dimensionTableLabelCell]}>L 长(CM)</Text>
-                            <TextInput
-                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
-                              value={String(inspection.outer_carton_length ?? '') || outerDimensions.length || ''}
-                              onChangeText={(v) => handleDimensionChange('outer', 'length', v)}
-                              placeholder="-"
-                              keyboardType="decimal-pad"
-                              editable={inspection.status !== 'completed'}
-                            />
-                            <TextInput
-                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
-                              value={String(inspection.inner_carton_length ?? '') || innerDimensions.length || ''}
-                              onChangeText={(v) => handleDimensionChange('inner', 'length', v)}
-                              placeholder="-"
-                              keyboardType="decimal-pad"
-                              editable={inspection.status !== 'completed'}
-                            />
+                            <View style={styles.dimensionTableLabel}>
+                              <Text style={styles.dimensionTableLabelText}>长 L (cm)</Text>
+                            </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.outer_carton_length ?? '') || outerDimensions.length || ''}
+                                onChangeText={(v) => handleDimensionChange('outer', 'length', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.inner_carton_length ?? '') || innerDimensions.length || ''}
+                                onChangeText={(v) => handleDimensionChange('inner', 'length', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
                           </View>
+                          
+                          {/* 数据行 - 宽 */}
                           <View style={styles.dimensionTableRow}>
-                            <Text style={[styles.dimensionTableCell, styles.dimensionTableLabelCell]}>W 宽(CM)</Text>
-                            <TextInput
-                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
-                              value={String(inspection.outer_carton_width ?? '') || outerDimensions.width || ''}
-                              onChangeText={(v) => handleDimensionChange('outer', 'width', v)}
-                              placeholder="-"
-                              keyboardType="decimal-pad"
-                              editable={inspection.status !== 'completed'}
-                            />
-                            <TextInput
-                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
-                              value={String(inspection.inner_carton_width ?? '') || innerDimensions.width || ''}
-                              onChangeText={(v) => handleDimensionChange('inner', 'width', v)}
-                              placeholder="-"
-                              keyboardType="decimal-pad"
-                              editable={inspection.status !== 'completed'}
-                            />
+                            <View style={styles.dimensionTableLabel}>
+                              <Text style={styles.dimensionTableLabelText}>宽 W (cm)</Text>
+                            </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.outer_carton_width ?? '') || outerDimensions.width || ''}
+                                onChangeText={(v) => handleDimensionChange('outer', 'width', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.inner_carton_width ?? '') || innerDimensions.width || ''}
+                                onChangeText={(v) => handleDimensionChange('inner', 'width', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
                           </View>
+                          
+                          {/* 数据行 - 高 */}
                           <View style={styles.dimensionTableRow}>
-                            <Text style={[styles.dimensionTableCell, styles.dimensionTableLabelCell]}>H 高(CM)</Text>
-                            <TextInput
-                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
-                              value={String(inspection.outer_carton_height ?? '') || outerDimensions.height || ''}
-                              onChangeText={(v) => handleDimensionChange('outer', 'height', v)}
-                              placeholder="-"
-                              keyboardType="decimal-pad"
-                              editable={inspection.status !== 'completed'}
-                            />
-                            <TextInput
-                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
-                              value={String(inspection.inner_carton_height ?? '') || innerDimensions.height || ''}
-                              onChangeText={(v) => handleDimensionChange('inner', 'height', v)}
-                              placeholder="-"
-                              keyboardType="decimal-pad"
-                              editable={inspection.status !== 'completed'}
-                            />
+                            <View style={styles.dimensionTableLabel}>
+                              <Text style={styles.dimensionTableLabelText}>高 H (cm)</Text>
+                            </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.outer_carton_height ?? '') || outerDimensions.height || ''}
+                                onChangeText={(v) => handleDimensionChange('outer', 'height', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.inner_carton_height ?? '') || innerDimensions.height || ''}
+                                onChangeText={(v) => handleDimensionChange('inner', 'height', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
                           </View>
-                          <View style={styles.dimensionTableRow}>
-                            <Text style={[styles.dimensionTableCell, styles.dimensionTableLabelCell]}>G.W. 重量(KG)</Text>
-                            <TextInput
-                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
-                              value={String(inspection.outer_carton_weight ?? '') || outerDimensions.weight || ''}
-                              onChangeText={(v) => handleDimensionChange('outer', 'weight', v)}
-                              placeholder="-"
-                              keyboardType="decimal-pad"
-                              editable={inspection.status !== 'completed'}
-                            />
-                            <TextInput
-                              style={[styles.dimensionTableCell, styles.dimensionTableInputCell]}
-                              value={String(inspection.inner_carton_weight ?? '') || innerDimensions.weight || ''}
-                              onChangeText={(v) => handleDimensionChange('inner', 'weight', v)}
-                              placeholder="-"
-                              keyboardType="decimal-pad"
-                              editable={inspection.status !== 'completed'}
-                            />
+                          
+                          {/* 数据行 - 重量 */}
+                          <View style={[styles.dimensionTableRow, styles.dimensionTableLastRow]}>
+                            <View style={styles.dimensionTableLabel}>
+                              <Text style={styles.dimensionTableLabelText}>重 GW (kg)</Text>
+                            </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.outer_carton_weight ?? '') || outerDimensions.weight || ''}
+                                onChangeText={(v) => handleDimensionChange('outer', 'weight', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.inner_carton_weight ?? '') || innerDimensions.weight || ''}
+                                onChangeText={(v) => handleDimensionChange('inner', 'weight', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
                           </View>
                         </View>
                       )}
@@ -5057,8 +5097,8 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  // 箱唛尺寸表格样式
-  dimensionTableContainer: {
+  // 箱唛尺寸表格样式 - 移动端优化
+  dimensionTableCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
@@ -5071,17 +5111,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 10,
+    textAlign: 'center',
   },
-  dimensionTable: {
-    gap: 4,
-  },
-  dimensionTableHeader: {
+  dimensionTableHeaderRow: {
     flexDirection: 'row',
     backgroundColor: '#F0F0FF',
-    borderRadius: 6,
+    borderRadius: 8,
     paddingVertical: 8,
+    marginBottom: 4,
   },
-  dimensionTableHeaderCell: {
+  dimensionTableHeaderLabel: {
+    flex: 1.2,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  dimensionTableHeaderInput: {
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 4,
@@ -5090,54 +5134,32 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#4F46E5',
+    textAlign: 'center',
   },
   dimensionTableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  dimensionTableLastRow: {
+    borderBottomWidth: 0,
   },
   dimensionTableLabel: {
-    flex: 1,
+    flex: 1.2,
     paddingHorizontal: 4,
   },
   dimensionTableLabelText: {
     fontSize: 12,
-    color: '#666',
+    fontWeight: '500',
+    color: '#555',
   },
-  dimensionTableCell: {
+  dimensionTableInputWrapper: {
     flex: 1,
-    alignItems: 'center',
     paddingHorizontal: 4,
-  },
-  dimensionTableMasterCell: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  dimensionTableInnerCell: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  dimensionTableLabelCell: {
-    flex: 1.4,
-    paddingHorizontal: 4,
-    justifyContent: 'center' as const,
-  },
-  dimensionTableInputCell: {
-    flex: 0.9,
-    height: 36,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    paddingHorizontal: 4,
-    fontSize: 14,
-    color: '#333',
-    textAlign: 'center' as const,
   },
   dimensionTableInput: {
-    width: '100%',
     height: 32,
     backgroundColor: '#F8F9FA',
     borderRadius: 6,
