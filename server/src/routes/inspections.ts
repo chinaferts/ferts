@@ -1438,6 +1438,10 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     inner_carton_width: inspection.inner_carton_width,
     inner_carton_height: inspection.inner_carton_height,
     inner_carton_weight: inspection.inner_carton_weight,
+    product_length: inspection.product_length,
+    product_width: inspection.product_width,
+    product_height: inspection.product_height,
+    product_weight: inspection.product_weight,
   };
   
   // 构建检查项列表，将相同名称的条码扫描项合并

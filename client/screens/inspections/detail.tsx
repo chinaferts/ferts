@@ -444,11 +444,14 @@ export default function InspectionDetailScreen() {
   const [outerDimensions, setOuterDimensions] = useState({ length: '', width: '', height: '', weight: '' });
   // 内盒尺寸状态
   const [innerDimensions, setInnerDimensions] = useState({ length: '', width: '', height: '', weight: '' });
+  // 包装产品尺寸状态
+  const [productDimensions, setProductDimensions] = useState({ length: '', width: '', height: '', weight: '' });
   // 使用 ref 跟踪最新尺寸值（解决闭包问题）
   const outerDimensionsRef = useRef({ length: '', width: '', height: '', weight: '' });
   const innerDimensionsRef = useRef({ length: '', width: '', height: '', weight: '' });
+  const productDimensionsRef = useRef({ length: '', width: '', height: '', weight: '' });
   // 尺寸防抖定时器
-  const dimensionTimeoutRef = useRef<{ outer?: ReturnType<typeof setTimeout>; inner?: ReturnType<typeof setTimeout> }>({});
+  const dimensionTimeoutRef = useRef<{ outer?: ReturnType<typeof setTimeout>; inner?: ReturnType<typeof setTimeout>; product?: ReturnType<typeof setTimeout> }>({});
   // 条码类型选择弹窗状态
   const [barcodeTypeModalVisible, setBarcodeTypeModalVisible] = useState(false);
   const [selectedBarcodeIndex, setSelectedBarcodeIndex] = useState<number | null>(null);
@@ -2200,7 +2203,7 @@ export default function InspectionDetailScreen() {
   };
 
   // 尺寸输入变化处理（防抖保存）
-  const handleDimensionChange = (type: 'outer' | 'inner', field: 'length' | 'width' | 'height' | 'weight', value: string) => {
+  const handleDimensionChange = (type: 'outer' | 'inner' | 'product', field: 'length' | 'width' | 'height' | 'weight', value: string) => {
     // 验证数值
     if (value !== '' && isNaN(parseFloat(value))) return;
     
@@ -2209,39 +2212,43 @@ export default function InspectionDetailScreen() {
       const next = { ...outerDimensionsRef.current, [field]: value };
       outerDimensionsRef.current = next;
       setOuterDimensions(next);
-    } else {
+    } else if (type === 'inner') {
       const next = { ...innerDimensionsRef.current, [field]: value };
       innerDimensionsRef.current = next;
       setInnerDimensions(next);
+    } else {
+      const next = { ...productDimensionsRef.current, [field]: value };
+      productDimensionsRef.current = next;
+      setProductDimensions(next);
     }
     
     // 同时更新 inspection 对象（用于 UI 显示）
     const fieldMap: Record<string, string> = {
-      length: type === 'outer' ? 'outer_carton_length' : 'inner_carton_length',
-      width: type === 'outer' ? 'outer_carton_width' : 'inner_carton_width',
-      height: type === 'outer' ? 'outer_carton_height' : 'inner_carton_height',
-      weight: type === 'outer' ? 'outer_carton_weight' : 'inner_carton_weight',
+      length: type === 'outer' ? 'outer_carton_length' : type === 'inner' ? 'inner_carton_length' : 'product_length',
+      width: type === 'outer' ? 'outer_carton_width' : type === 'inner' ? 'inner_carton_width' : 'product_width',
+      height: type === 'outer' ? 'outer_carton_height' : type === 'inner' ? 'inner_carton_height' : 'product_height',
+      weight: type === 'outer' ? 'outer_carton_weight' : type === 'inner' ? 'inner_carton_weight' : 'product_weight',
     };
     const backendField = fieldMap[field];
     setInspection(prev => prev ? { ...prev, [backendField]: value } : prev);
     
     // 防抖保存到后端（500ms）
-    const key = type === 'outer' ? 'outer' : 'inner';
+    const key = type;
     if (dimensionTimeoutRef.current[key]) {
       clearTimeout(dimensionTimeoutRef.current[key]);
     }
     dimensionTimeoutRef.current[key] = setTimeout(async () => {
       // 使用 ref 获取最新值（解决闭包问题）
-      const dims = type === 'outer' ? outerDimensionsRef.current : innerDimensionsRef.current;
+      const dims = type === 'outer' ? outerDimensionsRef.current : type === 'inner' ? innerDimensionsRef.current : productDimensionsRef.current;
       const currentValue = value;
       try {
         const updateData: Record<string, number | null> = {};
         const fields = ['length', 'width', 'height', 'weight'] as const;
         fields.forEach(f => {
-          const bf = f === 'length' ? (type === 'outer' ? 'outer_carton_length' : 'inner_carton_length')
-            : f === 'width' ? (type === 'outer' ? 'outer_carton_width' : 'inner_carton_width')
-            : f === 'height' ? (type === 'outer' ? 'outer_carton_height' : 'inner_carton_height')
-            : (type === 'outer' ? 'outer_carton_weight' : 'inner_carton_weight');
+          const bf = f === 'length' ? (type === 'outer' ? 'outer_carton_length' : type === 'inner' ? 'inner_carton_length' : 'product_length')
+            : f === 'width' ? (type === 'outer' ? 'outer_carton_width' : type === 'inner' ? 'inner_carton_width' : 'product_width')
+            : f === 'height' ? (type === 'outer' ? 'outer_carton_height' : type === 'inner' ? 'inner_carton_height' : 'product_height')
+            : (type === 'outer' ? 'outer_carton_weight' : type === 'inner' ? 'inner_carton_weight' : 'product_weight');
           const v = f === field ? currentValue : dims[f];
           updateData[bf] = v === '' ? null : parseFloat(v);
         });
@@ -2700,6 +2707,9 @@ export default function InspectionDetailScreen() {
                             <View style={styles.dimensionTableHeaderInput}>
                               <Text style={styles.dimensionTableHeaderText}>内盒 Inner</Text>
                             </View>
+                            <View style={styles.dimensionTableHeaderInput}>
+                              <Text style={styles.dimensionTableHeaderText}>产品 Product</Text>
+                            </View>
                           </View>
                           
                           {/* 数据行 - 长 */}
@@ -2722,6 +2732,16 @@ export default function InspectionDetailScreen() {
                                 style={styles.dimensionTableInput}
                                 value={String(inspection.inner_carton_length ?? '') || innerDimensions.length || ''}
                                 onChangeText={(v) => handleDimensionChange('inner', 'length', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.product_length ?? '') || productDimensions.length || ''}
+                                onChangeText={(v) => handleDimensionChange('product', 'length', v)}
                                 placeholder="-"
                                 keyboardType="decimal-pad"
                                 editable={inspection.status !== 'completed'}
@@ -2754,6 +2774,16 @@ export default function InspectionDetailScreen() {
                                 editable={inspection.status !== 'completed'}
                               />
                             </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.product_width ?? '') || productDimensions.width || ''}
+                                onChangeText={(v) => handleDimensionChange('product', 'width', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
                           </View>
                           
                           {/* 数据行 - 高 */}
@@ -2781,6 +2811,16 @@ export default function InspectionDetailScreen() {
                                 editable={inspection.status !== 'completed'}
                               />
                             </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.product_height ?? '') || productDimensions.height || ''}
+                                onChangeText={(v) => handleDimensionChange('product', 'height', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
                           </View>
                           
                           {/* 数据行 - 重量 */}
@@ -2803,6 +2843,16 @@ export default function InspectionDetailScreen() {
                                 style={styles.dimensionTableInput}
                                 value={String(inspection.inner_carton_weight ?? '') || innerDimensions.weight || ''}
                                 onChangeText={(v) => handleDimensionChange('inner', 'weight', v)}
+                                placeholder="-"
+                                keyboardType="decimal-pad"
+                                editable={inspection.status !== 'completed'}
+                              />
+                            </View>
+                            <View style={styles.dimensionTableInputWrapper}>
+                              <TextInput
+                                style={styles.dimensionTableInput}
+                                value={String(inspection.product_weight ?? '') || productDimensions.weight || ''}
+                                onChangeText={(v) => handleDimensionChange('product', 'weight', v)}
                                 placeholder="-"
                                 keyboardType="decimal-pad"
                                 editable={inspection.status !== 'completed'}

@@ -168,7 +168,7 @@ def draw_summary(c, width, margin, y, data):
     return y
 
 def draw_dimensions_table(c, width, margin, y, data):
-    """绘制外箱内盒尺寸重量统计表"""
+    """绘制外箱内盒产品尺寸重量统计表"""
     outer_l = data.get('outer_carton_length')
     outer_w = data.get('outer_carton_width')
     outer_h = data.get('outer_carton_height')
@@ -177,6 +177,10 @@ def draw_dimensions_table(c, width, margin, y, data):
     inner_w = data.get('inner_carton_width')
     inner_h = data.get('inner_carton_height')
     inner_g = data.get('inner_carton_weight')
+    prod_l = data.get('product_length')
+    prod_w = data.get('product_width')
+    prod_h = data.get('product_height')
+    prod_g = data.get('product_weight')
 
     # 始终绘制尺寸重量统计表（即使数据为空）
     c.setFont('ChineseFont', 11)
@@ -189,8 +193,8 @@ def draw_dimensions_table(c, width, margin, y, data):
     table_width = width - 2 * margin  # 表格总宽度 = 页面宽度 - 左右边距
     row_h = 8 * mm
     header_h = 10 * mm
-    # 按比例分配列宽：第一列30%，第二列35%，第三列35%
-    col_widths = [table_width * 0.30, table_width * 0.35, table_width * 0.35]
+    # 按比例分配列宽：第一列20%，第二列27%，第三列27%，第四列26%
+    col_widths = [table_width * 0.20, table_width * 0.27, table_width * 0.27, table_width * 0.26]
     total_w = sum(col_widths)
 
     def fmt(v):
@@ -202,8 +206,8 @@ def draw_dimensions_table(c, width, margin, y, data):
     c.rect(table_x, header_y, total_w, header_h, fill=1, stroke=0)
     c.setFillColor(colors.white)
     c.setFont('ChineseFont', 9)
-    headers = ['', 'Master Carton 外箱 (CM/KG)', 'Inner Carton 内盒 (CM/KG)']
-    x_pos = [table_x, table_x + col_widths[0], table_x + col_widths[0] + col_widths[1]]
+    headers = ['', 'Master Carton 外箱 (CM/KG)', 'Inner Carton 内盒 (CM/KG)', 'Product 产品 (CM/KG)']
+    x_pos = [table_x, table_x + col_widths[0], table_x + col_widths[0] + col_widths[1], table_x + col_widths[0] + col_widths[1] + col_widths[2]]
     for i, h in enumerate(headers):
         c.drawCentredString(x_pos[i] + col_widths[i]/2, header_y + 3*mm, h)
 
@@ -211,13 +215,13 @@ def draw_dimensions_table(c, width, margin, y, data):
 
     # 数据行
     rows = [
-        ('L 长 (CM)', fmt(outer_l), fmt(inner_l)),
-        ('W 宽 (CM)', fmt(outer_w), fmt(inner_w)),
-        ('H 高 (CM)', fmt(outer_h), fmt(inner_h)),
-        ('G.W. 重量 (KG)', fmt(outer_g), fmt(inner_g)),
+        ('L 长 (CM)', fmt(outer_l), fmt(inner_l), fmt(prod_l)),
+        ('W 宽 (CM)', fmt(outer_w), fmt(inner_w), fmt(prod_w)),
+        ('H 高 (CM)', fmt(outer_h), fmt(inner_h), fmt(prod_h)),
+        ('G.W. 重量 (KG)', fmt(outer_g), fmt(inner_g), fmt(prod_g)),
     ]
 
-    for idx, (label, outer_val, inner_val) in enumerate(rows):
+    for idx, (label, outer_val, inner_val, prod_val) in enumerate(rows):
         row_y = y - row_h
         # 斑马纹 - 使用更柔和的颜色
         bg = colors.HexColor('#F9FAFB') if idx % 2 == 0 else colors.white
@@ -232,11 +236,12 @@ def draw_dimensions_table(c, width, margin, y, data):
         c.setFillColor(colors.HexColor('#1F2937'))
         c.setFont('ChineseFont', 9)
         c.drawString(table_x + 4*mm, row_y + 2.5*mm, label)
-        # 第二列和第三列居中
+        # 第二列、第三列和第四列居中
         c.setFillColor(colors.HexColor('#374151'))
         c.setFont('ChineseFont', 9)
         c.drawCentredString(table_x + col_widths[0] + col_widths[1]/2, row_y + 2.5*mm, outer_val)
         c.drawCentredString(table_x + col_widths[0] + col_widths[1] + col_widths[2]/2, row_y + 2.5*mm, inner_val)
+        c.drawCentredString(table_x + col_widths[0] + col_widths[1] + col_widths[2] + col_widths[3]/2, row_y + 2.5*mm, prod_val)
 
         y = row_y
 
