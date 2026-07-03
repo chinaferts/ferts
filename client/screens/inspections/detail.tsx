@@ -2885,9 +2885,11 @@ export default function InspectionDetailScreen() {
                           <View key={idx} style={styles.barcodeCodeItem}>
                             <Feather name="code" size={14} color="#6C63FF" />
                             <Text style={styles.barcodeCodeText}>{code}</Text>
-                            <TouchableOpacity onPress={() => handleDeleteBarcodeCode(item.id, code)}>
-                              <Feather name="x-circle" size={16} color="#FF5252" />
-                            </TouchableOpacity>
+                            {inspection?.status !== 'completed' && (
+                              <TouchableOpacity onPress={() => handleDeleteBarcodeCode(item.id, code)}>
+                                <Feather name="x-circle" size={16} color="#FF5252" />
+                              </TouchableOpacity>
+                            )}
                           </View>
                         ))}
                       </View>
@@ -2911,7 +2913,7 @@ export default function InspectionDetailScreen() {
                             });
                           }}>
                           <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
-                          {item.status !== 'pass' && (
+                          {item.status !== 'pass' && inspection?.status !== 'completed' && (
                             <TouchableOpacity style={styles.photoDeleteButton}
                               onPress={() => {
                                 const updatedItems = barcodeItems.map(barcodeItem => {
