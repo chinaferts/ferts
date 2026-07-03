@@ -204,7 +204,9 @@ router.get('/', async (req: Request, res: Response) => {
           if (!photosMap[record.inspection_id]) {
             photosMap[record.inspection_id] = [];
           }
-          photosMap[record.inspection_id].push(...record.photos);
+          // 转换为完整 URL
+          const fullUrls = record.photos.map((p: string) => toFullUrl(req, p));
+          photosMap[record.inspection_id].push(...fullUrls);
         }
       }
     }
