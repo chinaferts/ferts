@@ -3276,9 +3276,9 @@ export default function InspectionDetailScreen() {
                   editable={inspection.status !== 'completed'}
                 />
                 {/* 问题照片预览 */}
-                {issue.photos.length > 0 && (
+                {(issue.photos?.length || 0) > 0 && (
                   <View style={styles.issuePhotosContainer}>
-                    {issue.photos.map((photo, photoIndex) => {
+                    {(issue.photos || []).map((photo, photoIndex) => {
                       const isCompleted = inspection.status === 'completed';
                       return (
                         <TouchableOpacity 
@@ -3304,7 +3304,7 @@ export default function InspectionDetailScreen() {
                       <Text style={styles.issueCameraText}>拍照 / Camera</Text>
                     </TouchableOpacity>
                     {/* 完成按钮 - 有照片时显示 */}
-                    {issues[index].photos.length > 0 && !issuePhotosUploaded && (
+                    {(issues[index].photos?.length || 0) > 0 && !issuePhotosUploaded && (
                       <TouchableOpacity 
                         style={[styles.issueCameraButton, { backgroundColor: '#10B981', minWidth: 100 }]} 
                         onPress={handleCompleteIssuePhotos}
