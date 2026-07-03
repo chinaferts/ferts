@@ -5110,7 +5110,7 @@ const styles = StyleSheet.create({
   dimensionTableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
@@ -5131,7 +5131,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   dimensionTableInput: {
-    height: 32,
+    height: 36,
     backgroundColor: '#F8F9FA',
     borderRadius: 6,
     borderWidth: 1,
