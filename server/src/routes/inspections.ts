@@ -1578,7 +1578,11 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   fs.unlinkSync(tempJsonPath);
   fs.unlinkSync(pdfOutputPath);
 
-    const filename = 'Inspection_Report_' + (inspection.inspection_number || 'unknown') + '.pdf';
+    const orderNo = inspection.order_number || inspection.orderNo || 'unknown';
+    const productNo = inspection.style_number || inspection.product_sku || inspection.productNo || '';
+    const filename = productNo 
+      ? `Inspection_Report_${orderNo}-${productNo}.pdf`
+      : `Inspection_Report_${orderNo}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
