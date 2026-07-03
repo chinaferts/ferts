@@ -2529,7 +2529,7 @@ export default function InspectionDetailScreen() {
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: '#00B894' }]}>
-                  {inspection.checklist_items.filter(i => i.category !== '问题统计以及拍照并描述' && i.category !== '条码扫描以及拍照').length - inspection.checkedCount}
+                  {inspection.checklist_items.filter(i => i.category !== '问题统计以及拍照并描述' && i.category !== '条码扫描以及拍照' && i.status !== 'na').length - inspection.checkedCount}
                 </Text>
                 <Text style={styles.statLabel}>待检查 / Pending</Text>
               </View>
@@ -2626,8 +2626,10 @@ export default function InspectionDetailScreen() {
                           console.log(`[PHOTO_DEBUG] 照片数量: ${item.photos.length}, 第一张:`, item.photos[0], ', getImageUrl:', getImageUrl(item.photos[0]));
                         }
                         // 问题统计以及拍照并描述检查项不显示照片，照片在问题描述列表中显示
+                        // 不适用(na)的检查项也不显示照片
                         const isProblemStatItem = item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述';
-                        return item.photos && item.photos.length > 0 && !isProblemStatItem ? (
+                        const isNaItem = item.status === 'na';
+                        return item.photos && item.photos.length > 0 && !isProblemStatItem && !isNaItem ? (
                           <View style={styles.photoPreviewSection}>
                             <View style={styles.photoGridContainer}>
                               {item.photos.map((photo, idx) => (
@@ -2964,7 +2966,8 @@ export default function InspectionDetailScreen() {
                   )}
                   
                   {/* 已保存的照片预览 - 与普通检查项一致，带删除功能 */}
-                  {item.photos && item.photos.length > 0 && (
+                  {/* 不适用(na)的检查项不显示照片 */}
+                  {item.photos && item.photos.length > 0 && item.status !== 'na' && (
                     <View style={styles.photoGridContainer}>
                       {item.photos.map((photo, idx) => (
                         <TouchableOpacity
