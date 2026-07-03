@@ -527,16 +527,20 @@ router.get('/:id', async (req: Request, res: Response) => {
       const recordBarcodes = record.barcode_codes || [];
       
       // 合并两个来源的照片：inspection_records.photos 字段 + inspection_photos 表
-      // 保留所有有效的图片路径（包括服务器路径和本地路径）
-      // 注意：本地路径（file:///...）只能在拍摄设备上访问，其他设备会显示空白
-      // 同时过滤掉非图片文件（如 .txt 测试文件）
+      // 只保留服务器可访问的照片（/uploads/ 或 http/https）
+      // 排除本地文件 URI（file://, content://, ph://）因为这些只能在拍摄设备上访问
       const validImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
       const isValidImage = (p: string) => {
         const lower = p.toLowerCase();
         return validImageExtensions.some(ext => lower.endsWith(ext));
       };
+      const isAccessiblePhoto = (p: string) => {
+        if (!p) return false;
+        // 只保留服务器可访问的照片
+        return p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://');
+      };
       const photosFromRecord = (record.photos || []).filter((p: string) => 
-        p && (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || p.startsWith('file://') || p.startsWith('content://')) && isValidImage(p)
+        p && isAccessiblePhoto(p) && isValidImage(p)
       ).map((p: string) => toFullUrl(req, p));
       const photosFromTable = recordPhotos.filter((p: string) => isValidImage(p));
       // 合并去重
