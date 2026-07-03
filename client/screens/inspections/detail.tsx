@@ -960,6 +960,14 @@ export default function InspectionDetailScreen() {
             severity: defect.severity || '',
           }));
           setIssues(issuesFromDefects);
+        } else if (data.status === 'completed') {
+          // 如果没有 defects 数据，从"问题统计以及拍照并描述"检查项获取照片
+          const problemItem = checklistItems.find(
+            item => item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述'
+          );
+          if (problemItem && problemItem.photos && problemItem.photos.length > 0) {
+            setIssues([{ text: '', photos: problemItem.photos, severity: '' }]);
+          }
         }
         
         setInspection({

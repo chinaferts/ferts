@@ -616,7 +616,24 @@ router.get('/:id', async (req: Request, res: Response) => {
       aql: inspection.aql,
       checklist_items,
       categories,
-      defects: defects || [],
+      // 如果 defects 为空，从"问题统计以及拍照并描述"检查项中获取照片作为问题描述
+      defects: (defects && defects.length > 0) ? defects : (() => {
+        const problemStatRecord = records?.find((r: any) => 
+          r.item_name === '问题统计以及拍照并描述' || 
+          r.category === '问题统计以及拍照并描述'
+        );
+        if (problemStatRecord && problemStatRecord.photos && Array.isArray(problemStatRecord.photos) && problemStatRecord.photos.length > 0) {
+          return [{
+            id: 'problem-stat-photos',
+            inspection_id: inspection.id,
+            description: problemStatRecord.notes || '问题统计照片',
+            severity: 'minor',
+            photo_urls: problemStatRecord.photos.map((p: any) => toFullUrl(req, typeof p === 'string' ? p : p.url || p.photo_url)),
+            created_at: problemStatRecord.created_at
+          }];
+        }
+        return [];
+      })(),
       // 将照片URL转换为完整URL，并确保包含所有验货级别的照片
       photos: (photos || []).map((p: any) => ({
         ...p,
@@ -1353,10 +1370,27 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         }
       }
     }
-    const defects = inspection.defects || [];
-    console.log('[EXPORT_PDF] Photos by record_id:', Array.from(photosByRecordId.entries()).slice(0, 3));
-
     const records = inspection.records || inspection.inspection_records || [];
+
+    // 从"问题统计以及拍照并描述"检查项中获取照片，构建问题列表
+    const problemStatRecord = records.find((r: any) => 
+      r.item_name === '问题统计以及拍照并描述' || r.item_category === '问题统计以及拍照并描述'
+    );
+    let defects = inspection.defects || [];
+    if (problemStatRecord && problemStatRecord.photos && problemStatRecord.photos.length > 0) {
+      // 如果 defects 为空，但有问题统计照片，则创建一个缺陷记录来显示这些照片
+      if (defects.length === 0) {
+        defects = [{
+          id: 0,
+          inspection_id: inspectionId,
+          description: '问题描述',
+          severity: 'minor',
+          photo_urls: problemStatRecord.photos,
+          created_at: new Date().toISOString()
+        }];
+      }
+    }
+    console.log('[EXPORT_PDF] Photos by record_id:', Array.from(photosByRecordId.entries()).slice(0, 3));
 
     console.log('[EXPORT_PDF] Inspection:', { id: inspection.id, hasRecords: !!inspection.records, hasInspectionRecords: !!inspection.inspection_records, recordsCount: records.length });
 
