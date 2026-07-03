@@ -178,10 +178,7 @@ def draw_dimensions_table(c, width, margin, y, data):
     inner_h = data.get('inner_carton_height')
     inner_g = data.get('inner_carton_weight')
 
-    # 如果所有尺寸都为空，不绘制
-    if all(v is None for v in [outer_l, outer_w, outer_h, outer_g, inner_l, inner_w, inner_h, inner_g]):
-        return y
-
+    # 始终绘制尺寸重量统计表（即使数据为空）
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#4F46E5'))
     c.drawString(margin, y, '【 尺寸重量统计表 / Dimensional Table 】')

@@ -1856,6 +1856,34 @@ export default function InspectionDetailScreen() {
 
   const doSubmit = async (result: 'pass' | 'fail') => {
     try {
+      // 提交前先保存尺寸重量数据（确保最新数据已保存）
+      const baseUrl = getApiBaseUrl();
+      const dimensionData: Record<string, number | null> = {};
+      const outerDims = outerDimensionsRef.current;
+      const innerDims = innerDimensionsRef.current;
+      
+      // 外箱尺寸
+      dimensionData['outer_carton_length'] = outerDims.length === '' ? null : parseFloat(outerDims.length);
+      dimensionData['outer_carton_width'] = outerDims.width === '' ? null : parseFloat(outerDims.width);
+      dimensionData['outer_carton_height'] = outerDims.height === '' ? null : parseFloat(outerDims.height);
+      dimensionData['outer_carton_weight'] = outerDims.weight === '' ? null : parseFloat(outerDims.weight);
+      // 内盒尺寸
+      dimensionData['inner_carton_length'] = innerDims.length === '' ? null : parseFloat(innerDims.length);
+      dimensionData['inner_carton_width'] = innerDims.width === '' ? null : parseFloat(innerDims.width);
+      dimensionData['inner_carton_height'] = innerDims.height === '' ? null : parseFloat(innerDims.height);
+      dimensionData['inner_carton_weight'] = innerDims.weight === '' ? null : parseFloat(innerDims.weight);
+      
+      try {
+        await fetch(`${baseUrl}/api/v1/inspections/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dimensionData),
+        });
+        console.log('[doSubmit] Dimensions saved:', dimensionData);
+      } catch (dimError) {
+        console.error('[doSubmit] Failed to save dimensions:', dimError);
+      }
+
       // 收集所有本地照片（包括 checklist_items、barcodeItems 和 issues 中的照片）
       const allLocalPhotos: { recordId: number; localPath: string }[] = [];
       
@@ -1993,7 +2021,6 @@ export default function InspectionDetailScreen() {
         }
 
       // 提交验货结果
-      const baseUrl = getApiBaseUrl();
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
