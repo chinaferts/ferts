@@ -192,6 +192,11 @@ interface InspectionDetail {
   inner_carton_width?: number;
   inner_carton_height?: number;
   inner_carton_weight?: number;
+  // 产品尺寸
+  product_length?: number;
+  product_width?: number;
+  product_height?: number;
+  product_weight?: number;
   checklist_items: ChecklistItem[];
   defects: Defect[];
 }
@@ -2512,6 +2517,93 @@ export default function InspectionDetailScreen() {
               </View>
             )}
           </View>
+
+          {/* 尺寸重量统计表 - 已完成状态显示 */}
+          {inspection.status === 'completed' && (
+            <View style={styles.dimensionTableCard}>
+              <Text style={styles.dimensionTableTitle}>尺寸重量统计 / Dimension Table</Text>
+              
+              {/* 表头 */}
+              <View style={styles.dimensionTableHeaderRow}>
+                <View style={styles.dimensionTableHeaderLabel}>
+                  <Text style={styles.dimensionTableHeaderText}>项目</Text>
+                </View>
+                <View style={styles.dimensionTableHeaderInput}>
+                  <Text style={styles.dimensionTableHeaderText}>外箱 Master</Text>
+                </View>
+                <View style={styles.dimensionTableHeaderInput}>
+                  <Text style={styles.dimensionTableHeaderText}>内盒 Inner</Text>
+                </View>
+                <View style={styles.dimensionTableHeaderInput}>
+                  <Text style={styles.dimensionTableHeaderText}>产品 Product</Text>
+                </View>
+              </View>
+              
+              {/* 数据行 - 长 */}
+              <View style={styles.dimensionTableRow}>
+                <View style={styles.dimensionTableLabel}>
+                  <Text style={styles.dimensionTableLabelText}>长 L (cm)</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.outer_carton_length || '-'}</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.inner_carton_length || '-'}</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.product_length || '-'}</Text>
+                </View>
+              </View>
+              
+              {/* 数据行 - 宽 */}
+              <View style={styles.dimensionTableRow}>
+                <View style={styles.dimensionTableLabel}>
+                  <Text style={styles.dimensionTableLabelText}>宽 W (cm)</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.outer_carton_width || '-'}</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.inner_carton_width || '-'}</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.product_width || '-'}</Text>
+                </View>
+              </View>
+              
+              {/* 数据行 - 高 */}
+              <View style={styles.dimensionTableRow}>
+                <View style={styles.dimensionTableLabel}>
+                  <Text style={styles.dimensionTableLabelText}>高 H (cm)</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.outer_carton_height || '-'}</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.inner_carton_height || '-'}</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.product_height || '-'}</Text>
+                </View>
+              </View>
+              
+              {/* 数据行 - 重 */}
+              <View style={[styles.dimensionTableRow, styles.dimensionTableLastRow]}>
+                <View style={styles.dimensionTableLabel}>
+                  <Text style={styles.dimensionTableLabelText}>重 GW (kg)</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.outer_carton_weight || '-'}</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.inner_carton_weight || '-'}</Text>
+                </View>
+                <View style={styles.dimensionTableInputWrapper}>
+                  <Text style={styles.dimensionTableInputText}>{inspection.product_weight || '-'}</Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
@@ -5190,6 +5282,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#333',
     textAlign: 'center',
+  },
+  dimensionTableInputText: {
+    height: 36,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    paddingHorizontal: 6,
+    fontSize: 13,
+    color: '#333',
+    textAlign: 'center',
+    lineHeight: 34,
   },
   dimensionTableUnit: {
     fontSize: 10,
