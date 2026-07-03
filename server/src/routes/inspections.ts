@@ -1358,8 +1358,18 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
 
     console.log('[EXPORT_PDF] Inspection:', { id: inspection.id, hasRecords: !!inspection.records, hasInspectionRecords: !!inspection.inspection_records, recordsCount: records.length });
 
-    // 构建分类和检查项（从 records 转换）
-    const checklistItems = records.map((record: any) => ({
+    // 过滤多余的条码扫描记录，只保留前3条
+    const filteredRecords = records.filter((record: any, index: number, self: any[]) => {
+      if (record.item_name === '条码扫描以及拍照') {
+        // 只保留前3条条码扫描记录
+        const barcodeIndex = self.filter((r, i) => i <= index && r.item_name === '条码扫描以及拍照').length - 1;
+        return barcodeIndex < 3;
+      }
+      return true;
+    });
+
+    // 构建分类和检查项（从 filteredRecords 转换）
+    const checklistItems = filteredRecords.map((record: any) => ({
       id: record.checklist_item_id || record.id,
       name: record.item_name,
       description: record.item_description,
@@ -1378,18 +1388,15 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       categoriesMap.get(category)!.push(item);
     }
     const recordsMap = new Map<number, any>();
-    for (const record of records) recordsMap.set(record.checklist_item_id, record);
+    for (const record of filteredRecords) recordsMap.set(record.checklist_item_id, record);
     console.log('[EXPORT_PDF] Records map:', Array.from(recordsMap.entries()).slice(0, 3));
 
     let passCount = 0, failCount = 0, naCount = 0, pendingCount = 0;
-    for (const item of checklistItems) {
-      const record = recordsMap.get(item.id);
-      if (record) {
-        if (record.result === 'pass') passCount++;
-        else if (record.result === 'fail') failCount++;
-        else if (record.result === 'na') naCount++;
-        else pendingCount++;
-      } else pendingCount++;
+    for (const record of filteredRecords) {
+      if (record.result === 'pass') passCount++;
+      else if (record.result === 'fail') failCount++;
+      else if (record.result === 'na') naCount++;
+      else pendingCount++;
     }
 
   // 使用 Python reportlab 生成 PDF（支持中文）
