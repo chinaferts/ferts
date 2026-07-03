@@ -2591,14 +2591,16 @@ export default function InspectionDetailScreen() {
                     </View>
                   ) : (
                     <>
-                      {/* 已保存的照片预览 */}
+                      {/* 已保存的照片预览 - 问题统计以及拍照并描述检查项不显示照片，照片在问题描述列表中显示 */}
                       {(() => {
                         // 调试日志 - 无论是否有照片都打印
                         console.log(`[PAGE_LOAD] 检查项: ${item.name}, photos:`, item.photos, ', barcodeCodes:', item.barcodeCodes);
                         if (item.photos && item.photos.length > 0) {
                           console.log(`[PHOTO_DEBUG] 照片数量: ${item.photos.length}, 第一张:`, item.photos[0], ', getImageUrl:', getImageUrl(item.photos[0]));
                         }
-                        return item.photos && item.photos.length > 0 ? (
+                        // 问题统计以及拍照并描述检查项不显示照片，照片在问题描述列表中显示
+                        const isProblemStatItem = item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述';
+                        return item.photos && item.photos.length > 0 && !isProblemStatItem ? (
                           <View style={styles.photoPreviewSection}>
                             <View style={styles.photoGridContainer}>
                               {item.photos.map((photo, idx) => (
