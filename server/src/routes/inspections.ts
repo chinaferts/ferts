@@ -890,10 +890,12 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
     // 如果有用户信息，记录提交人
     if (currentUser) {
       updateData.submitted_by = currentUser.id;
-      updateData.inspector_name = currentUser.name; // 更新验货员名称
-    } else if (inspector_name) {
-      // 如果前端传递了验货员名称，也使用它
+    }
+    // 优先使用前端传递的验货员名称，其次使用 session 中的用户名称
+    if (inspector_name) {
       updateData.inspector_name = inspector_name;
+    } else if (currentUser?.name) {
+      updateData.inspector_name = currentUser.name;
     }
 
     const { data, error } = await client
