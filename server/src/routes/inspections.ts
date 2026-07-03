@@ -505,7 +505,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     const unlinkedPhotos = (photos || []).filter((p: any) => !p.record_id);
     
     // 组合数据
-    const checklist_items = (records || []).map((record: any) => {
+    let checklist_items = (records || []).map((record: any) => {
       const item = record.checklist_items;
       // 从 inspection_photos 表获取该记录的照片，并转换为完整URL
       // 优先匹配 record_id，如果没有则分配未关联的照片
@@ -566,6 +566,17 @@ router.get('/:id', async (req: Request, res: Response) => {
         photos: allPhotos,
         barcodeCodes: recordBarcodes
       };
+    });
+
+    // 过滤多余的条码扫描项：只保留前3条
+    const BARCODE_CATEGORY = '条码扫描以及拍照';
+    let barcodeCount = 0;
+    checklist_items = checklist_items.filter((item: any) => {
+      if (item.category === BARCODE_CATEGORY || item.name?.includes('条码')) {
+        barcodeCount++;
+        return barcodeCount <= 3;
+      }
+      return true;
     });
 
     // 按分类分组
