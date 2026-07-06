@@ -16,5 +16,12 @@ export function getApiBaseUrl(): string {
   }
   // 兜底：从 app config 的 extra 中获取
   const extra = (Constants.expoConfig?.extra as Record<string, string> | undefined) || {};
-  return extra.backendBaseUrl || '';
+  if (extra.backendBaseUrl) {
+    return extra.backendBaseUrl;
+  }
+  // 最终兜底：使用 COZE_PROJECT_DOMAIN_DEFAULT 环境变量（构建时注入）
+  if (process.env.COZE_PROJECT_DOMAIN_DEFAULT) {
+    return `https://${process.env.COZE_PROJECT_DOMAIN_DEFAULT}`;
+  }
+  return '';
 }
