@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 /**
  * 获取 API 基础 URL
@@ -19,9 +19,21 @@ export function getApiBaseUrl(): string {
   if (extra.backendBaseUrl) {
     return extra.backendBaseUrl;
   }
+  // 兜底：从 expoUpdates 的 manifest 中获取（适用于 EAS Update 或 Expo Go）
+  const manifestExtra = (Constants.manifest?.extra as Record<string, string> | undefined) || {};
+  if (manifestExtra.backendBaseUrl) {
+    return manifestExtra.backendBaseUrl;
+  }
   // 最终兜底：使用 COZE_PROJECT_DOMAIN_DEFAULT 环境变量（构建时注入）
   if (process.env.COZE_PROJECT_DOMAIN_DEFAULT) {
     return `https://${process.env.COZE_PROJECT_DOMAIN_DEFAULT}`;
+  }
+  // 最后兜底：使用 executionEnvironment 判断是否在 Expo Go 中运行
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+    // 在生产环境中，尝试从 Constants.hostUri 获取
+    if (Constants.hostUri) {
+      return `https://${Constants.hostUri}`;
+    }
   }
   return '';
 }
