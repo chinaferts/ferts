@@ -3306,7 +3306,7 @@ export default function InspectionDetailScreen() {
                           }}
                           onLongPress={isCompleted ? undefined : () => handleRemoveIssuePhoto(index, photoIndex)}
                         >
-                          <Image source={{ uri: photo }} style={styles.issuePhoto} />
+                          <Image source={{ uri: getImageUrl(photo) }} style={styles.issuePhoto} />
                         </TouchableOpacity>
                       );
                     })}
@@ -3370,7 +3370,7 @@ export default function InspectionDetailScreen() {
                         setSelectedPhoto(photo);
                         setPhotoModalVisible(true);
                       }}>
-                        <Image source={{ uri: photo }} style={styles.defectPhotoThumb} />
+                        <Image source={{ uri: getImageUrl(photo) }} style={styles.defectPhotoThumb} />
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -3483,7 +3483,7 @@ export default function InspectionDetailScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.defectPhotoPreview}>
                 {defectPhotos.map((photo, idx) => (
                   <View key={idx} style={styles.defectPhotoItem}>
-                    <Image source={{ uri: photo }} style={styles.defectPhotoThumb} />
+                    <Image source={{ uri: getImageUrl(photo) }} style={styles.defectPhotoThumb} />
                     <TouchableOpacity style={styles.removePhotoBtn}
                       onPress={() => setDefectPhotos(prev => prev.filter((_, i) => i !== idx))}>
                       <Feather name="x" size={14} color="#FF6B6B" />
