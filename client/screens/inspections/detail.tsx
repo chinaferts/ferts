@@ -20,9 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // 获取完整的图片 URL（同步版本，用于 Image source）
 const getImageUrl = (photo: string): string => {
-  console.log('[getImageUrl] 输入:', photo, ', 类型:', typeof photo);
   if (!photo) {
-    console.log('[getImageUrl] 照片为空');
     return '';
   }
   
@@ -34,14 +32,17 @@ const getImageUrl = (photo: string): string => {
   // 如果是本地文件 URI（包括 file://、content://、ph://），直接返回
   // 这些是设备本地路径，可能是当前设备拍摄的 photo:// 或文件路径
   if (photo.startsWith('file:') || photo.startsWith('content://') || photo.startsWith('ph://')) {
-    console.log('[getImageUrl] 本地文件 URI，直接返回:', photo.substring(0, 50));
     return photo;
   }
   
   // 如果是相对路径，拼接到服务器 URL
-  const baseUrl = getApiBaseUrl() || '';
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    console.warn('[getImageUrl] WARNING: getApiBaseUrl() returned empty string! Photo:', photo);
+    // 返回原始路径，让 Image 组件尝试加载
+    return photo;
+  }
   const result = photo.startsWith('/') ? `${baseUrl}${photo}` : `${baseUrl}/${photo}`;
-  console.log('[getImageUrl] 相对路径转换:', result);
   return result;
 };
 

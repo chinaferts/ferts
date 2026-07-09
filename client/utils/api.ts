@@ -26,7 +26,12 @@ export function getApiBaseUrl(): string {
   }
   // 最终兜底：使用 COZE_PROJECT_DOMAIN_DEFAULT 环境变量（构建时注入）
   if (process.env.COZE_PROJECT_DOMAIN_DEFAULT) {
-    return `https://${process.env.COZE_PROJECT_DOMAIN_DEFAULT}`;
+    const domain = process.env.COZE_PROJECT_DOMAIN_DEFAULT;
+    // 如果已经包含协议前缀，直接返回
+    if (domain.startsWith('http://') || domain.startsWith('https://')) {
+      return domain;
+    }
+    return `https://${domain}`;
   }
   // 最后兜底：使用 executionEnvironment 判断是否在 Expo Go 中运行
   if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
