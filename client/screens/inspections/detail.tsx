@@ -2048,6 +2048,64 @@ export default function InspectionDetailScreen() {
           }
         }
 
+        // 保存问题描述列表到 defects 表
+        if (issues.length > 0) {
+          console.log('[SUBMIT] Saving issues to defects table:', issues.length);
+          for (const issue of issues) {
+            // 上传问题照片
+            const uploadedPhotos: string[] = [];
+            for (const photo of issue.photos) {
+              if (photo && (photo.startsWith('file:') || photo.startsWith('content:') || photo.startsWith('ph:'))) {
+                const formData = new FormData();
+                formData.append('photo', {
+                  uri: photo,
+                  type: 'image/jpeg',
+                  name: `photo_${Date.now()}.jpg`,
+                } as any);
+
+                try {
+                  const uploadRes = await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
+                    method: 'POST',
+                    body: formData,
+                  });
+                  if (uploadRes.ok) {
+                    const uploadData = await uploadRes.json();
+                    const serverPath = uploadData.serverPath || uploadData.path || uploadData.photo_url || uploadData.url;
+                    if (serverPath) {
+                      uploadedPhotos.push(serverPath);
+                    }
+                  }
+                } catch (uploadErr) {
+                  console.error('Failed to upload issue photo:', uploadErr);
+                }
+              } else if (photo) {
+                // 已经是服务器路径
+                uploadedPhotos.push(photo);
+              }
+            }
+
+            // 保存缺陷到 defects 表
+            try {
+              const defectRes = await fetch(`${baseUrl}/api/v1/defects`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  inspection_id: parseInt(id as string),
+                  title: issue.text || '问题描述',
+                  description: issue.description || '',
+                  photos: uploadedPhotos,
+                  status: 'open',
+                }),
+              });
+              if (!defectRes.ok) {
+                console.error('Failed to save defect:', await defectRes.text());
+              }
+            } catch (defectErr) {
+              console.error('Failed to save defect:', defectErr);
+            }
+          }
+        }
+
       // 提交验货结果
       const response = await fetch(`${baseUrl}/api/v1/inspections/${id}/submit`, {
         method: 'POST',
