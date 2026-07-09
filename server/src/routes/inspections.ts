@@ -544,7 +544,6 @@ router.get('/:id', async (req: Request, res: Response) => {
     let checklist_items = await Promise.all((records || []).map(async (record: any) => {
       const item = record.checklist_items;
       // 从 inspection_photos 表获取该记录的照片，并转换为完整URL
-      // 优先匹配 record_id，如果没有则分配未关联的照片
       const filteredPhotos = photos?.filter((p: any) => p.record_id === record.id) || [];
       let recordPhotos = await Promise.all(
         filteredPhotos.map((p: any) => toFullUrlAsync(req, p.photo_url))
@@ -552,13 +551,14 @@ router.get('/:id', async (req: Request, res: Response) => {
       
       // 如果该记录没有照片，且有未关联的照片，且该记录是拍照相关项且已检查，则分配未关联的照片
       // 只有已检查的记录（result != 'unchecked'）才能分配照片
-      // "问题统计以及拍照并描述"项可以获取照片（用于在问题列表中显示）
       // "问题描述"项不获取照片（纯文字描述项）
+      // "问题统计以及拍照并描述"项不获取未关联照片（它的问题照片来自前端单独上传，不应显示其他检查项的照片）
       // 不适用的项（result === 'na'）不分配任何照片
       if (recordPhotos.length === 0 && unlinkedPhotos.length > 0 && record.result && record.result !== 'unchecked' && record.result !== 'na') {
         const itemName = (item?.name || record.item_name || '').toLowerCase();
         const isProblemDescOnly = itemName.includes('问题描述') && !itemName.includes('问题统计');
-        const isPhotoRelated = !isProblemDescOnly && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照') || itemName.includes('问题统计'));
+        const isProblemSummary = itemName.includes('问题统计');
+        const isPhotoRelated = !isProblemDescOnly && !isProblemSummary && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照'));
         if (isPhotoRelated) {
           recordPhotos = await Promise.all(unlinkedPhotos.map((p: any) => toFullUrlAsync(req, p.photo_url)));
         }
