@@ -545,8 +545,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       const item = record.checklist_items;
       // 从 inspection_photos 表获取该记录的照片，并转换为完整URL
       // 优先匹配 record_id，如果没有则分配未关联的照片
+      const filteredPhotos = photos?.filter((p: any) => p.record_id === record.id) || [];
       let recordPhotos = await Promise.all(
-        photos?.filter((p: any) => p.record_id === record.id).map((p: any) => toFullUrlAsync(req, p.photo_url)) || []
+        filteredPhotos.map((p: any) => toFullUrlAsync(req, p.photo_url))
       );
       
       // 如果该记录没有照片，且有未关联的照片，且该记录是拍照相关项且已检查，则分配未关联的照片
@@ -571,8 +572,11 @@ router.get('/:id', async (req: Request, res: Response) => {
       // 排除本地文件 URI（file://, content://, ph://）因为这些只能在拍摄设备上访问
       const validImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
       const isValidImage = (p: string) => {
+        if (!p) return false;
         const lower = p.toLowerCase();
-        return validImageExtensions.some(ext => lower.endsWith(ext));
+        // 对于 presigned URL，需要去掉查询参数后再检查扩展名
+        const urlWithoutQuery = lower.split('?')[0];
+        return validImageExtensions.some(ext => urlWithoutQuery.endsWith(ext));
       };
       const isAccessiblePhoto = (p: string) => {
         if (!p) return false;
@@ -587,14 +591,6 @@ router.get('/:id', async (req: Request, res: Response) => {
       const photosFromTable = recordPhotos.filter((p: string) => isValidImage(p));
       // 合并去重
       const allPhotos = [...new Set([...photosFromRecord, ...photosFromTable])];
-      
-      console.log('[GET_INSPECTION] Record:', {
-        id: record.id,
-        item_name: record.item_name,
-        record_photos_field: photosFromRecord,
-        table_photos: photosFromTable,
-        merged_photos: allPhotos
-      });
       
       return {
         id: item.id,
