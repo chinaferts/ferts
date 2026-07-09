@@ -5,6 +5,7 @@ import * as path from 'path';
 import { execSync } from 'child_process';
 import PDFDocument from 'pdfkit';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
+import { uploadPhoto, getPhotoUrl, getPhotoUrls } from '../utils/storage.js';
 
 // 从 session token 获取用户信息
 async function getUserFromSession(req: Request): Promise<{ id: string; name: string } | null> {
@@ -53,7 +54,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// 接收Base64照片并保存到服务器
+// 接收Base64照片并保存到对象存储
 router.post('/import-photo', async (req: Request, res: Response) => {
   try {
     const { photoData, recordId, oldPhotoPath } = req.body;
@@ -68,21 +69,23 @@ router.post('/import-photo', async (req: Request, res: Response) => {
     
     // 检测图片类型
     let extension = '.jpg';
+    let contentType = 'image/jpeg';
     if (photoData.startsWith('data:image/png')) {
       extension = '.png';
+      contentType = 'image/png';
     } else if (photoData.startsWith('data:image/webp')) {
       extension = '.webp';
+      contentType = 'image/webp';
     }
     
     // 生成唯一文件名
     const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}${extension}`;
-    const filePath = path.join(uploadsDir, filename);
     
-    // 保存文件
-    fs.writeFileSync(filePath, buffer);
+    // 上传到对象存储
+    const storageKey = await uploadPhoto(buffer, `photos/${filename}`, contentType);
     
-    // 返回服务器路径（相对于uploads目录）
-    const serverPath = `/uploads/photos/${filename}`;
+    // 生成访问URL
+    const photoUrl = await getPhotoUrl(storageKey);
     
     // 如果提供了recordId和旧照片路径，更新数据库
     if (recordId && isSupabaseConfigured()) {
@@ -104,12 +107,15 @@ router.post('/import-photo', async (req: Request, res: Response) => {
             photos = [];
           }
           
+          // 存储对象存储的key（而非URL），以便后续动态生成URL
+          const photoKey = storageKey;
+          
           // 如果有旧照片路径，替换它
           if (oldPhotoPath && photos.includes(oldPhotoPath)) {
             const index = photos.indexOf(oldPhotoPath);
-            photos[index] = serverPath;
-          } else if (!photos.includes(serverPath)) {
-            photos.push(serverPath);
+            photos[index] = photoKey;
+          } else if (!photos.includes(photoKey)) {
+            photos.push(photoKey);
           }
           
           // 更新数据库
@@ -124,7 +130,7 @@ router.post('/import-photo', async (req: Request, res: Response) => {
       }
     }
     
-    res.json({ success: true, serverPath });
+    res.json({ success: true, serverPath: storageKey, photoUrl });
   } catch (error) {
     console.error('导入照片失败:', error);
     res.status(500).json({ success: false, error: '导入照片失败' });
@@ -204,8 +210,8 @@ router.get('/', async (req: Request, res: Response) => {
           if (!photosMap[record.inspection_id]) {
             photosMap[record.inspection_id] = [];
           }
-          // 转换为完整 URL
-          const fullUrls = record.photos.map((p: string) => toFullUrl(req, p));
+          // 转换为完整 URL（异步）
+          const fullUrls = await Promise.all(record.photos.map((p: string) => toFullUrlAsync(req, p)));
           photosMap[record.inspection_id].push(...fullUrls);
         }
       }
@@ -217,8 +223,8 @@ router.get('/', async (req: Request, res: Response) => {
           if (!photosMap[photo.inspection_id]) {
             photosMap[photo.inspection_id] = [];
           }
-          // 转换为完整 URL
-          const fullUrl = toFullUrl(req, photo.photo_url);
+          // 转换为完整 URL（异步）
+          const fullUrl = await toFullUrlAsync(req, photo.photo_url);
           if (!photosMap[photo.inspection_id].includes(fullUrl)) {
             photosMap[photo.inspection_id].push(fullUrl);
           }
@@ -331,14 +337,38 @@ function getServerBaseUrl(req: Request): string {
   return process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
 }
 
-// 辅助函数：将相对路径转换为完整URL
+// 辅助函数：将相对路径转换为完整URL（同步版本，仅处理旧路径）
 function toFullUrl(req: Request, path: string): string {
   if (!path) return path;
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('file://') || path.startsWith('content://') || path.startsWith('data:')) {
     return path;
   }
+  // 如果是对象存储key（不以/开头），返回原值，后续由异步函数处理
+  if (!path.startsWith('/')) {
+    return path;
+  }
   const baseUrl = getServerBaseUrl(req);
   return path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+}
+
+// 辅助函数：将相对路径或对象存储key转换为完整URL（异步版本）
+async function toFullUrlAsync(req: Request, path: string): Promise<string> {
+  if (!path) return path;
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('file://') || path.startsWith('content://') || path.startsWith('data:')) {
+    return path;
+  }
+  // 如果是旧路径（以/开头），使用服务器URL
+  if (path.startsWith('/')) {
+    const baseUrl = getServerBaseUrl(req);
+    return path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+  }
+  // 否则是对象存储key，生成签名URL
+  try {
+    return await getPhotoUrl(path);
+  } catch (e) {
+    console.error('[toFullUrlAsync] Failed to generate presigned URL for key:', path, e);
+    return path;
+  }
 }
 
 router.get('/:id', async (req: Request, res: Response) => {
@@ -442,7 +472,9 @@ router.get('/:id', async (req: Request, res: Response) => {
         }
         
         // 从 inspection_photos 表获取该记录的照片
-        let recordPhotosFromTable = inspectionPhotos?.filter((p: any) => p.record_id === existingRecord.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
+        let recordPhotosFromTable = await Promise.all(
+          inspectionPhotos?.filter((p: any) => p.record_id === existingRecord.id).map((p: any) => toFullUrlAsync(req, p.photo_url)) || []
+        );
         // 如果没有匹配的照片且有未关联的照片，且是拍照相关项且已检查，则分配未关联的照片
         // 只有已检查的记录（result != 'unchecked'）才能分配照片
         // 排除"问题统计以及拍照并描述"和"问题描述"，这些项的照片在问题列表中单独显示
@@ -451,13 +483,15 @@ router.get('/:id', async (req: Request, res: Response) => {
           const isProblemItem = itemNameLower.includes('问题统计') || itemNameLower.includes('问题描述');
           const isPhotoRelated = !isProblemItem && (itemNameLower.includes('拍照') || itemNameLower.includes('photo') || itemNameLower.includes('条码扫描以及拍照'));
           if (isPhotoRelated) {
-            recordPhotosFromTable = unlinkedInspPhotos.map((p: any) => toFullUrl(req, p.photo_url));
+            recordPhotosFromTable = await Promise.all(unlinkedInspPhotos.map((p: any) => toFullUrlAsync(req, p.photo_url)));
           }
         }
         // 合并 inspection_records.photos 字段和 inspection_photos 表的照片
-        const photosFromRecord = (existingRecord.photos || []).filter((p: string) => 
-          p && (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://'))
-        ).map((p: string) => toFullUrl(req, p));
+        const photosFromRecord = await Promise.all(
+          (existingRecord.photos || []).filter((p: string) => 
+            p && (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || !p.startsWith('/'))
+          ).map((p: string) => toFullUrlAsync(req, p))
+        );
         const allPhotos = [...new Set([...photosFromRecord, ...recordPhotosFromTable])];
         
         return {
@@ -506,12 +540,14 @@ router.get('/:id', async (req: Request, res: Response) => {
     // 获取未关联到具体记录的照片（record_id为空的照片）
     const unlinkedPhotos = (photos || []).filter((p: any) => !p.record_id);
     
-    // 组合数据
-    let checklist_items = (records || []).map((record: any) => {
+    // 组合数据（使用异步处理照片URL）
+    let checklist_items = await Promise.all((records || []).map(async (record: any) => {
       const item = record.checklist_items;
       // 从 inspection_photos 表获取该记录的照片，并转换为完整URL
       // 优先匹配 record_id，如果没有则分配未关联的照片
-      let recordPhotos = photos?.filter((p: any) => p.record_id === record.id).map((p: any) => toFullUrl(req, p.photo_url)) || [];
+      let recordPhotos = await Promise.all(
+        photos?.filter((p: any) => p.record_id === record.id).map((p: any) => toFullUrlAsync(req, p.photo_url)) || []
+      );
       
       // 如果该记录没有照片，且有未关联的照片，且该记录是拍照相关项且已检查，则分配未关联的照片
       // 只有已检查的记录（result != 'unchecked'）才能分配照片
@@ -523,7 +559,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         const isProblemDescOnly = itemName.includes('问题描述') && !itemName.includes('问题统计');
         const isPhotoRelated = !isProblemDescOnly && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照') || itemName.includes('问题统计'));
         if (isPhotoRelated) {
-          recordPhotos = unlinkedPhotos.map((p: any) => toFullUrl(req, p.photo_url));
+          recordPhotos = await Promise.all(unlinkedPhotos.map((p: any) => toFullUrlAsync(req, p.photo_url)));
         }
       }
       
@@ -531,7 +567,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       const recordBarcodeFormats = record.barcode_formats || [];
       
       // 合并两个来源的照片：inspection_records.photos 字段 + inspection_photos 表
-      // 只保留服务器可访问的照片（/uploads/ 或 http/https）
+      // 只保留服务器可访问的照片（/uploads/ 或 http/https）或对象存储key
       // 排除本地文件 URI（file://, content://, ph://）因为这些只能在拍摄设备上访问
       const validImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
       const isValidImage = (p: string) => {
@@ -540,12 +576,14 @@ router.get('/:id', async (req: Request, res: Response) => {
       };
       const isAccessiblePhoto = (p: string) => {
         if (!p) return false;
-        // 只保留服务器可访问的照片
-        return p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://');
+        // 保留服务器可访问的照片或对象存储key（不以/开头的相对路径）
+        return p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || !p.startsWith('/');
       };
-      const photosFromRecord = (record.photos || []).filter((p: string) => 
-        p && isAccessiblePhoto(p) && isValidImage(p)
-      ).map((p: string) => toFullUrl(req, p));
+      const photosFromRecord = await Promise.all(
+        (record.photos || []).filter((p: string) => 
+          p && isAccessiblePhoto(p) && isValidImage(p)
+        ).map((p: string) => toFullUrlAsync(req, p))
+      );
       const photosFromTable = recordPhotos.filter((p: string) => isValidImage(p));
       // 合并去重
       const allPhotos = [...new Set([...photosFromRecord, ...photosFromTable])];
@@ -571,7 +609,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         barcodeCodes: recordBarcodes,
         barcodeFormats: recordBarcodeFormats
       };
-    });
+    }));
 
     // 过滤多余的条码扫描项：只保留前3条
     const BARCODE_CATEGORY = '条码扫描以及拍照';
@@ -622,29 +660,32 @@ router.get('/:id', async (req: Request, res: Response) => {
       checklist_items,
       categories,
       // 如果 defects 为空，从"问题统计以及拍照并描述"检查项中获取照片作为问题描述
-      defects: (defects && defects.length > 0) ? defects : (() => {
+      defects: (defects && defects.length > 0) ? defects : await (async () => {
         const problemStatRecord = records?.find((r: any) => 
           r.item_name === '问题统计以及拍照并描述' || 
           r.category === '问题统计以及拍照并描述'
         );
         if (problemStatRecord && problemStatRecord.photos && Array.isArray(problemStatRecord.photos) && problemStatRecord.photos.length > 0) {
+          const photoUrls = await Promise.all(
+            problemStatRecord.photos.map((p: any) => toFullUrlAsync(req, typeof p === 'string' ? p : p.url || p.photo_url))
+          );
           return [{
             id: 'problem-stat-photos',
             inspection_id: inspection.id,
             description: problemStatRecord.notes || '问题统计照片',
             severity: 'minor',
-            photo_urls: problemStatRecord.photos.map((p: any) => toFullUrl(req, typeof p === 'string' ? p : p.url || p.photo_url)),
+            photo_urls: photoUrls,
             created_at: problemStatRecord.created_at
           }];
         }
         return [];
       })(),
       // 将照片URL转换为完整URL，并确保包含所有验货级别的照片
-      photos: (photos || []).map((p: any) => ({
+      photos: await Promise.all((photos || []).map(async (p: any) => ({
         ...p,
-        photo_url: toFullUrl(req, p.photo_url),
-        url: toFullUrl(req, p.url || p.photo_url)
-      })),
+        photo_url: await toFullUrlAsync(req, p.photo_url),
+        url: await toFullUrlAsync(req, p.url || p.photo_url)
+      }))),
       checkedCount: records?.filter((r: any) => r.result !== 'unchecked').length || 0,
       defectCount: defects?.length || 0
     };
@@ -1263,32 +1304,21 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
       });
     }
 
-    // 保存照片到本地文件系统
-    const uploadDir = isProduction 
-      ? '/tmp/uploads/photos'
-      : path.join(process.cwd(), 'uploads', 'photos');
+    // 上传到对象存储
     const fileName = `${Date.now()}-${file.originalname}`;
-    const filePath = path.join(uploadDir, fileName);
+    const storageKey = await uploadPhoto(file.buffer, `photos/${fileName}`, file.mimetype);
+    console.log('[UPLOAD_PHOTO] 文件已上传到对象存储:', storageKey);
     
-    // 确保目录存在
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    // 存储对象存储的key（而非相对路径）
+    const photoKey = storageKey;
     
-    // 保存文件
-    fs.writeFileSync(filePath, file.buffer);
-    console.log('[UPLOAD_PHOTO] 文件已保存到:', filePath);
-    
-    // 生成访问URL（相对于 uploads 目录）
-    const photoUrl = `/uploads/photos/${fileName}`;
-    
-    // 如果 Supabase 配置了，保存到数据库；否则只返回本地URL
+    // 如果 Supabase 配置了，保存到数据库
     const client = requireSupabaseClient();
     const { data, error } = await client
       .from('inspection_photos')
       .insert({
         inspection_id: parseInt(id as string),
-        photo_url: photoUrl,
+        photo_url: photoKey,
         photo_type: 'checklist',
         record_id: record_id ? parseInt(record_id) : null
       })
