@@ -1344,33 +1344,29 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
 
     let inspection: any;
     
-    // 尝试使用 mock 数据（mockGetInspection 返回完整的验货数据）
-    const mockInspection = mockGetInspection(idStr);
-    if (mockInspection) {
-      inspection = mockInspection;
-    } else {
-      const { data, error } = await client
-        .from('inspections').select('*').eq('id', inspectionId).single();
-      if (error || !data) {
-        res.status(404).json({ success: false, error: 'Inspection not found' });
-        return;
-      }
-      inspection = data;
-      
-      // 获取验货员姓名：优先使用 inspector_name，否则从 profiles 表获取
-      if (!inspection.inspector_name) {
-        const userId = inspection.submitted_by || inspection.created_by;
-        if (userId) {
-          const { data: userData } = await client
-            .from('profiles')
-            .select('name, email, username')
-            .eq('id', userId)
-            .single();
-          if (userData) {
-            inspection.inspector_name = userData.name || userData.email || userData.username || null;
-          }
+    // PDF导出始终使用数据库数据，不使用mock数据
+    const { data, error } = await client
+      .from('inspections').select('*').eq('id', inspectionId).single();
+    if (error || !data) {
+      res.status(404).json({ success: false, error: 'Inspection not found' });
+      return;
+    }
+    inspection = data;
+    
+    // 获取验货员姓名：优先使用 inspector_name，否则从 profiles 表获取
+    if (!inspection.inspector_name) {
+      const userId = inspection.submitted_by || inspection.created_by;
+      if (userId) {
+        const { data: userData } = await client
+          .from('profiles')
+          .select('name, email, username')
+          .eq('id', userId)
+          .single();
+        if (userData) {
+          inspection.inspector_name = userData.name || userData.email || userData.username || null;
         }
       }
+    }
       
       // 从数据库获取 inspection_records
       const { data: recordsData } = await client
@@ -1385,7 +1381,6 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         .select('*')
         .eq('inspection_id', inspectionId);
       inspection.defects = defectsData || [];
-    }
 
     // 获取照片记录
     const { data: photos } = await client
@@ -1437,10 +1432,11 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         }];
       }
     }
-    console.log('[EXPORT_PDF] Photos by record_id:', Array.from(photosByRecordId.entries()).slice(0, 3));
 
-    console.log('[EXPORT_PDF] Inspection:', { id: inspection.id, hasRecords: !!inspection.records, hasInspectionRecords: !!inspection.inspection_records, recordsCount: records.length });
-
+    // 过滤多余的条码扫描记录，只保留前3条（按ID排序）
+    // 先按ID排序，确保顺序正确
+    records.sort((a: any, b: any) => a.id - b.id);
+    
     // 过滤多余的条码扫描记录，只保留前3条
     const filteredRecords = records.filter((record: any, index: number, self: any[]) => {
       if (record.item_name === '条码扫描以及拍照') {
@@ -1474,12 +1470,8 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     });
     
     const checklistItems = filteredRecords.map((record: any) => {
-      // 转换照片URL为签名URL
-      const photos = (record.photos || []).map((p: string) => {
-        if (!p) return p;
-        if (p.startsWith('http://') || p.startsWith('https://')) return p;
-        return recordPhotoUrlMap.get(p) || p;
-      });
+      // 从 photosByRecordId 获取照片（已转换为签名URL）
+      const photos = photosByRecordId.get(record.id) || [];
       return {
         id: record.checklist_item_id || record.id,
         name: record.item_name,
@@ -1501,7 +1493,6 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     }
     const recordsMap = new Map<number, any>();
     for (const record of filteredRecords) recordsMap.set(record.checklist_item_id, record);
-    console.log('[EXPORT_PDF] Records map:', Array.from(recordsMap.entries()).slice(0, 3));
 
     let passCount = 0, failCount = 0, naCount = 0, pendingCount = 0;
     for (const record of filteredRecords) {
