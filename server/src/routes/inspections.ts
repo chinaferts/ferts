@@ -663,7 +663,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         );
         if (problemStatRecord && problemStatRecord.photos && Array.isArray(problemStatRecord.photos) && problemStatRecord.photos.length > 0) {
           const photoUrls = await Promise.all(
-            problemStatRecord.photos.map((p: any) => toFullUrlAsync(req, typeof p === 'string' ? p : p.url || p.photo_url))
+            problemStatRecord.photos.filter((p: any) => p != null).map((p: any) => toFullUrlAsync(req, typeof p === 'string' ? p : p.url || p.photo_url))
           );
           return [{
             id: 'problem-stat-photos',
@@ -677,7 +677,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         return [];
       })(),
       // 将照片URL转换为完整URL，并确保包含所有验货级别的照片
-      photos: await Promise.all((photos || []).map(async (p: any) => ({
+      photos: await Promise.all((photos || []).filter((p: any) => p != null).map(async (p: any) => ({
         ...p,
         photo_url: await toFullUrlAsync(req, p.photo_url),
         url: await toFullUrlAsync(req, p.url || p.photo_url)
