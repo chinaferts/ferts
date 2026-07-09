@@ -1393,15 +1393,27 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       .select('*')
       .eq('inspection_id', inspectionId);
     
-    // 按 record_id 分组照片
+    // 按 record_id 分组照片，并转换为签名URL
     const photosByRecordId = new Map<number, string[]>();
-    if (photos) {
+    if (photos && photos.length > 0) {
+      // 收集所有照片的key
+      const photoKeys = photos.map(p => p.photo_url).filter(Boolean);
+      // 批量获取签名URL
+      const photoUrls = await getPhotoUrls(photoKeys);
+      // 创建 key -> URL 的映射
+      const photoUrlMap = new Map<string, string>();
+      photoKeys.forEach((key, index) => {
+        photoUrlMap.set(key, photoUrls[index]);
+      });
+      
       for (const photo of photos) {
-        if (photo.record_id) {
+        if (photo.record_id && photo.photo_url) {
           if (!photosByRecordId.has(photo.record_id)) {
             photosByRecordId.set(photo.record_id, []);
           }
-          photosByRecordId.get(photo.record_id)!.push(photo.photo_url);
+          // 使用签名URL，如果没有则使用原始key（可能是旧的相对路径）
+          const url = photoUrlMap.get(photo.photo_url) || photo.photo_url;
+          photosByRecordId.get(photo.record_id)!.push(url);
         }
       }
     }
@@ -1440,17 +1452,46 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     });
 
     // 构建分类和检查项（从 filteredRecords 转换）
-    const checklistItems = filteredRecords.map((record: any) => ({
-      id: record.checklist_item_id || record.id,
-      name: record.item_name,
-      description: record.item_description,
-      category: record.item_category,
-      status: record.result,
-      notes: record.notes,
-      record_id: record.id,
-      photos: record.photos || [],
-      barcodeCodes: record.barcode_codes || []
-    }));
+    // 收集所有需要转换的照片key
+    const allPhotoKeys: string[] = [];
+    for (const record of filteredRecords) {
+      if (record.photos && Array.isArray(record.photos)) {
+        for (const p of record.photos) {
+          if (p && !p.startsWith('http://') && !p.startsWith('https://')) {
+            allPhotoKeys.push(p);
+          }
+        }
+      }
+    }
+    // 批量获取签名URL
+    const recordPhotoUrls = await getPhotoUrls(allPhotoKeys);
+    // 创建 key -> url 的映射
+    const recordPhotoUrlMap = new Map<string, string>();
+    allPhotoKeys.forEach((key, idx) => {
+      if (recordPhotoUrls[idx]) {
+        recordPhotoUrlMap.set(key, recordPhotoUrls[idx]);
+      }
+    });
+    
+    const checklistItems = filteredRecords.map((record: any) => {
+      // 转换照片URL为签名URL
+      const photos = (record.photos || []).map((p: string) => {
+        if (!p) return p;
+        if (p.startsWith('http://') || p.startsWith('https://')) return p;
+        return recordPhotoUrlMap.get(p) || p;
+      });
+      return {
+        id: record.checklist_item_id || record.id,
+        name: record.item_name,
+        description: record.item_description,
+        category: record.item_category,
+        status: record.result,
+        notes: record.notes,
+        record_id: record.id,
+        photos,
+        barcodeCodes: record.barcode_codes || []
+      };
+    });
     
     const categoriesMap = new Map<string, any[]>();
     for (const item of checklistItems) {
