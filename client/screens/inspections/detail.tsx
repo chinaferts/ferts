@@ -687,11 +687,11 @@ export default function InspectionDetailScreen() {
           
           if (uploadRes.ok) {
             const uploadData = await uploadRes.json();
-            let serverPath = uploadData.photo_url || uploadData.url || uploadData.path;
+            // 优先使用 serverPath（对象存储key），其次使用 photoUrl（签名URL）
+            let serverPath = uploadData.serverPath || uploadData.photoUrl || uploadData.photo_url || uploadData.url || uploadData.path;
             
-            if (serverPath && !serverPath.startsWith('http') && !serverPath.startsWith('/uploads')) {
-              serverPath = `/uploads/photos/${serverPath}`;
-            }
+            // 不再为对象存储key添加 /uploads/photos/ 前缀
+            // serverPath 可能是对象存储key（如 photos/xxx.png）或完整URL
             
             // 替换本地路径为服务器路径
             newIssues[index].photos[photoIndex] = serverPath;
@@ -1999,13 +1999,8 @@ export default function InspectionDetailScreen() {
               
               if (uploadRes.ok) {
                 const uploadData = await uploadRes.json();
-                // 服务器返回的路径可能是完整的URL或相对路径
-                let serverPath = uploadData.photo_url || uploadData.url || uploadData.path;
-                
-                // 如果返回的是相对路径，补全为完整路径
-                if (serverPath && !serverPath.startsWith('http') && !serverPath.startsWith('/uploads')) {
-                  serverPath = `/uploads/photos/${serverPath}`;
-                }
+                // 优先使用 serverPath（对象存储key），其次使用 photoUrl（签名URL）
+                let serverPath = uploadData.serverPath || uploadData.photoUrl || uploadData.photo_url || uploadData.url || uploadData.path;
                 
                 console.log('[doSubmit] Upload success:', serverPath);
                 
