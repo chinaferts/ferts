@@ -661,18 +661,38 @@ router.get('/:id', async (req: Request, res: Response) => {
           r.item_name === '问题统计以及拍照并描述' || 
           r.category === '问题统计以及拍照并描述'
         );
+        // 优先从 inspection_records.photos 字段获取
         if (problemStatRecord && problemStatRecord.photos && Array.isArray(problemStatRecord.photos) && problemStatRecord.photos.length > 0) {
+          const validPhotos = problemStatRecord.photos.filter((p: any) => p != null && typeof p === 'string' && !p.startsWith('undefined'));
+          if (validPhotos.length > 0) {
+            const photoUrls = await Promise.all(
+              validPhotos.map((p: any) => toFullUrlAsync(req, typeof p === 'string' ? p : p.url || p.photo_url))
+            );
+            return [{
+              id: 'problem-stat-photos',
+              inspection_id: inspection.id,
+              description: problemStatRecord.notes || '问题统计照片',
+              severity: 'minor',
+              photo_urls: photoUrls,
+              created_at: problemStatRecord.created_at
+            }];
+          }
+        }
+        // 兜底：使用未关联照片（兼容历史数据中 record_id 为空的情况）
+        if (unlinkedPhotos.length > 0) {
           const photoUrls = await Promise.all(
-            problemStatRecord.photos.filter((p: any) => p != null).map((p: any) => toFullUrlAsync(req, typeof p === 'string' ? p : p.url || p.photo_url))
+            unlinkedPhotos.filter((p: any) => p && p.photo_url).map((p: any) => toFullUrlAsync(req, p.photo_url))
           );
-          return [{
-            id: 'problem-stat-photos',
-            inspection_id: inspection.id,
-            description: problemStatRecord.notes || '问题统计照片',
-            severity: 'minor',
-            photo_urls: photoUrls,
-            created_at: problemStatRecord.created_at
-          }];
+          if (photoUrls.length > 0) {
+            return [{
+              id: 'problem-stat-photos',
+              inspection_id: inspection.id,
+              description: problemStatRecord?.notes || '问题描述',
+              severity: 'minor',
+              photo_urls: photoUrls,
+              created_at: problemStatRecord?.created_at || inspection.created_at
+            }];
+          }
         }
         return [];
       })(),
@@ -1411,6 +1431,34 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
           photosByRecordId.get(photo.record_id)!.push(url);
         }
       }
+      
+      // 收集未关联照片（record_id 为空），用于分配给没有照片的拍照相关项
+      const unlinkedPhotoUrls: string[] = [];
+      for (const photo of photos) {
+        if (!photo.record_id && photo.photo_url) {
+          const url = photoUrlMap.get(photo.photo_url) || photo.photo_url;
+          unlinkedPhotoUrls.push(url);
+        }
+      }
+      
+      // 将未关联照片分配给没有照片的拍照相关检查项（排除"问题统计"和"问题描述"项）
+      if (unlinkedPhotoUrls.length > 0) {
+        const records = inspection.records || inspection.inspection_records || [];
+        for (const record of records) {
+          // 已有照片的记录不分配
+          if (photosByRecordId.has(record.id) && photosByRecordId.get(record.id)!.length > 0) continue;
+          // 只分配给已检查的记录
+          if (!record.result || record.result === 'unchecked' || record.result === 'na') continue;
+          
+          const itemName = (record.item_name || '').toLowerCase();
+          const isProblemItem = itemName.includes('问题统计') || (itemName.includes('问题描述') && !itemName.includes('拍照'));
+          const isPhotoRelated = !isProblemItem && (itemName.includes('拍照') || itemName.includes('photo'));
+          
+          if (isPhotoRelated) {
+            photosByRecordId.set(record.id, [...unlinkedPhotoUrls]);
+          }
+        }
+      }
     }
     const records = inspection.records || inspection.inspection_records || [];
 
@@ -1419,15 +1467,44 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       r.item_name === '问题统计以及拍照并描述' || r.item_category === '问题统计以及拍照并描述'
     );
     let defects = inspection.defects || [];
-    if (problemStatRecord && problemStatRecord.photos && problemStatRecord.photos.length > 0) {
-      // 如果 defects 为空，但有问题统计照片，则创建一个缺陷记录来显示这些照片
-      if (defects.length === 0) {
+    if (defects.length === 0) {
+      // 优先从 photosByRecordId 获取问题统计记录的照片（来自 inspection_photos 表）
+      let problemPhotos: string[] = [];
+      if (problemStatRecord) {
+        problemPhotos = photosByRecordId.get(problemStatRecord.id) || [];
+      }
+      // 如果 photosByRecordId 没有，尝试从 inspection_records.photos 字段获取
+      if (problemPhotos.length === 0 && problemStatRecord?.photos?.length > 0) {
+        const validPhotos = (problemStatRecord.photos || []).filter((p: any) => p && typeof p === 'string' && !p.startsWith('undefined'));
+        if (validPhotos.length > 0) {
+          // 转换对象存储key为签名URL
+          const photoKeys = validPhotos.filter((p: string) => !p.startsWith('http://') && !p.startsWith('https://'));
+          const existingUrls = validPhotos.filter((p: string) => p.startsWith('http://') || p.startsWith('https://'));
+          if (photoKeys.length > 0) {
+            const signedUrls = await getPhotoUrls(photoKeys);
+            problemPhotos = [...existingUrls, ...signedUrls.filter(Boolean)];
+          } else {
+            problemPhotos = existingUrls;
+          }
+        }
+      }
+      // 如果仍然没有照片，使用未关联照片作为兜底
+      if (problemPhotos.length === 0 && photos && photos.length > 0) {
+        const unlinkedProblemPhotos = photos.filter((p: any) => !p.record_id && p.photo_url);
+        if (unlinkedProblemPhotos.length > 0) {
+          const unlinkedKeys = unlinkedProblemPhotos.map((p: any) => p.photo_url);
+          const unlinkedSignedUrls = await getPhotoUrls(unlinkedKeys);
+          problemPhotos = unlinkedSignedUrls.filter(Boolean);
+        }
+      }
+      
+      if (problemPhotos.length > 0) {
         defects = [{
           id: 0,
           inspection_id: inspectionId,
           description: '问题描述',
           severity: 'minor',
-          photo_urls: problemStatRecord.photos,
+          photo_urls: problemPhotos,
           created_at: new Date().toISOString()
         }];
       }
