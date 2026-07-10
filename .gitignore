@@ -108,3 +108,4 @@ assets/*.gif
 assets/*.webp
 assets/*.svg
 assets/*.ico
+.codegraph
