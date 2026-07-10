@@ -678,7 +678,7 @@ export default function InspectionDetailScreen() {
             name: filename,
             type: 'image/jpeg',
           } as any);
-          formData.append('recordId', String(problemRecordId));
+          formData.append('record_id', String(problemRecordId));
           
           const uploadRes = await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
             method: 'POST',
@@ -687,8 +687,9 @@ export default function InspectionDetailScreen() {
           
           if (uploadRes.ok) {
             const uploadData = await uploadRes.json();
-            // 优先使用 serverPath（对象存储key），其次使用 photoUrl（签名URL）
-            let serverPath = uploadData.serverPath || uploadData.photoUrl || uploadData.photo_url || uploadData.url || uploadData.path;
+            // 后端返回格式: { success: true, data: { photo_url: "...", ... } }
+            const data = uploadData.data || uploadData;
+            let serverPath = data.photo_url || data.url || data.path || uploadData.serverPath;
             
             // 不再为对象存储key添加 /uploads/photos/ 前缀
             // serverPath 可能是对象存储key（如 photos/xxx.png）或完整URL
@@ -1989,7 +1990,7 @@ export default function InspectionDetailScreen() {
                 name: filename,
                 type: 'image/jpeg',
               } as any);
-              formData.append('recordId', String(recordId));
+              formData.append('record_id', String(recordId));
               
               // 上传到服务器 - 使用正确的API路径
               const uploadRes = await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
@@ -1999,16 +2000,19 @@ export default function InspectionDetailScreen() {
               
               if (uploadRes.ok) {
                 const uploadData = await uploadRes.json();
-                // 优先使用 serverPath（对象存储key），其次使用 photoUrl（签名URL）
-                let serverPath = uploadData.serverPath || uploadData.photoUrl || uploadData.photo_url || uploadData.url || uploadData.path;
+                // 后端返回格式: { success: true, data: { photo_url: "...", ... } }
+                const data = uploadData.data || uploadData;
+                let serverPath = data.photo_url || data.url || data.path || uploadData.serverPath || uploadData.photoUrl;
                 
                 console.log('[doSubmit] Upload success:', serverPath);
                 
                 // 收集上传成功的照片
-                if (!uploadedPhotos[recordId]) {
-                  uploadedPhotos[recordId] = [];
+                if (serverPath) {
+                  if (!uploadedPhotos[recordId]) {
+                    uploadedPhotos[recordId] = [];
+                  }
+                  uploadedPhotos[recordId].push(serverPath);
                 }
-                uploadedPhotos[recordId].push(serverPath);
               } else {
                 console.error('[doSubmit] Upload failed, status:', uploadRes.status);
               }
@@ -2057,11 +2061,15 @@ export default function InspectionDetailScreen() {
             for (const photo of issue.photos) {
               if (photo && (photo.startsWith('file:') || photo.startsWith('content:') || photo.startsWith('ph:'))) {
                 const formData = new FormData();
-                formData.append('photo', {
+                formData.append('file', {
                   uri: photo,
                   type: 'image/jpeg',
                   name: `photo_${Date.now()}.jpg`,
                 } as any);
+                // 关联到"问题统计以及拍照并描述"记录，确保照片有正确的 record_id
+                if (problemRecordId) {
+                  formData.append('record_id', String(problemRecordId));
+                }
 
                 try {
                   const uploadRes = await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
@@ -2070,7 +2078,9 @@ export default function InspectionDetailScreen() {
                   });
                   if (uploadRes.ok) {
                     const uploadData = await uploadRes.json();
-                    const serverPath = uploadData.serverPath || uploadData.path || uploadData.photo_url || uploadData.url;
+                    // 后端返回格式: { success: true, data: { photo_url: "...", ... } }
+                    const data = uploadData.data || uploadData;
+                    const serverPath = data.photo_url || data.url || data.path || uploadData.serverPath;
                     if (serverPath) {
                       uploadedPhotos.push(serverPath);
                     }
