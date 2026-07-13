@@ -540,6 +540,30 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     // 获取未关联到具体记录的照片（record_id为空的照片）
     const unlinkedPhotos = (photos || []).filter((p: any) => !p.record_id);
+    const unlinkedPhotoUrls: string[] = unlinkedPhotos.map((p: any) => p.photo_url).filter(Boolean);
+    
+    // 预计算：确定哪些记录需要未关联照片，并逐一分配（每个照片只分配给一个记录）
+    // 先顺序确定分配方案，再并行处理，避免并发时重复分配
+    const recordsNeedingUnlinked: number[] = [];
+    for (const record of records || []) {
+      const filteredPhotos = photos?.filter((p: any) => p.record_id === record.id) || [];
+      const hasLinkedPhotos = filteredPhotos.some((p: any) => p.photo_url);
+      if (!hasLinkedPhotos && unlinkedPhotoUrls.length > 0 && record.result && record.result !== 'unchecked' && record.result !== 'na') {
+        const itemName = (record.checklist_items?.name || record.item_name || '').toLowerCase();
+        const isProblemDescOnly = itemName.includes('问题描述') && !itemName.includes('问题统计');
+        const isPhotoRelated = !isProblemDescOnly && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照') || itemName.includes('问题统计'));
+        if (isPhotoRelated) {
+          recordsNeedingUnlinked.push(record.id);
+        }
+      }
+    }
+    // 逐一分配未关联照片：每个照片只给一个记录，按顺序分配
+    const unlinkedByRecordId = new Map<number, string[]>();
+    recordsNeedingUnlinked.forEach((recordId, index) => {
+      if (unlinkedPhotoUrls[index]) {
+        unlinkedByRecordId.set(recordId, [unlinkedPhotoUrls[index]]);
+      }
+    });
     
     // 组合数据（使用异步处理照片URL）
     let checklist_items = await Promise.all((records || []).map(async (record: any) => {
@@ -548,18 +572,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       const filteredPhotos = photos?.filter((p: any) => p.record_id === record.id) || [];
       let rawRecordPhotos: string[] = filteredPhotos.map((p: any) => p.photo_url).filter(Boolean);
       
-      // 如果该记录没有照片，且有未关联的照片，且该记录是拍照相关项且已检查，则分配未关联的照片
-      // 只有已检查的记录（result != 'unchecked'）才能分配照片
-      // "问题描述"项不获取照片（纯文字描述项）
-      // "问题统计以及拍照并描述"项不获取未关联照片（它的问题照片来自前端单独上传，不应显示其他检查项的照片）
-      // 不适用的项（result === 'na'）不分配任何照片
-      if (rawRecordPhotos.length === 0 && unlinkedPhotos.length > 0 && record.result && record.result !== 'unchecked' && record.result !== 'na') {
-        const itemName = (item?.name || record.item_name || '').toLowerCase();
-        const isProblemDescOnly = itemName.includes('问题描述') && !itemName.includes('问题统计');
-        const isPhotoRelated = !isProblemDescOnly && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照') || itemName.includes('问题统计'));
-        if (isPhotoRelated) {
-          rawRecordPhotos = unlinkedPhotos.map((p: any) => p.photo_url).filter(Boolean);
-        }
+      // 如果该记录没有关联照片，使用预分配的未关联照片（逐一分配，非全部复制）
+      if (rawRecordPhotos.length === 0 && unlinkedByRecordId.has(record.id)) {
+        rawRecordPhotos = unlinkedByRecordId.get(record.id)!;
       }
       
       const recordBarcodes = record.barcode_codes || [];
