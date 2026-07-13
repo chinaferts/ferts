@@ -583,14 +583,14 @@ router.get('/:id', async (req: Request, res: Response) => {
         // 保留服务器可访问的照片或对象存储key（不以/开头的相对路径）
         return p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || !p.startsWith('/');
       };
-      const photosFromRecord = await Promise.all(
-        (record.photos || []).filter((p: string) => 
-          p && isAccessiblePhoto(p) && isValidImage(p)
-        ).map((p: string) => toFullUrlAsync(req, p))
+      // 先基于原始值（storage key）去重，再转换为 URL
+      // 避免同一张照片因 presigned URL 时间戳不同而被 Set 误判为不同照片
+      const rawPhotosFromRecord = (record.photos || []).filter((p: string) => 
+        p && isAccessiblePhoto(p) && isValidImage(p)
       );
-      const photosFromTable = recordPhotos.filter((p: string) => isValidImage(p));
-      // 合并去重
-      const allPhotos = [...new Set([...photosFromRecord, ...photosFromTable])];
+      const rawPhotosFromTable = recordPhotos.filter((p: string) => isValidImage(p));
+      const deduplicatedRaw = [...new Set([...rawPhotosFromRecord, ...rawPhotosFromTable])];
+      const allPhotos = await Promise.all(deduplicatedRaw.map((p: string) => toFullUrlAsync(req, p)));
       
       return {
         id: item.id,
