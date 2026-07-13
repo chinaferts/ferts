@@ -707,7 +707,14 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
                 y -= photo_max_height + 3 * mm
                 photo_x = margin
             
-            photo_path = get_full_photo_path(photo.get('url', ''))
+            # 兼容字符串URL和字典{'url': '...'}两种格式
+            if isinstance(photo, str):
+                photo_url = photo
+            elif isinstance(photo, dict):
+                photo_url = photo.get('url', '')
+            else:
+                photo_url = str(photo) if photo else ''
+            photo_path = get_full_photo_path(photo_url)
             if photo_path and os.path.exists(photo_path):
                 try:
                     draw_photo(c, photo_x, y - photo_max_height, photo_path, photo_max_width, photo_max_height)
