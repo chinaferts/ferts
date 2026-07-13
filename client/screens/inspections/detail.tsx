@@ -17,6 +17,7 @@ import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { GestureHandlerRootView, PinchGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
 
 // 获取完整的图片 URL（同步版本，用于 Image source）
 const getImageUrl = (photo: string): string => {
@@ -221,6 +222,11 @@ export default function InspectionDetailScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [selectedPhotoItem, setSelectedPhotoItem] = useState<ChecklistItem | null>(null);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number>(-1);
+  // 照片缩放/平移状态
+  const [photoScale, setPhotoScale] = useState(1);
+  const [photoTranslate, setPhotoTranslate] = useState({ x: 0, y: 0 });
+  const lastScale = useRef(1);
+  const lastTranslate = useRef({ x: 0, y: 0 });
   const [scannerVisible, setScannerVisible] = useState(false);
   const [scannedCodes, setScannedCodes] = useState<string[]>([]);
   // 拍照临时状态 - 用于新流程：先拍照到预览区，完成后再保存
@@ -2750,6 +2756,7 @@ export default function InspectionDetailScreen() {
                                   if (isCompleted) {
                                     // 已完成验货：点击放大查看
                                     setSelectedPhoto(getImageUrl(photo));
+                                    setPhotoScale(1); setPhotoTranslate({ x: 0, y: 0 }); lastScale.current = 1; lastTranslate.current = { x: 0, y: 0 };
                                     setPhotoModalVisible(true);
                                   } else {
                                     // 未完成验货：跳转到编辑页面
@@ -3373,6 +3380,7 @@ export default function InspectionDetailScreen() {
                           style={styles.issuePhotoItem}
                           onPress={isCompleted ? () => {
                             setSelectedPhoto(getImageUrl(photo));
+                            setPhotoScale(1); setPhotoTranslate({ x: 0, y: 0 }); lastScale.current = 1; lastTranslate.current = { x: 0, y: 0 };
                             setPhotoModalVisible(true);
                           } : () => {
                             setEditingPhoto({ uri: photo, issueIndex: index, photoIndex: photoIndex });
@@ -3380,6 +3388,7 @@ export default function InspectionDetailScreen() {
                           }}
                           onLongPress={isCompleted ? () => {
                             setSelectedPhoto(getImageUrl(photo));
+                            setPhotoScale(1); setPhotoTranslate({ x: 0, y: 0 }); lastScale.current = 1; lastTranslate.current = { x: 0, y: 0 };
                             setPhotoModalVisible(true);
                           } : () => handleRemoveIssuePhoto(index, photoIndex)}
                         >
@@ -3445,6 +3454,7 @@ export default function InspectionDetailScreen() {
                     {defect.photo_urls.map((photo, idx) => (
                       <TouchableOpacity key={idx} onPress={() => {
                         setSelectedPhoto(photo);
+                        setPhotoScale(1); setPhotoTranslate({ x: 0, y: 0 }); lastScale.current = 1; lastTranslate.current = { x: 0, y: 0 };
                         setPhotoModalVisible(true);
                       }}>
                         <Image source={{ uri: getImageUrl(photo) }} style={styles.defectPhotoThumb} />
@@ -3579,13 +3589,78 @@ export default function InspectionDetailScreen() {
 
       {/* 图片预览 Modal */}
       <Modal visible={photoModalVisible} transparent animationType="fade"
-        onRequestClose={() => setPhotoModalVisible(false)}>
-        <View style={styles.photoModalOverlay}>
-          {selectedPhoto && <Image source={{ uri: selectedPhoto }} style={styles.fullPhoto} resizeMode="contain" />}
+        onRequestClose={() => { setPhotoModalVisible(false); setPhotoScale(1); setPhotoTranslate({ x: 0, y: 0 }); }}>
+        <GestureHandlerRootView style={styles.photoModalOverlay}>
+          {selectedPhoto && (
+            <PinchGestureHandler
+              onGestureEvent={(event) => {
+                const newScale = Math.min(Math.max(lastScale.current * event.nativeEvent.scale, 1), 5);
+                setPhotoScale(newScale);
+                if (newScale <= 1) setPhotoTranslate({ x: 0, y: 0 });
+              }}
+              onHandlerStateChange={(event) => {
+                if (event.nativeEvent.state === State.END || event.nativeEvent.state === State.CANCELLED) {
+                  lastScale.current = photoScale;
+                  if (photoScale <= 1) {
+                    lastScale.current = 1;
+                    lastTranslate.current = { x: 0, y: 0 };
+                  }
+                }
+              }}
+            >
+              <PanGestureHandler
+                enabled={photoScale > 1}
+                onGestureEvent={(event) => {
+                  setPhotoTranslate({
+                    x: lastTranslate.current.x + event.nativeEvent.translationX,
+                    y: lastTranslate.current.y + event.nativeEvent.translationY,
+                  });
+                }}
+                onHandlerStateChange={(event) => {
+                  if (event.nativeEvent.state === State.END || event.nativeEvent.state === State.CANCELLED) {
+                    lastTranslate.current = photoTranslate;
+                  }
+                }}
+              >
+                <Image source={{ uri: selectedPhoto }} style={[styles.fullPhoto, { transform: [{ scale: photoScale }, { translateX: photoTranslate.x }, { translateY: photoTranslate.y }] }]} resizeMode="contain" />
+              </PanGestureHandler>
+            </PinchGestureHandler>
+          )}
           {/* 关闭按钮 */}
-          <TouchableOpacity style={styles.closePhotoButton} onPress={() => setPhotoModalVisible(false)}>
+          <TouchableOpacity style={styles.closePhotoButton} onPress={() => { setPhotoModalVisible(false); setPhotoScale(1); setPhotoTranslate({ x: 0, y: 0 }); }}>
             <Feather name="x" size={24} color="#FFFFFF" />
           </TouchableOpacity>
+          {/* 缩放控制按钮 */}
+          <View style={styles.zoomControlButtons}>
+            <TouchableOpacity style={styles.zoomBtn} onPress={() => {
+              const newScale = Math.min(photoScale + 0.5, 5);
+              setPhotoScale(newScale);
+              lastScale.current = newScale;
+            }}>
+              <Feather name="zoom-in" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.zoomBtn} onPress={() => {
+              const newScale = Math.max(photoScale - 0.5, 1);
+              setPhotoScale(newScale);
+              lastScale.current = newScale;
+              if (newScale <= 1) {
+                setPhotoTranslate({ x: 0, y: 0 });
+                lastTranslate.current = { x: 0, y: 0 };
+              }
+            }}>
+              <Feather name="zoom-out" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            {photoScale > 1 && (
+              <TouchableOpacity style={styles.zoomBtn} onPress={() => {
+                setPhotoScale(1);
+                setPhotoTranslate({ x: 0, y: 0 });
+                lastScale.current = 1;
+                lastTranslate.current = { x: 0, y: 0 };
+              }}>
+                <Feather name="maximize" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+          </View>
           {/* 操作按钮区域 */}
           <View style={styles.photoActionButtons}>
             {inspection.status !== 'completed' && (
@@ -3628,7 +3703,7 @@ export default function InspectionDetailScreen() {
               </>
             )}
           </View>
-        </View>
+        </GestureHandlerRootView>
       </Modal>
 
       {/* 扫码说明 Modal */}
@@ -4698,6 +4773,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  zoomControlButtons: {
+    position: 'absolute',
+    bottom: 120,
+    right: 20,
+    flexDirection: 'column',
+    gap: 10,
+    zIndex: 10,
+  },
+  zoomBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
