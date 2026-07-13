@@ -596,13 +596,28 @@ router.get('/:id', async (req: Request, res: Response) => {
         // 保留服务器可访问的照片或对象存储key（不以/开头的相对路径）
         return p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || !p.startsWith('/');
       };
-      // 先基于原始值（storage key）去重，再统一转换为 URL
-      // 避免同一张照片因 presigned URL 时间戳不同而被 Set 误判为不同照片
+      // 先基于文件名去重（同一张照片在两个来源中可能有不同的字符串表示）
+      // 例如：storage key "inspection-photos/abc.jpg" vs presigned URL "https://.../abc.jpg?X-Amz-..."
+      // 通过提取文件名（最后一段路径）来识别同一张照片
       const rawPhotosFromRecord = (record.photos || []).filter((p: string) => 
         p && isAccessiblePhoto(p) && isValidImage(p)
       );
       const rawPhotosFromTable = rawRecordPhotos.filter((p: string) => isValidImage(p));
-      const deduplicatedRaw = [...new Set([...rawPhotosFromRecord, ...rawPhotosFromTable])];
+      const getPhotoKey = (p: string) => {
+        // 提取文件名作为去重 key：取最后一段路径，去掉查询参数
+        const withoutQuery = p.split('?')[0];
+        const parts = withoutQuery.split('/');
+        return parts[parts.length - 1] || p;
+      };
+      const seenKeys = new Set<string>();
+      const deduplicatedRaw: string[] = [];
+      for (const p of [...rawPhotosFromRecord, ...rawPhotosFromTable]) {
+        const key = getPhotoKey(p);
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          deduplicatedRaw.push(p);
+        }
+      }
       const allPhotos = await Promise.all(deduplicatedRaw.map((p: string) => toFullUrlAsync(req, p)));
       
       return {
