@@ -2741,19 +2741,26 @@ export default function InspectionDetailScreen() {
                         // 不适用(na)的检查项也不显示照片
                         const isProblemStatItem = item.category === '问题统计以及拍照并描述' || item.name === '问题统计以及拍照并描述';
                         const isNaItem = item.status === 'na';
+                        const isCompleted = inspection.status === 'completed';
                         return item.photos && item.photos.length > 0 && !isProblemStatItem && !isNaItem ? (
                           <View style={styles.photoPreviewSection}>
                             <View style={styles.photoGridContainer}>
                               {item.photos.map((photo, idx) => (
                                 <TouchableOpacity key={idx} onPress={() => {
-                                  // 点击照片跳转到编辑页面
-                                  router.push('/photo-edit' as any, {
-                                    photos: item.photos,
-                                    initialIndex: idx,
-                                    itemRecordId: item.record_id,
-                                    itemId: item.id,
-                                    inspectionId: id,
-                                  });
+                                  if (isCompleted) {
+                                    // 已完成验货：点击放大查看
+                                    setSelectedPhoto(getImageUrl(photo));
+                                    setPhotoModalVisible(true);
+                                  } else {
+                                    // 未完成验货：跳转到编辑页面
+                                    router.push('/photo-edit' as any, {
+                                      photos: item.photos,
+                                      initialIndex: idx,
+                                      itemRecordId: item.record_id,
+                                      itemId: item.id,
+                                      inspectionId: id,
+                                    });
+                                  }
                                 }} style={styles.photoContainer}>
                                   <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
                                   {item.status !== 'pass' && inspection.status !== 'completed' && (
@@ -3364,11 +3371,17 @@ export default function InspectionDetailScreen() {
                         <TouchableOpacity 
                           key={photoIndex} 
                           style={styles.issuePhotoItem}
-                          onPress={isCompleted ? undefined : () => {
+                          onPress={isCompleted ? () => {
+                            setSelectedPhoto(getImageUrl(photo));
+                            setPhotoModalVisible(true);
+                          } : () => {
                             setEditingPhoto({ uri: photo, issueIndex: index, photoIndex: photoIndex });
                             setEditPhotoModalVisible(true);
                           }}
-                          onLongPress={isCompleted ? undefined : () => handleRemoveIssuePhoto(index, photoIndex)}
+                          onLongPress={isCompleted ? () => {
+                            setSelectedPhoto(getImageUrl(photo));
+                            setPhotoModalVisible(true);
+                          } : () => handleRemoveIssuePhoto(index, photoIndex)}
                         >
                           <Image source={{ uri: getImageUrl(photo) }} style={styles.issuePhoto} />
                         </TouchableOpacity>
