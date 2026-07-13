@@ -481,8 +481,8 @@ router.get('/:id', async (req: Request, res: Response) => {
         // 排除"问题统计以及拍照并描述"和"问题描述"，这些项的照片在问题列表中单独显示
         if (recordPhotosFromTable.length === 0 && unlinkedInspPhotos.length > 0 && existingRecord.result && existingRecord.result !== 'unchecked') {
           const itemNameLower = (item.name || '').toLowerCase();
-          const isProblemItem = itemNameLower.includes('问题统计') || itemNameLower.includes('问题描述');
-          const isPhotoRelated = !isProblemItem && (itemNameLower.includes('拍照') || itemNameLower.includes('photo') || itemNameLower.includes('条码扫描以及拍照'));
+          const isProblemDescOnly = itemNameLower.includes('问题描述') && !itemNameLower.includes('问题统计');
+          const isPhotoRelated = !isProblemDescOnly && (itemNameLower.includes('拍照') || itemNameLower.includes('photo') || itemNameLower.includes('条码扫描以及拍照') || itemNameLower.includes('问题统计'));
           if (isPhotoRelated) {
             recordPhotosFromTable = await Promise.all(unlinkedInspPhotos.map((p: any) => toFullUrlAsync(req, p.photo_url)));
           }
@@ -556,8 +556,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       if (rawRecordPhotos.length === 0 && unlinkedPhotos.length > 0 && record.result && record.result !== 'unchecked' && record.result !== 'na') {
         const itemName = (item?.name || record.item_name || '').toLowerCase();
         const isProblemDescOnly = itemName.includes('问题描述') && !itemName.includes('问题统计');
-        const isProblemSummary = itemName.includes('问题统计');
-        const isPhotoRelated = !isProblemDescOnly && !isProblemSummary && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照'));
+        const isPhotoRelated = !isProblemDescOnly && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照') || itemName.includes('问题统计'));
         if (isPhotoRelated) {
           rawRecordPhotos = unlinkedPhotos.map((p: any) => p.photo_url).filter(Boolean);
         }
