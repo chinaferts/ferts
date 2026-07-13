@@ -6,6 +6,7 @@ import { execSync } from 'child_process';
 import PDFDocument from 'pdfkit';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 import { uploadPhoto, getPhotoUrl, getPhotoUrls } from '../utils/storage.js';
+import { getStorage } from '../utils/storage.js';
 
 // 从 session token 获取用户信息
 async function getUserFromSession(req: Request): Promise<{ id: string; name: string } | null> {
@@ -368,6 +369,24 @@ async function toFullUrlAsync(req: Request, path: string): Promise<string> {
   } catch (e) {
     console.error('[toFullUrlAsync] Failed to generate presigned URL for key:', path, e);
     return path;
+  }
+}
+
+// 从对象存储下载照片到本地临时文件，返回本地路径
+async function downloadPhotoToLocal(photoKey: string): Promise<string | null> {
+  if (!photoKey || photoKey.startsWith('http://') || photoKey.startsWith('https://')) {
+    return photoKey || null;
+  }
+  try {
+    const storage = getStorage();
+    const buffer = await (storage as any).readFile({ key: photoKey });
+    const fileName = `pdf_photo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const localPath = `/tmp/${fileName}`;
+    fs.writeFileSync(localPath, buffer);
+    return localPath;
+  } catch (e) {
+    console.error('[downloadPhotoToLocal] Failed to download photo:', photoKey, e);
+    return null;
   }
 }
 
@@ -1406,41 +1425,51 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       .select('*')
       .eq('inspection_id', inspectionId);
     
-    // 按 record_id 分组照片，并转换为签名URL
+    // 按 record_id 分组照片，下载为本地文件
     const photosByRecordId = new Map<number, string[]>();
     if (photos && photos.length > 0) {
-      // 收集所有照片的key
-      const photoKeys = photos.map(p => p.photo_url).filter(Boolean);
-      // 批量获取签名URL
-      const photoUrls = await getPhotoUrls(photoKeys);
-      // 创建 key -> URL 的映射
-      const photoUrlMap = new Map<string, string>();
-      photoKeys.forEach((key, index) => {
-        photoUrlMap.set(key, photoUrls[index]);
+      // 收集所有唯一的照片key
+      const allPhotoKeys = new Set<string>();
+      for (const photo of photos) {
+        if (photo.photo_url && !photo.photo_url.startsWith('http://') && !photo.photo_url.startsWith('https://')) {
+          allPhotoKeys.add(photo.photo_url);
+        }
+      }
+      // 批量下载照片到本地
+      const keyToLocalPath = new Map<string, string>();
+      const downloadPromises = Array.from(allPhotoKeys).map(async (key) => {
+        const localPath = await downloadPhotoToLocal(key);
+        if (localPath) {
+          keyToLocalPath.set(key, localPath);
+        }
       });
+      await Promise.all(downloadPromises);
       
       for (const photo of photos) {
         if (photo.record_id && photo.photo_url) {
           if (!photosByRecordId.has(photo.record_id)) {
             photosByRecordId.set(photo.record_id, []);
           }
-          // 使用签名URL，如果没有则使用原始key（可能是旧的相对路径）
-          const url = photoUrlMap.get(photo.photo_url) || photo.photo_url;
-          photosByRecordId.get(photo.record_id)!.push(url);
+          const localPath = keyToLocalPath.get(photo.photo_url);
+          if (localPath) {
+            photosByRecordId.get(photo.record_id)!.push(localPath);
+          }
         }
       }
       
       // 收集未关联照片（record_id 为空），用于分配给没有照片的拍照相关项
-      const unlinkedPhotoUrls: string[] = [];
+      const unlinkedPhotoPaths: string[] = [];
       for (const photo of photos) {
         if (!photo.record_id && photo.photo_url) {
-          const url = photoUrlMap.get(photo.photo_url) || photo.photo_url;
-          unlinkedPhotoUrls.push(url);
+          const localPath = keyToLocalPath.get(photo.photo_url);
+          if (localPath) {
+            unlinkedPhotoPaths.push(localPath);
+          }
         }
       }
       
       // 将未关联照片分配给没有照片的拍照相关检查项（排除"问题统计"和"问题描述"项）
-      if (unlinkedPhotoUrls.length > 0) {
+      if (unlinkedPhotoPaths.length > 0) {
         const records = inspection.records || inspection.inspection_records || [];
         for (const record of records) {
           // 已有照片的记录不分配
@@ -1453,7 +1482,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
           const isPhotoRelated = !isProblemItem && (itemName.includes('拍照') || itemName.includes('photo'));
           
           if (isPhotoRelated) {
-            photosByRecordId.set(record.id, [...unlinkedPhotoUrls]);
+            photosByRecordId.set(record.id, [...unlinkedPhotoPaths]);
           }
         }
       }
@@ -1466,7 +1495,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     );
     let defects = inspection.defects || [];
     if (defects.length === 0) {
-      // 优先从 photosByRecordId 获取问题统计记录的照片（来自 inspection_photos 表）
+      // 优先从 photosByRecordId 获取问题统计记录的照片（来自 inspection_photos 表，已是本地路径）
       let problemPhotos: string[] = [];
       if (problemStatRecord) {
         problemPhotos = photosByRecordId.get(problemStatRecord.id) || [];
@@ -1475,14 +1504,15 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       if (problemPhotos.length === 0 && problemStatRecord?.photos?.length > 0) {
         const validPhotos = (problemStatRecord.photos || []).filter((p: any) => p && typeof p === 'string' && !p.startsWith('undefined'));
         if (validPhotos.length > 0) {
-          // 转换对象存储key为签名URL
+          // 下载对象存储key为本地文件
           const photoKeys = validPhotos.filter((p: string) => !p.startsWith('http://') && !p.startsWith('https://'));
-          const existingUrls = validPhotos.filter((p: string) => p.startsWith('http://') || p.startsWith('https://'));
+          const existingPaths = validPhotos.filter((p: string) => p.startsWith('/'));
           if (photoKeys.length > 0) {
-            const signedUrls = await getPhotoUrls(photoKeys);
-            problemPhotos = [...existingUrls, ...signedUrls.filter(Boolean)];
+            const downloadPromises = photoKeys.map((key: string) => downloadPhotoToLocal(key));
+            const downloadedPaths = (await Promise.all(downloadPromises)).filter(Boolean) as string[];
+            problemPhotos = [...existingPaths, ...downloadedPaths];
           } else {
-            problemPhotos = existingUrls;
+            problemPhotos = existingPaths;
           }
         }
       }
@@ -1491,8 +1521,8 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         const unlinkedProblemPhotos = photos.filter((p: any) => !p.record_id && p.photo_url);
         if (unlinkedProblemPhotos.length > 0) {
           const unlinkedKeys = unlinkedProblemPhotos.map((p: any) => p.photo_url);
-          const unlinkedSignedUrls = await getPhotoUrls(unlinkedKeys);
-          problemPhotos = unlinkedSignedUrls.filter(Boolean);
+          const downloadPromises = unlinkedKeys.map(key => downloadPhotoToLocal(key));
+          problemPhotos = (await Promise.all(downloadPromises)).filter(Boolean) as string[];
         }
       }
       
