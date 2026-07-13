@@ -543,24 +543,22 @@ router.get('/:id', async (req: Request, res: Response) => {
     // 组合数据（使用异步处理照片URL）
     let checklist_items = await Promise.all((records || []).map(async (record: any) => {
       const item = record.checklist_items;
-      // 从 inspection_photos 表获取该记录的照片，并转换为完整URL
+      // 从 inspection_photos 表获取该记录的原始 photo_url（storage key），暂不转换
       const filteredPhotos = photos?.filter((p: any) => p.record_id === record.id) || [];
-      let recordPhotos = await Promise.all(
-        filteredPhotos.map((p: any) => toFullUrlAsync(req, p.photo_url))
-      );
+      let rawRecordPhotos: string[] = filteredPhotos.map((p: any) => p.photo_url).filter(Boolean);
       
       // 如果该记录没有照片，且有未关联的照片，且该记录是拍照相关项且已检查，则分配未关联的照片
       // 只有已检查的记录（result != 'unchecked'）才能分配照片
       // "问题描述"项不获取照片（纯文字描述项）
       // "问题统计以及拍照并描述"项不获取未关联照片（它的问题照片来自前端单独上传，不应显示其他检查项的照片）
       // 不适用的项（result === 'na'）不分配任何照片
-      if (recordPhotos.length === 0 && unlinkedPhotos.length > 0 && record.result && record.result !== 'unchecked' && record.result !== 'na') {
+      if (rawRecordPhotos.length === 0 && unlinkedPhotos.length > 0 && record.result && record.result !== 'unchecked' && record.result !== 'na') {
         const itemName = (item?.name || record.item_name || '').toLowerCase();
         const isProblemDescOnly = itemName.includes('问题描述') && !itemName.includes('问题统计');
         const isProblemSummary = itemName.includes('问题统计');
         const isPhotoRelated = !isProblemDescOnly && !isProblemSummary && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照'));
         if (isPhotoRelated) {
-          recordPhotos = await Promise.all(unlinkedPhotos.map((p: any) => toFullUrlAsync(req, p.photo_url)));
+          rawRecordPhotos = unlinkedPhotos.map((p: any) => p.photo_url).filter(Boolean);
         }
       }
       
@@ -583,12 +581,12 @@ router.get('/:id', async (req: Request, res: Response) => {
         // 保留服务器可访问的照片或对象存储key（不以/开头的相对路径）
         return p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || !p.startsWith('/');
       };
-      // 先基于原始值（storage key）去重，再转换为 URL
+      // 先基于原始值（storage key）去重，再统一转换为 URL
       // 避免同一张照片因 presigned URL 时间戳不同而被 Set 误判为不同照片
       const rawPhotosFromRecord = (record.photos || []).filter((p: string) => 
         p && isAccessiblePhoto(p) && isValidImage(p)
       );
-      const rawPhotosFromTable = recordPhotos.filter((p: string) => isValidImage(p));
+      const rawPhotosFromTable = rawRecordPhotos.filter((p: string) => isValidImage(p));
       const deduplicatedRaw = [...new Set([...rawPhotosFromRecord, ...rawPhotosFromTable])];
       const allPhotos = await Promise.all(deduplicatedRaw.map((p: string) => toFullUrlAsync(req, p)));
       
