@@ -53,6 +53,24 @@ export default function ProfileScreen() {
 
         {/* Settings Menu */}
         <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
+          {isAdmin && (
+            <>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push('/settings')}
+              >
+                <View style={styles.menuLeft}>
+                  <Feather name="shield" size={18} color="#DC2626" style={styles.menuIcon} />
+                  <View>
+                    <Text style={[styles.menuText, { color: text }]}>{t('adminSettings')}</Text>
+                    <Text style={[styles.menuTextEn, { color: muted }]}>{t('adminSettingsEn')}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: muted }}>›</Text>
+              </TouchableOpacity>
+              <View style={[styles.divider, { backgroundColor: border }]} />
+            </>
+          )}
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => router.push('/account')}

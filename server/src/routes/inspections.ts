@@ -1733,4 +1733,58 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   }
 });
 
+// 管理员：删除所有验货记录（含关联照片和缺陷）
+router.delete('/admin/cleanup-records', async (req: Request, res: Response) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const supabase = requireSupabaseClient();
+    const { data: userData } = await supabase.from('users').select('role').eq('id', parseInt(userId)).single();
+    if (!userData || userData.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { error: e1 } = await supabase.from('inspection_photos').delete().neq('id', 0);
+    const { error: e2 } = await supabase.from('inspection_records').delete().neq('id', 0);
+    const { error: e3 } = await supabase.from('defects').delete().neq('id', 0);
+    const { error: e4 } = await supabase.from('inspections').delete().neq('id', 0);
+
+    if (e1 || e2 || e3 || e4) {
+      console.error('Cleanup records errors:', { e1, e2, e3, e4 });
+      return res.status(500).json({ error: 'Failed to cleanup records' });
+    }
+
+    res.json({ success: true, message: 'All inspection records deleted' });
+  } catch (err: any) {
+    console.error('Cleanup records error:', err);
+    res.status(500).json({ error: err.message || 'Failed to cleanup records' });
+  }
+});
+
+// 管理员：清除所有验货照片（保留记录）
+router.delete('/admin/cleanup-photos', async (req: Request, res: Response) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const supabase = requireSupabaseClient();
+    const { data: userData } = await supabase.from('users').select('role').eq('id', parseInt(userId)).single();
+    if (!userData || userData.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { error } = await supabase.from('inspection_photos').delete().neq('id', 0);
+    if (error) {
+      console.error('Cleanup photos error:', error);
+      return res.status(500).json({ error: 'Failed to cleanup photos' });
+    }
+
+    res.json({ success: true, message: 'All inspection photos deleted' });
+  } catch (err: any) {
+    console.error('Cleanup photos error:', err);
+    res.status(500).json({ error: err.message || 'Failed to cleanup photos' });
+  }
+});
+
 export default router;
