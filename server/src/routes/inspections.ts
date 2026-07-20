@@ -542,41 +542,18 @@ router.get('/:id', async (req: Request, res: Response) => {
     const unlinkedPhotos = (photos || []).filter((p: any) => !p.record_id);
     const unlinkedPhotoUrls: string[] = unlinkedPhotos.map((p: any) => p.photo_url).filter(Boolean);
     
-    // 预计算：确定哪些记录需要未关联照片，并逐一分配（每个照片只分配给一个记录）
-    // 先顺序确定分配方案，再并行处理，避免并发时重复分配
-    const recordsNeedingUnlinked: number[] = [];
-    for (const record of records || []) {
-      const filteredPhotos = photos?.filter((p: any) => p.record_id === record.id) || [];
-      const hasLinkedPhotos = filteredPhotos.some((p: any) => p.photo_url);
-      if (!hasLinkedPhotos && unlinkedPhotoUrls.length > 0 && record.result && record.result !== 'unchecked' && record.result !== 'na') {
-        const itemName = (record.checklist_items?.name || record.item_name || '').toLowerCase();
-        const isProblemDescOnly = itemName.includes('问题描述') && !itemName.includes('问题统计');
-        const isProblemSummary = itemName.includes('问题统计');
-        const isPhotoRelated = !isProblemDescOnly && !isProblemSummary && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照'));
-        if (isPhotoRelated) {
-          recordsNeedingUnlinked.push(record.id);
-        }
-      }
-    }
-    // 逐一分配未关联照片：每个照片只给一个记录，按顺序分配
+    // 不分配未关联照片给任何检查项
+    // 未关联照片是由于前端bug导致record_id为null的其它检查项照片
+    // 只使用有明确record_id关联的照片
     const unlinkedByRecordId = new Map<number, string[]>();
-    recordsNeedingUnlinked.forEach((recordId, index) => {
-      if (unlinkedPhotoUrls[index]) {
-        unlinkedByRecordId.set(recordId, [unlinkedPhotoUrls[index]]);
-      }
-    });
     
     // 组合数据（使用异步处理照片URL）
     let checklist_items = await Promise.all((records || []).map(async (record: any) => {
       const item = record.checklist_items;
       // 从 inspection_photos 表获取该记录的原始 photo_url（storage key），暂不转换
       const filteredPhotos = photos?.filter((p: any) => p.record_id === record.id) || [];
-      let rawRecordPhotos: string[] = filteredPhotos.map((p: any) => p.photo_url).filter(Boolean);
-      
-      // 如果该记录没有关联照片，使用预分配的未关联照片（逐一分配，非全部复制）
-      if (rawRecordPhotos.length === 0 && unlinkedByRecordId.has(record.id)) {
-        rawRecordPhotos = unlinkedByRecordId.get(record.id)!;
-      }
+      // 只使用有明确record_id关联的照片，不使用未关联照片
+      const rawRecordPhotos: string[] = filteredPhotos.map((p: any) => p.photo_url).filter(Boolean);
       
       const recordBarcodes = record.barcode_codes || [];
       const recordBarcodeFormats = record.barcode_formats || [];
@@ -707,22 +684,8 @@ router.get('/:id', async (req: Request, res: Response) => {
             }];
           }
         }
-        // 兜底：使用未关联照片（兼容历史数据中 record_id 为空的情况）
-        if (unlinkedPhotos.length > 0) {
-          const photoUrls = await Promise.all(
-            unlinkedPhotos.filter((p: any) => p && p.photo_url).map((p: any) => toFullUrlAsync(req, p.photo_url))
-          );
-          if (photoUrls.length > 0) {
-            return [{
-              id: 'problem-stat-photos',
-              inspection_id: inspection.id,
-              description: problemStatRecord?.notes || '问题描述',
-              severity: 'minor',
-              photo_urls: photoUrls,
-              created_at: problemStatRecord?.created_at || inspection.created_at
-            }];
-          }
-        }
+        // 问题描述列表只使用真正属于"问题统计"项的照片
+        // 不使用未关联照片（这些是其它检查项的照片，由于前端bug导致record_id为null）
         return [];
       })(),
       // 将照片URL转换为完整URL，并确保包含所有验货级别的照片
@@ -1511,15 +1474,8 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
           }
         }
       }
-      // 如果仍然没有照片，使用未关联照片作为兜底
-      if (problemPhotos.length === 0 && photos && photos.length > 0) {
-        const unlinkedProblemPhotos = photos.filter((p: any) => !p.record_id && p.photo_url);
-        if (unlinkedProblemPhotos.length > 0) {
-          const unlinkedKeys = unlinkedProblemPhotos.map((p: any) => p.photo_url);
-          const urlPromises = unlinkedKeys.map((key: string) => getPhotoUrl(key));
-          problemPhotos = (await Promise.all(urlPromises)).filter(Boolean) as string[];
-        }
-      }
+      // 问题描述列表只使用真正属于"问题统计"项的照片
+      // 不使用未关联照片（这些是其它检查项的照片，由于前端bug导致record_id为null）
       
       if (problemPhotos.length > 0) {
         defects = [{
