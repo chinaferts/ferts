@@ -1468,7 +1468,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         }
       }
       
-      // 收集未关联照片（record_id 为空），用于分配给没有照片的拍照相关项
+      // 收集未关联照片（record_id 为空），用于问题描述列表
       const unlinkedPhotoUrls: string[] = [];
       for (const photo of photos) {
         if (!photo.record_id && photo.photo_url) {
@@ -1479,24 +1479,8 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         }
       }
       
-      // 将未关联照片分配给没有照片的拍照相关检查项（排除"问题统计"和"问题描述"项）
-      if (unlinkedPhotoUrls.length > 0) {
-        const records = inspection.records || inspection.inspection_records || [];
-        for (const record of records) {
-          // 已有照片的记录不分配
-          if (photosByRecordId.has(record.id) && photosByRecordId.get(record.id)!.length > 0) continue;
-          // 只分配给已检查的记录
-          if (!record.result || record.result === 'unchecked' || record.result === 'na') continue;
-          
-          const itemName = (record.item_name || '').toLowerCase();
-          const isProblemItem = itemName.includes('问题统计') || (itemName.includes('问题描述') && !itemName.includes('拍照'));
-          const isPhotoRelated = !isProblemItem && (itemName.includes('拍照') || itemName.includes('photo'));
-          
-          if (isPhotoRelated) {
-            photosByRecordId.set(record.id, [...unlinkedPhotoUrls]);
-          }
-        }
-      }
+      // PDF导出中不将未关联照片分配给检查项，只使用有明确record_id关联的照片
+      // 未关联照片仅用于问题描述列表（在后续代码中处理）
     }
     const records = inspection.records || inspection.inspection_records || [];
 
