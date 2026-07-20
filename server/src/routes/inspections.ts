@@ -1436,7 +1436,13 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
           if (!photosByRecordId.has(photo.record_id)) {
             photosByRecordId.set(photo.record_id, []);
           }
-          const url = keyToUrl.get(photo.photo_url);
+          // 如果已经是完整URL，直接使用；否则从映射中获取
+          let url: string | undefined;
+          if (photo.photo_url.startsWith('http://') || photo.photo_url.startsWith('https://')) {
+            url = photo.photo_url;
+          } else {
+            url = keyToUrl.get(photo.photo_url);
+          }
           if (url) {
             photosByRecordId.get(photo.record_id)!.push(url);
           }
