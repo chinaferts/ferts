@@ -472,28 +472,55 @@ router.get('/:id', async (req: Request, res: Response) => {
           return null;
         }
         
-        // 从 inspection_photos 表获取该记录的照片
-        let recordPhotosFromTable = await Promise.all(
-          inspectionPhotos?.filter((p: any) => p.record_id === existingRecord.id).map((p: any) => toFullUrlAsync(req, p.photo_url)) || []
-        );
+        // 从 inspection_photos 表获取该记录的照片（storage key）
+        const rawPhotosFromTable = inspectionPhotos
+          ?.filter((p: any) => p.record_id === existingRecord.id)
+          .map((p: any) => p.photo_url)
+          .filter(Boolean) || [];
+        
         // 如果没有匹配的照片且有未关联的照片，且是拍照相关项且已检查，则分配未关联的照片
         // 只有已检查的记录（result != 'unchecked'）才能分配照片
         // 排除"问题统计以及拍照并描述"和"问题描述"，这些项的照片在问题列表中单独显示
-        if (recordPhotosFromTable.length === 0 && unlinkedInspPhotos.length > 0 && existingRecord.result && existingRecord.result !== 'unchecked') {
+        let finalRawPhotos = rawPhotosFromTable;
+        if (rawPhotosFromTable.length === 0 && unlinkedInspPhotos.length > 0 && existingRecord.result && existingRecord.result !== 'unchecked') {
           const itemNameLower = (item.name || '').toLowerCase();
           const isProblemDescOnly = itemNameLower.includes('问题描述') && !itemNameLower.includes('问题统计');
           const isPhotoRelated = !isProblemDescOnly && (itemNameLower.includes('拍照') || itemNameLower.includes('photo') || itemNameLower.includes('条码扫描以及拍照') || itemNameLower.includes('问题统计'));
           if (isPhotoRelated) {
-            recordPhotosFromTable = await Promise.all(unlinkedInspPhotos.map((p: any) => toFullUrlAsync(req, p.photo_url)));
+            finalRawPhotos = unlinkedInspPhotos.map((p: any) => p.photo_url).filter(Boolean);
           }
         }
-        // 合并 inspection_records.photos 字段和 inspection_photos 表的照片
-        const photosFromRecord = await Promise.all(
-          (existingRecord.photos || []).filter((p: string) => 
-            p && (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || !p.startsWith('/'))
-          ).map((p: string) => toFullUrlAsync(req, p))
+        
+        // 合并 inspection_records.photos 字段和 inspection_photos 表的照片（去重）
+        const rawPhotosFromRecord = (existingRecord.photos || []).filter((p: string) => 
+          p && (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || !p.startsWith('/'))
         );
-        const allPhotos = [...new Set([...photosFromRecord, ...recordPhotosFromTable])];
+        
+        // 提取 storage key 进行去重
+        const getStorageKey = (p: string): string => {
+          if (p.startsWith('http://') || p.startsWith('https://')) {
+            try {
+              const url = new URL(p);
+              return url.pathname.replace(/^\//, '');
+            } catch {
+              return p;
+            }
+          }
+          return p.replace(/^\//, '');
+        };
+        
+        const seenKeys = new Set<string>();
+        const deduplicatedRaw: string[] = [];
+        for (const p of [...rawPhotosFromRecord, ...finalRawPhotos]) {
+          const key = getStorageKey(p);
+          if (!seenKeys.has(key)) {
+            seenKeys.add(key);
+            deduplicatedRaw.push(p);
+          }
+        }
+        
+        // 转换为完整 URL
+        const allPhotos = await Promise.all(deduplicatedRaw.map((p: string) => toFullUrlAsync(req, p)));
         
         return {
           id: itemName,  // 使用 item_name 作为 id
