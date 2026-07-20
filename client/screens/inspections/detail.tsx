@@ -866,15 +866,10 @@ export default function InspectionDetailScreen() {
     });
     setBarcodeItems(updatedExtraBarcode);
     
-    // 如果是问题描述的照片，直接更新
+    // 如果是问题描述的照片，更新"问题统计以及拍照并描述"检查项的 photos 数组
     if (editingPhoto?.issueIndex !== undefined && editingPhoto?.photoIndex !== undefined) {
-      const newIssues = [...issues];
-      if (newIssues[editingPhoto.issueIndex]) {
-        newIssues[editingPhoto.issueIndex].photos[editingPhoto.photoIndex] = newUri;
-        setIssues(newIssues);
-      }
-      
-      // 同时更新"问题统计以及拍照并描述"检查项的 photos 数组
+      // 只更新检查项的 photos 数组，不直接更新 issues 数组
+      // 因为问题描述列表的照片来源于检查项，直接更新 issues 会导致重复保存
       setInspection(prev => {
         if (!prev) return prev;
         return {
@@ -892,6 +887,13 @@ export default function InspectionDetailScreen() {
           })
         };
       });
+      
+      // 同步更新 issues 数组（用于前端显示）
+      const newIssues = [...issues];
+      if (newIssues[editingPhoto.issueIndex]) {
+        newIssues[editingPhoto.issueIndex].photos[editingPhoto.photoIndex] = newUri;
+        setIssues(newIssues);
+      }
     }
     
     setEditingPhoto(null);
