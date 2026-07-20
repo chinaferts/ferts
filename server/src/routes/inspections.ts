@@ -551,7 +551,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       if (!hasLinkedPhotos && unlinkedPhotoUrls.length > 0 && record.result && record.result !== 'unchecked' && record.result !== 'na') {
         const itemName = (record.checklist_items?.name || record.item_name || '').toLowerCase();
         const isProblemDescOnly = itemName.includes('问题描述') && !itemName.includes('问题统计');
-        const isPhotoRelated = !isProblemDescOnly && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照') || itemName.includes('问题统计'));
+        const isProblemSummary = itemName.includes('问题统计');
+        const isPhotoRelated = !isProblemDescOnly && !isProblemSummary && (itemName.includes('拍照') || itemName.includes('photo') || itemName.includes('条码扫描以及拍照'));
         if (isPhotoRelated) {
           recordsNeedingUnlinked.push(record.id);
         }

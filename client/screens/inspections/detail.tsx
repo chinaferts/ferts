@@ -3429,45 +3429,6 @@ export default function InspectionDetailScreen() {
           </View>
         )}
 
-        {/* 缺陷记录 */}
-        {inspection.defects.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>缺陷记录 / Defect Records ({inspection.defects.length})</Text>
-            {inspection.defects.map(defect => (
-              <View key={defect.id} style={styles.defectCard}>
-                <View style={styles.defectHeader}>
-                  <View style={[styles.severityBadge, {
-                    backgroundColor: defect.severity === 'critical' ? 'rgba(255,107,107,0.15)'
-                      : defect.severity === 'major' ? 'rgba(253,203,110,0.15)' : 'rgba(14,165,233,0.15)'
-                  }]}>
-                    <Text style={[styles.severityText, {
-                      color: defect.severity === 'critical' ? '#FF6B6B' : defect.severity === 'major' ? '#FDCB6E' : '#0EA5E9'
-                    }]}>
-                      {defect.severity === 'critical' ? t('critical') : defect.severity === 'major' ? t('major') : t('minor')}
-                    </Text>
-                  </View>
-                  <Text style={styles.defectItem}>{defect.title}</Text>
-                </View>
-                <Text style={styles.defectDescription}>{defect.description}</Text>
-                {defect.photo_urls && defect.photo_urls.length > 0 && (
-                  <View style={styles.defectPhotosWrap}>
-                    {defect.photo_urls.map((photo, idx) => (
-                      <TouchableOpacity key={idx} onPress={() => {
-                        setSelectedPhoto(photo);
-                        setPhotoScale(1); setPhotoTranslate({ x: 0, y: 0 }); lastScale.current = 1; lastTranslate.current = { x: 0, y: 0 };
-                        setPhotoModalVisible(true);
-                      }}>
-                        <Image source={{ uri: getImageUrl(photo) }} style={styles.defectPhotoThumb} />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
-
-        )}
-
         {/* 已扫描条码 */}
         {scannedCodes.length > 0 && (
           <View style={styles.section}>
