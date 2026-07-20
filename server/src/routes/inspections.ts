@@ -588,14 +588,14 @@ router.get('/:id', async (req: Request, res: Response) => {
         if (p.startsWith('http://') || p.startsWith('https://')) {
           try {
             const url = new URL(p);
-            // 去掉查询参数，只保留路径
-            return url.pathname;
+            // 去掉查询参数，只保留路径，并去掉开头的/
+            return url.pathname.replace(/^\//, '');
           } catch {
             return p;
           }
         }
-        // 如果是相对路径或 storage key，直接使用
-        return p;
+        // 如果是相对路径或 storage key，去掉开头的/
+        return p.replace(/^\//, '');
       };
       
       // 基于 storage key 去重
