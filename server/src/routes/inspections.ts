@@ -1402,6 +1402,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     
     // 按 record_id 分组照片，生成 presigned URL
     const photosByRecordId = new Map<number, string[]>();
+    let unlinkedPhotoUrls: string[] = [];
     if (photos && photos.length > 0) {
       // 收集所有唯一的照片key，批量生成 presigned URL
       const allPhotoKeys = new Set<string>();
@@ -1431,8 +1432,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         }
       }
       
-      // 收集未关联照片（record_id 为空），用于问题描述列表
-      const unlinkedPhotoUrls: string[] = [];
+      // 收集未关联照片（record_id 为空）
       for (const photo of photos) {
         if (!photo.record_id && photo.photo_url) {
           const url = keyToUrl.get(photo.photo_url);
@@ -1441,9 +1441,6 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
           }
         }
       }
-      
-      // PDF导出中不将未关联照片分配给检查项，只使用有明确record_id关联的照片
-      // 未关联照片仅用于问题描述列表（在后续代码中处理）
     }
     const records = inspection.records || inspection.inspection_records || [];
 
@@ -1618,7 +1615,41 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   
   for (const record of sortedRecords) {
     const name = record.item_name || 'Unknown';
-    const photos = photosByRecordId.get(record.id) || [];
+    // 优先从 photosByRecordId 获取照片（来自 inspection_photos 表，有 record_id）
+    let photos = photosByRecordId.get(record.id) || [];
+    
+    // 如果 photosByRecordId 没有照片，尝试从 record.photos 字段获取（来自 inspection_records 表）
+    if (photos.length === 0 && record.photos && Array.isArray(record.photos) && record.photos.length > 0) {
+      const validPhotos = record.photos.filter((p: any) => p && typeof p === 'string' && !p.startsWith('undefined'));
+      if (validPhotos.length > 0) {
+        // 将对象存储key转换为 presigned URL
+        const photoKeys = validPhotos.filter((p: string) => !p.startsWith('http://') && !p.startsWith('https://'));
+        const existingUrls = validPhotos.filter((p: string) => p.startsWith('http://') || p.startsWith('https://'));
+        if (photoKeys.length > 0) {
+          const urlPromises = photoKeys.map((key: string) => getPhotoUrl(key));
+          const generatedUrls = (await Promise.all(urlPromises)).filter(Boolean) as string[];
+          photos = [...existingUrls, ...generatedUrls];
+        } else {
+          photos = existingUrls;
+        }
+      }
+    }
+    
+    // 如果仍然没有照片，且存在未关联照片，分配一张（避免所有检查项显示相同的照片）
+    if (photos.length === 0 && unlinkedPhotoUrls.length > 0) {
+      // 只分配给拍照相关的检查项
+      const itemNameLower = name.toLowerCase();
+      const isProblemItem = itemNameLower.includes('问题统计') || (itemNameLower.includes('问题描述') && !itemNameLower.includes('拍照'));
+      const isPhotoRelated = !isProblemItem && (itemNameLower.includes('拍照') || itemNameLower.includes('photo') || itemNameLower.includes('条码扫描'));
+      
+      if (isPhotoRelated) {
+        // 从未关联照片中取一张（shift会修改原数组，确保每张只分配一次）
+        const photo = unlinkedPhotoUrls.shift();
+        if (photo) {
+          photos = [photo];
+        }
+      }
+    }
     
     if (name === '条码扫描以及拍照' || name === '条码扫描') {
       // 条码扫描项：合并到同名组
