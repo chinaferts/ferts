@@ -1443,42 +1443,33 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     const photosByRecordId = new Map<number, string[]>();
     if (photos && photos.length > 0) {
       console.log(`[PDF] Total photos: ${photos.length}`);
-      // 收集所有唯一的照片key，批量生成 presigned URL
-      const allPhotoKeys = new Set<string>();
-      for (const photo of photos) {
-        if (photo.photo_url && !photo.photo_url.startsWith('http://') && !photo.photo_url.startsWith('https://')) {
-          allPhotoKeys.add(photo.photo_url);
-        }
-      }
-      console.log(`[PDF] Unique photo keys: ${allPhotoKeys.size}`);
-      const keyToUrl = new Map<string, string>();
-      const urlPromises = Array.from(allPhotoKeys).map(async (key) => {
-        const url = await getPhotoUrl(key);
-        console.log(`[PDF] getPhotoUrl(${key}) = ${url ? 'OK' : 'NULL'}`);
-        if (url) {
-          keyToUrl.set(key, url);
-        }
-      });
-      await Promise.all(urlPromises);
-      console.log(`[PDF] Generated URLs: ${keyToUrl.size}`);
       
       for (const photo of photos) {
         if (photo.record_id && photo.photo_url) {
           if (!photosByRecordId.has(photo.record_id)) {
             photosByRecordId.set(photo.record_id, []);
           }
-          // 如果已经是完整URL，直接使用；否则从映射中获取
+          // 直接生成 presigned URL
           let url: string | undefined;
           if (photo.photo_url.startsWith('http://') || photo.photo_url.startsWith('https://')) {
             url = photo.photo_url;
           } else {
-            url = keyToUrl.get(photo.photo_url);
+            url = await getPhotoUrl(photo.photo_url);
           }
           if (url) {
             photosByRecordId.get(photo.record_id)!.push(url);
+          } else {
+            console.log(`[PDF] Failed to generate URL for: ${photo.photo_url}`);
           }
         }
       }
+      
+      // 打印每个检查项的照片数量
+      for (const [recordId, urls] of photosByRecordId) {
+        console.log(`[PDF] Record ${recordId}: ${urls.length} photos`);
+      }
+    } else {
+      console.log(`[PDF] No photos found for inspection ${inspectionId}`);
     }
     const records = inspection.records || inspection.inspection_records || [];
 
