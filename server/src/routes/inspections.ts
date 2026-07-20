@@ -574,23 +574,35 @@ router.get('/:id', async (req: Request, res: Response) => {
         // 保留服务器可访问的照片或对象存储key（不以/开头的相对路径）
         return p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || !p.startsWith('/');
       };
-      // 先基于文件名去重（同一张照片在两个来源中可能有不同的字符串表示）
-      // 例如：storage key "inspection-photos/abc.jpg" vs presigned URL "https://.../abc.jpg?X-Amz-..."
-      // 通过提取文件名（最后一段路径）来识别同一张照片
+      
       const rawPhotosFromRecord = (record.photos || []).filter((p: string) => 
         p && isAccessiblePhoto(p) && isValidImage(p)
       );
       const rawPhotosFromTable = rawRecordPhotos.filter((p: string) => isValidImage(p));
-      const getPhotoKey = (p: string) => {
-        // 提取文件名作为去重 key：取最后一段路径，去掉查询参数
-        const withoutQuery = p.split('?')[0];
-        const parts = withoutQuery.split('/');
-        return parts[parts.length - 1] || p;
+      
+      // 提取 storage key 作为去重标识
+      // storage key 格式：photos/xxx.jpg 或 inspection-photos/xxx.jpg
+      // presigned URL 格式：https://xxx.com/photos/xxx.jpg?X-Amz-...
+      const getStorageKey = (p: string): string => {
+        // 如果是完整 URL，提取路径部分
+        if (p.startsWith('http://') || p.startsWith('https://')) {
+          try {
+            const url = new URL(p);
+            // 去掉查询参数，只保留路径
+            return url.pathname;
+          } catch {
+            return p;
+          }
+        }
+        // 如果是相对路径或 storage key，直接使用
+        return p;
       };
+      
+      // 基于 storage key 去重
       const seenKeys = new Set<string>();
       const deduplicatedRaw: string[] = [];
       for (const p of [...rawPhotosFromRecord, ...rawPhotosFromTable]) {
-        const key = getPhotoKey(p);
+        const key = getStorageKey(p);
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           deduplicatedRaw.push(p);
