@@ -1415,6 +1415,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     // 按 record_id 分组照片，生成 presigned URL
     const photosByRecordId = new Map<number, string[]>();
     if (photos && photos.length > 0) {
+      console.log(`[PDF] Total photos: ${photos.length}`);
       // 收集所有唯一的照片key，批量生成 presigned URL
       const allPhotoKeys = new Set<string>();
       for (const photo of photos) {
@@ -1422,14 +1423,17 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
           allPhotoKeys.add(photo.photo_url);
         }
       }
+      console.log(`[PDF] Unique photo keys: ${allPhotoKeys.size}`);
       const keyToUrl = new Map<string, string>();
       const urlPromises = Array.from(allPhotoKeys).map(async (key) => {
         const url = await getPhotoUrl(key);
+        console.log(`[PDF] getPhotoUrl(${key}) = ${url ? 'OK' : 'NULL'}`);
         if (url) {
           keyToUrl.set(key, url);
         }
       });
       await Promise.all(urlPromises);
+      console.log(`[PDF] Generated URLs: ${keyToUrl.size}`);
       
       for (const photo of photos) {
         if (photo.record_id && photo.photo_url) {
