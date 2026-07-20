@@ -1526,6 +1526,10 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     const checklistItems = filteredRecords.map((record: any) => {
       // 从 photosByRecordId 获取照片（已转换为签名URL）
       const photos = photosByRecordId.get(record.id) || [];
+      // 调试日志：记录每个检查项的照片数量
+      if (photos.length > 0) {
+        console.log(`[PDF] 检查项 ${record.item_name} (id: ${record.id}) 有 ${photos.length} 张照片`);
+      }
       return {
         id: record.checklist_item_id || record.id,
         name: record.item_name,
@@ -1538,6 +1542,10 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
         barcodeCodes: record.barcode_codes || []
       };
     });
+    
+    // 调试日志：记录总共有多少检查项有照片
+    const itemsWithPhotos = checklistItems.filter(item => item.photos.length > 0);
+    console.log(`[PDF] 总共 ${checklistItems.length} 个检查项，${itemsWithPhotos.length} 个有照片`);
     
     const categoriesMap = new Map<string, any[]>();
     for (const item of checklistItems) {

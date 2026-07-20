@@ -257,10 +257,15 @@ def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=
         # 获取完整路径或下载网络图片
         if photo_path.startswith('http'):
             import requests
-            response = requests.get(photo_path, timeout=10)
-            if response.status_code == 200:
-                img_data = response.content
-            else:
+            try:
+                response = requests.get(photo_path, timeout=10)
+                if response.status_code == 200:
+                    img_data = response.content
+                else:
+                    print(f"下载照片失败: {photo_path}, 状态码: {response.status_code}")
+                    return 0
+            except Exception as e:
+                print(f"下载照片异常: {photo_path}, 错误: {e}")
                 return 0
         else:
             full_path = get_full_photo_path(photo_path)
