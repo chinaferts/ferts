@@ -49,6 +49,31 @@ if command -v python3 &> /dev/null; then
 fi
 info "==================== Python 依赖安装完成！===================="
 
+# ============== 安装中文字体（构建阶段有root权限）======================
+info "==================== 安装中文字体 ===================="
+FONT_PATH="/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+if [ ! -f "$FONT_PATH" ]; then
+  info "在构建阶段安装中文字体..."
+  if command -v apt-get &> /dev/null; then
+    apt-get update -qq 2>/dev/null && apt-get install -y -qq fonts-wqy-microhei 2>/dev/null || \
+    warn "apt-get 安装中文字体失败"
+  elif command -v yum &> /dev/null; then
+    yum install -y -q wqy-microhei-fonts 2>/dev/null || \
+    warn "yum 安装中文字体失败"
+  else
+    warn "未找到包管理器，跳过中文字体安装"
+  fi
+  
+  if [ ! -f "$FONT_PATH" ]; then
+    warn "中文字体未找到，PDF可能无法显示中文"
+  else
+    info "中文字体安装成功"
+  fi
+else
+  info "中文字体已存在"
+fi
+info "==================== 中文字体安装完成！===================="
+
 info "==================== 客户端打包 ===================="
 info "开始执行：npx expo export (client)"
 (cd "$ROOT_DIR/client" && npx expo export --platform web) || error "客户端打包失败"

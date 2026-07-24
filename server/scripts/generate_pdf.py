@@ -13,13 +13,29 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
 
-# 注册中文字体 - 使用项目自带的文泉驿微米黑
+# 注册中文字体 - 优先使用项目自带字体，备选使用系统字体
 script_dir = os.path.dirname(os.path.abspath(__file__))
 FONT_PATH = os.path.join(script_dir, 'wqy-microhei.ttc')
+
+# 如果项目自带字体不存在，尝试使用系统字体
 if not os.path.exists(FONT_PATH):
-    raise FileNotFoundError(f'中文字体文件不存在: {FONT_PATH}')
+    system_font_paths = [
+        '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+        '/usr/share/fonts/wqy-microhei/wqy-microhei.ttc',
+        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+    ]
+    for sys_font in system_font_paths:
+        if os.path.exists(sys_font):
+            FONT_PATH = sys_font
+            print(f'[INFO] 使用系统中文字体：{FONT_PATH}', file=sys.stderr)
+            break
+
+if not os.path.exists(FONT_PATH):
+    raise FileNotFoundError(f'中文字体文件不存在：{FONT_PATH}')
+
 # TTC 是字体集合，需要指定 subfontIndex（0 是第一个字体）
 pdfmetrics.registerFont(TTFont('ChineseFont', FONT_PATH, subfontIndex=0))
+print(f'[INFO] 中文字体注册成功：{FONT_PATH}', file=sys.stderr)
 
 # 服务器uploads目录基础路径
 # 开发环境: /workspace/projects/server

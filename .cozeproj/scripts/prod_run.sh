@@ -24,9 +24,25 @@ info "检查中文字体..."
 FONT_PATH="/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
 if [ ! -f "$FONT_PATH" ]; then
   info "安装中文字体..."
-  apt-get update -qq && apt-get install -y -qq fonts-wqy-microhei 2>/dev/null || \
-  yum install -y -q wqy-microhei-fonts 2>/dev/null || \
-  warn "中文字体安装失败，PDF可能无法显示中文"
+  # 尝试多种安装方式
+  if command -v apt-get &> /dev/null; then
+    apt-get update -qq 2>/dev/null && apt-get install -y -qq fonts-wqy-microhei 2>/dev/null || \
+    warn "apt-get 安装中文字体失败"
+  elif command -v yum &> /dev/null; then
+    yum install -y -q wqy-microhei-fonts 2>/dev/null || \
+    warn "yum 安装中文字体失败"
+  else
+    warn "未找到包管理器，跳过中文字体安装"
+  fi
+  
+  # 再次检查字体是否安装成功
+  if [ ! -f "$FONT_PATH" ]; then
+    warn "中文字体未找到，PDF可能无法显示中文"
+  else
+    info "中文字体安装成功"
+  fi
+else
+  info "中文字体已存在"
 fi
 info "中文字体检查完成"
 
