@@ -1471,7 +1471,8 @@ export default function InspectionDetailScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           result: 'pass',
-          photos: allPhotos,
+          // 不保存 photos 到 inspection_records.photos 字段，避免重复
+          // 照片已经保存到 inspection_photos 表
         }),
       });
       
