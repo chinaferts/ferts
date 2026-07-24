@@ -373,12 +373,8 @@ export default function InspectionDetailScreen() {
             });
             setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
             
-            // 同时更新数据库中的 photos 字段
-            await fetch(`${getApiBaseUrl()}/api/v1/inspections/${id}/checklist-items/${targetRecordId}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ photos: [...(updatedItems.find(i => i.record_id === targetRecordId)?.photos || [])] }),
-            });
+            // 不更新 inspection_records.photos 字段，避免照片重复
+            // 照片已经保存到 inspection_photos 表
           }
         } else {
           console.error('[UploadPhoto] 上传失败，状态码:', response.status);
@@ -1086,11 +1082,8 @@ export default function InspectionDetailScreen() {
             const serverUrl = result.data?.photo_url;
             if (serverUrl) {
               updatedItems[itemIndex].photos[photoIndex] = serverUrl;
-              await fetch(`${getApiBaseUrl()}/api/v1/inspections/${id}/checklist-items/${itemRecordId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ photos: updatedItems[itemIndex].photos }),
-              });
+              // 不更新 inspection_records.photos 字段，避免照片重复
+              // 照片已经保存到 inspection_photos 表
             }
           }
         }
@@ -1137,7 +1130,8 @@ export default function InspectionDetailScreen() {
             category: item.category,
             item_category: item.category,
             result: status,
-            photos: photosToSave,
+            // 不保存 photos 到 inspection_records.photos 字段，避免照片重复
+            // 照片已经保存到 inspection_photos 表
             barcode_codes: barcodeCodesToSave,
             barcode_type: item.barcodeType,
           }),
@@ -1416,7 +1410,8 @@ export default function InspectionDetailScreen() {
             category: tempPhotoTarget.category,
             item_category: tempPhotoTarget.category,
             result: 'pass',
-            photos: allPhotos,
+            // 不保存 photos 到 inspection_records.photos 字段，避免照片重复
+            // 照片已经保存到 inspection_photos 表
             barcode_codes: tempPhotoTarget.barcodeCodes || [],
             barcode_type: tempPhotoTarget.barcodeType,
           }),
@@ -2050,12 +2045,8 @@ export default function InspectionDetailScreen() {
                 // 去重：只保留唯一的照片路径
                 updatedPhotos = Array.from(new Set(updatedPhotos));
                 
-                // 更新到服务器 (使用 record_id)
-                await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items/${item.record_id}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ photos: updatedPhotos }),
-                });
+                // 不更新 inspection_records.photos 字段，避免照片重复
+                // 照片已经保存到 inspection_photos 表
               }
             }
           }
