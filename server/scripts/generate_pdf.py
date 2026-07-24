@@ -13,25 +13,40 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
 
-# 注册中文字体 - 优先使用项目自带字体，备选使用系统字体
+# 注册中文字体 - 优先使用系统字体，备选使用项目自带字体
 script_dir = os.path.dirname(os.path.abspath(__file__))
-FONT_PATH = os.path.join(script_dir, 'wqy-microhei.ttc')
 
-# 如果项目自带字体不存在，尝试使用系统字体
-if not os.path.exists(FONT_PATH):
-    system_font_paths = [
-        '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-        '/usr/share/fonts/wqy-microhei/wqy-microhei.ttc',
-        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-    ]
-    for sys_font in system_font_paths:
-        if os.path.exists(sys_font):
-            FONT_PATH = sys_font
-            print(f'[INFO] 使用系统中文字体：{FONT_PATH}', file=sys.stderr)
-            break
+# 首先尝试系统字体（生产环境通常已安装）
+system_font_paths = [
+    '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+    '/usr/share/fonts/wqy-microhei/wqy-microhei.ttc',
+    '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+]
 
-if not os.path.exists(FONT_PATH):
-    raise FileNotFoundError(f'中文字体文件不存在：{FONT_PATH}')
+FONT_PATH = None
+for sys_font in system_font_paths:
+    if os.path.exists(sys_font):
+        FONT_PATH = sys_font
+        print(f'[INFO] 使用系统中文字体：{FONT_PATH}', file=sys.stderr)
+        break
+
+# 如果系统字体不存在，尝试项目自带字体
+if not FONT_PATH:
+    project_font = os.path.join(script_dir, 'wqy-microhei.ttc')
+    if os.path.exists(project_font) and os.path.getsize(project_font) > 1000:  # 检查文件大小，避免损坏文件
+        FONT_PATH = project_font
+        print(f'[INFO] 使用项目自带字体：{FONT_PATH}', file=sys.stderr)
+
+if not FONT_PATH:
+    # 列出所有可能的字体路径供调试
+    import subprocess
+    try:
+        result = subprocess.run(['fc-list', ':lang=zh'], capture_output=True, text=True)
+        print(f'[DEBUG] 系统中文字体列表：{result.stdout}', file=sys.stderr)
+    except:
+        pass
+    raise FileNotFoundError(f'中文字体文件不存在，已尝试路径：{system_font_paths + [os.path.join(script_dir, "wqy-microhei.ttc")]}')
 
 # TTC 是字体集合，需要指定 subfontIndex（0 是第一个字体）
 pdfmetrics.registerFont(TTFont('ChineseFont', FONT_PATH, subfontIndex=0))
