@@ -46,6 +46,19 @@ import {
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+// 提取 storage key 进行去重
+function getStorageKey(p: string): string {
+  if (p.startsWith('http://') || p.startsWith('https://')) {
+    try {
+      const url = new URL(p);
+      return url.pathname.replace(/^\//, '');
+    } catch {
+      return p;
+    }
+  }
+  return p.replace(/^\//, '');
+}
+
 // 上传目录 - 生产环境使用 /tmp，本地开发使用项目目录
 const isProduction = process.env.NODE_ENV === 'production' || process.env.IS_PROD === 'true';
 const uploadsDir = isProduction 
@@ -460,19 +473,6 @@ router.get('/:id', async (req: Request, res: Response) => {
         const rawPhotosFromRecord = (existingRecord.photos || []).filter((p: string) => 
           p && (p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || !p.startsWith('/'))
         );
-        
-        // 提取 storage key 进行去重
-        const getStorageKey = (p: string): string => {
-          if (p.startsWith('http://') || p.startsWith('https://')) {
-            try {
-              const url = new URL(p);
-              return url.pathname.replace(/^\//, '');
-            } catch {
-              return p;
-            }
-          }
-          return p.replace(/^\//, '');
-        };
         
         const seenKeys = new Set<string>();
         const deduplicatedRaw: string[] = [];
@@ -1473,7 +1473,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     });
     
     // 调试日志：记录总共有多少检查项有照片
-    const itemsWithPhotos = checklistItems.filter(item => item.photos.length > 0);
+    const itemsWithPhotos = checklistItems.filter((item: any) => item.photos.length > 0);
     console.log(`[PDF] 总共 ${checklistItems.length} 个检查项，${itemsWithPhotos.length} 个有照片`);
     
     const categoriesMap = new Map<string, any[]>();
