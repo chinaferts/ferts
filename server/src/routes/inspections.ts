@@ -577,65 +577,26 @@ router.get('/:id', async (req: Request, res: Response) => {
     // 组合数据（使用异步处理照片URL）
     let checklist_items = await Promise.all((records || []).map(async (record: any) => {
       const item = record.checklist_items;
-      // 从 inspection_photos 表获取该记录的原始 photo_url（storage key），暂不转换
+      // 只从 inspection_photos 表获取照片（唯一数据源）
       const filteredPhotos = photos?.filter((p: any) => p.record_id === record.id) || [];
-      // 只使用有明确record_id关联的照片，不使用未关联照片
       const rawRecordPhotos: string[] = filteredPhotos.map((p: any) => p.photo_url).filter(Boolean);
       
       const recordBarcodes = record.barcode_codes || [];
       const recordBarcodeFormats = record.barcode_formats || [];
       
-      // 合并两个来源的照片：inspection_records.photos 字段 + inspection_photos 表
-      // 只保留服务器可访问的照片（/uploads/ 或 http/https）或对象存储key
-      // 排除本地文件 URI（file://, content://, ph://）因为这些只能在拍摄设备上访问
+      // 验证照片格式
       const validImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
       const isValidImage = (p: string) => {
         if (!p) return false;
         const lower = p.toLowerCase();
-        // 对于 presigned URL，需要去掉查询参数后再检查扩展名
         const urlWithoutQuery = lower.split('?')[0];
         return validImageExtensions.some(ext => urlWithoutQuery.endsWith(ext));
       };
-      const isAccessiblePhoto = (p: string) => {
-        if (!p) return false;
-        // 保留服务器可访问的照片或对象存储key（不以/开头的相对路径）
-        return p.startsWith('/uploads/') || p.startsWith('http://') || p.startsWith('https://') || !p.startsWith('/');
-      };
       
-      const rawPhotosFromRecord = (record.photos || []).filter((p: string) => 
-        p && isAccessiblePhoto(p) && isValidImage(p)
-      );
       const rawPhotosFromTable = rawRecordPhotos.filter((p: string) => isValidImage(p));
       
-      // 提取 storage key 作为去重标识
-      // storage key 格式：photos/xxx.jpg 或 inspection-photos/xxx.jpg
-      // presigned URL 格式：https://xxx.com/photos/xxx.jpg?X-Amz-...
-      const getStorageKey = (p: string): string => {
-        // 如果是完整 URL，提取路径部分
-        if (p.startsWith('http://') || p.startsWith('https://')) {
-          try {
-            const url = new URL(p);
-            // 去掉查询参数，只保留路径，并去掉开头的/
-            return url.pathname.replace(/^\//, '');
-          } catch {
-            return p;
-          }
-        }
-        // 如果是相对路径或 storage key，去掉开头的/
-        return p.replace(/^\//, '');
-      };
-      
-      // 基于 storage key 去重
-      const seenKeys = new Set<string>();
-      const deduplicatedRaw: string[] = [];
-      for (const p of [...rawPhotosFromRecord, ...rawPhotosFromTable]) {
-        const key = getStorageKey(p);
-        if (!seenKeys.has(key)) {
-          seenKeys.add(key);
-          deduplicatedRaw.push(p);
-        }
-      }
-      const allPhotos = await Promise.all(deduplicatedRaw.map((p: string) => toFullUrlAsync(req, p)));
+      // 转换为完整 URL
+      const allPhotos = await Promise.all(rawPhotosFromTable.map((p: string) => toFullUrlAsync(req, p)));
       
       return {
         id: item.id,
@@ -1479,26 +1440,10 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     );
     let defects = inspection.defects || [];
     if (defects.length === 0) {
-      // 优先从 photosByRecordId 获取问题统计记录的照片（来自 inspection_photos 表，已是 presigned URL）
+      // 只从 inspection_photos 表获取问题统计记录的照片（唯一数据源）
       let problemPhotos: string[] = [];
       if (problemStatRecord) {
         problemPhotos = photosByRecordId.get(problemStatRecord.id) || [];
-      }
-      // 如果 photosByRecordId 没有，尝试从 inspection_records.photos 字段获取
-      if (problemPhotos.length === 0 && problemStatRecord?.photos?.length > 0) {
-        const validPhotos = (problemStatRecord.photos || []).filter((p: any) => p && typeof p === 'string' && !p.startsWith('undefined'));
-        if (validPhotos.length > 0) {
-          // 将对象存储key转换为 presigned URL
-          const photoKeys = validPhotos.filter((p: string) => !p.startsWith('http://') && !p.startsWith('https://'));
-          const existingUrls = validPhotos.filter((p: string) => p.startsWith('http://') || p.startsWith('https://'));
-          if (photoKeys.length > 0) {
-            const urlPromises = photoKeys.map((key: string) => getPhotoUrl(key));
-            const generatedUrls = (await Promise.all(urlPromises)).filter(Boolean) as string[];
-            problemPhotos = [...existingUrls, ...generatedUrls];
-          } else {
-            problemPhotos = existingUrls;
-          }
-        }
       }
       // 问题描述列表只使用真正属于"问题统计"项的照片
       // 不使用未关联照片（这些是其它检查项的照片，由于前端bug导致record_id为null）
@@ -1652,36 +1597,14 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   
   for (const record of sortedRecords) {
     const name = record.item_name || 'Unknown';
-    // 只使用有明确record_id关联的照片（来自inspection_photos表）
-    let photos = photosByRecordId.get(record.id) || [];
+    // 只使用 inspection_photos 表中的照片（唯一数据源）
+    const photos = photosByRecordId.get(record.id) || [];
     
     // 调试日志：输出照片数量
     if (photos.length > 0) {
-      console.log(`[PDF Debug] Record ${record.id} (${record.item_name}): ${photos.length} photos from photosByRecordId`);
+      console.log(`[PDF Debug] Record ${record.id} (${record.item_name}): ${photos.length} photos`);
       console.log(`[PDF Debug] First photo URL: ${photos[0]}`);
-    }
-    
-    // 如果photosByRecordId没有照片，尝试从record.photos字段获取（来自inspection_records表）
-    if (photos.length === 0 && record.photos && Array.isArray(record.photos) && record.photos.length > 0) {
-      console.log(`[PDF Debug] Record ${record.id} (${record.item_name}): trying record.photos field, ${record.photos.length} photos`);
-      const validPhotos = record.photos.filter((p: any) => p && typeof p === 'string' && !p.startsWith('undefined'));
-      if (validPhotos.length > 0) {
-        // 将对象存储key转换为presigned URL
-        const photoKeys = validPhotos.filter((p: string) => !p.startsWith('http://') && !p.startsWith('https://'));
-        const existingUrls = validPhotos.filter((p: string) => p.startsWith('http://') || p.startsWith('https://'));
-        console.log(`[PDF Debug] photoKeys: ${photoKeys.length}, existingUrls: ${existingUrls.length}`);
-        if (photoKeys.length > 0) {
-          const urlPromises = photoKeys.map((key: string) => getPhotoUrl(key));
-          const generatedUrls = (await Promise.all(urlPromises)).filter(Boolean) as string[];
-          console.log(`[PDF Debug] Generated URLs: ${generatedUrls.length}`);
-          photos = [...existingUrls, ...generatedUrls];
-        } else {
-          photos = existingUrls;
-        }
-      }
-    }
-    
-    if (photos.length === 0) {
+    } else {
       console.log(`[PDF Debug] Record ${record.id} (${record.item_name}): NO photos`);
     }
     
