@@ -260,7 +260,7 @@ def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=
         if photo_path.startswith('http'):
             import requests
             try:
-                response = requests.get(photo_path, timeout=10)
+                response = requests.get(photo_path, timeout=30)
                 if response.status_code == 200:
                     img_data = response.content
                 else:
@@ -285,10 +285,10 @@ def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=
         if img.mode in ('RGBA', 'P'):
             img = img.convert('RGB')
         
-        # 调整为1600x1200分辨率
+        # 保持宽高比缩放，适配目标显示区域
         target_width = 1600
         target_height = 1200
-        img = img.resize((target_width, target_height), Image.LANCZOS)
+        img.thumbnail((target_width, target_height), Image.LANCZOS)
         
         draw_width = max_display_width
         draw_height = max_display_height
@@ -721,14 +721,22 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
                 photo_url = photo.get('url', '')
             else:
                 photo_url = str(photo) if photo else ''
-            photo_path = get_full_photo_path(photo_url)
-            if photo_path and os.path.exists(photo_path):
+            
+            # HTTP URL 直接传给 draw_photo（内部会下载），本地文件才检查存在性
+            if photo_url.startswith('http'):
                 try:
-                    draw_photo(c, photo_x, y - photo_max_height, photo_path, photo_max_width, photo_max_height)
+                    draw_photo(c, photo_x, y, photo_url, photo_max_width, photo_max_height)
                     photo_x += photo_max_width + 3 * mm
                 except Exception as e:
                     print(f"绘制问题照片失败: {e}")
-    
+            else:
+                photo_path = get_full_photo_path(photo_url)
+                if photo_path and os.path.exists(photo_path):
+                    try:
+                        draw_photo(c, photo_x, y, photo_path, photo_max_width, photo_max_height)
+                        photo_x += photo_max_width + 3 * mm
+                    except Exception as e:
+                        print(f"绘制问题照片失败: {e}")    
     y -= 10 * mm
     return y
 
