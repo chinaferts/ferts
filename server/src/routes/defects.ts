@@ -56,7 +56,7 @@ router.post('/', async (req: Request, res: Response) => {
       .insert({
         inspection_id,
         title,
-        severity,
+        severity: severity || 'minor',
         description,
         location_description,
         photo_urls,
