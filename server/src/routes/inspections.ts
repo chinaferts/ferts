@@ -101,29 +101,7 @@ router.post('/import-photo', async (req: Request, res: Response) => {
           .single();
         
         if (record) {
-          let photos = [];
-          try {
-            photos = JSON.parse(record.photos || '[]');
-          } catch (e) {
-            photos = [];
-          }
-          
-          // 存储对象存储的key（而非URL），以便后续动态生成URL
-          const photoKey = storageKey;
-          
-          // 如果有旧照片路径，替换它
-          if (oldPhotoPath && photos.includes(oldPhotoPath)) {
-            const index = photos.indexOf(oldPhotoPath);
-            photos[index] = photoKey;
-          } else if (!photos.includes(photoKey)) {
-            photos.push(photoKey);
-          }
-          
-          // 更新数据库
-          await client
-            .from('inspection_records')
-            .update({ photos: JSON.stringify(photos) })
-            .eq('id', recordId);
+          // 不再更新 inspection_records.photos 字段，照片只保存到 inspection_photos 表
         }
       } catch (dbError) {
         console.error('更新照片路径失败:', dbError);
@@ -203,21 +181,8 @@ router.get('/', async (req: Request, res: Response) => {
       .select('inspection_id, photo_url')
       .in('inspection_id', inspectionIds);
     
-    // 整理照片信息
+    // 整理照片信息 - 只从 inspection_photos 表获取
     const photosMap: { [key: number]: string[] } = {};
-    if (recordsData) {
-      for (const record of recordsData) {
-        if (record.photos && Array.isArray(record.photos)) {
-          if (!photosMap[record.inspection_id]) {
-            photosMap[record.inspection_id] = [];
-          }
-          // 转换为完整 URL（异步）
-          const fullUrls = await Promise.all(record.photos.map((p: string) => toFullUrlAsync(req, p)));
-          photosMap[record.inspection_id].push(...fullUrls);
-        }
-      }
-    }
-    // 合并 inspection_photos 表的照片
     if (inspectionPhotosData) {
       for (const photo of inspectionPhotosData) {
         if (photo.photo_url) {
@@ -1475,27 +1440,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     });
 
     // 构建分类和检查项（从 filteredRecords 转换）
-    // 收集所有需要转换的照片key
-    const allPhotoKeys: string[] = [];
-    for (const record of filteredRecords) {
-      if (record.photos && Array.isArray(record.photos)) {
-        for (const p of record.photos) {
-          if (p && !p.startsWith('http://') && !p.startsWith('https://')) {
-            allPhotoKeys.push(p);
-          }
-        }
-      }
-    }
-    // 批量获取签名URL
-    const recordPhotoUrls = await getPhotoUrls(allPhotoKeys);
-    // 创建 key -> url 的映射
-    const recordPhotoUrlMap = new Map<string, string>();
-    allPhotoKeys.forEach((key, idx) => {
-      if (recordPhotoUrls[idx]) {
-        recordPhotoUrlMap.set(key, recordPhotoUrls[idx]);
-      }
-    });
-    
+    // 构建分类和检查项（从 filteredRecords 转换）
     const checklistItems = filteredRecords.map((record: any) => {
       // 从 photosByRecordId 获取照片（已转换为签名URL）
       const photos = photosByRecordId.get(record.id) || [];
