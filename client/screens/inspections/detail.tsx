@@ -2514,9 +2514,11 @@ export default function InspectionDetailScreen() {
                 if (currentInspection) {
                   const updatedItems = currentInspection.checklist_items.map(item => {
                     if (item.record_id === targetRecordId) {
-                      // 过滤掉本地路径，添加服务器路径
-                      const filteredPhotos = (item.photos || []).filter(p => p && !p.startsWith('file:') && !p.startsWith('content:'));
-                      return { ...item, photos: [...filteredPhotos, ...uploadedServerUrls] };
+                      // 只保留服务器路径，过滤掉所有本地路径
+                      const serverPhotos = (item.photos || []).filter(p => p && (p.startsWith('http://') || p.startsWith('https://')));
+                      // 去重：合并已有的服务器路径和新上传的服务器路径
+                      const allServerPhotos = Array.from(new Set([...serverPhotos, ...uploadedServerUrls]));
+                      return { ...item, photos: allServerPhotos };
                     }
                     return item;
                   });
