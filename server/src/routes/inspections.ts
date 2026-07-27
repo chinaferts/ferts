@@ -7,6 +7,7 @@ import PDFDocument from 'pdfkit';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 import { uploadPhoto, getPhotoUrl, getPhotoUrls } from '../utils/storage.js';
 import { getStorage } from '../utils/storage.js';
+import { PDF_SCRIPT_B64, FONT_B64 } from '../generated/pdf_assets.js';
 
 // 从 session token 获取用户信息
 async function getUserFromSession(req: Request): Promise<{ id: string; name: string } | null> {
@@ -1498,56 +1499,18 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     }
 
   // 使用 Python reportlab 生成 PDF（支持中文）
-  // 始终将脚本复制到 /tmp 以确保使用最新版本（解决部署系统不更新 scripts 目录的问题）
-  const isProduction = process.env.NODE_ENV === 'production';
-  
-  // 查找源脚本：优先使用构建输出目录中的脚本（确保与代码版本一致）
-  const possibleSourcePaths = isProduction
-    ? [
-        '/tmp/server_dist/scripts/generate_pdf.py',  // 构建输出目录
-        '/opt/bytefaas/server/scripts/generate_pdf.py', // 传统部署路径
-        '/opt/bytefaas/scripts/generate_pdf.py',       // 备选路径
-      ]
-    : [path.join(process.cwd(), 'scripts', 'generate_pdf.py')];
-  
+  // 使用构建时嵌入的 Python 脚本（确保与代码版本一致，不依赖部署系统复制文件）
   const pdfScriptPath = '/tmp/generate_pdf_latest.py';
-  let sourceScriptPath = '';
 
   try {
     const fs = await import('fs');
-    // 查找存在的源脚本
-    for (const p of possibleSourcePaths) {
-      if (fs.existsSync(p)) {
-        sourceScriptPath = p;
-        break;
-      }
-    }
-
-    if (sourceScriptPath) {
-      const sourceMtime = fs.statSync(sourceScriptPath).mtimeMs;
-      let needsCopy = true;
-      try {
-        const tmpMtime = fs.statSync(pdfScriptPath).mtimeMs;
-        needsCopy = sourceMtime > tmpMtime;
-      } catch {
-        // /tmp 文件不存在，需要复制
-      }
-      if (needsCopy) {
-        fs.copyFileSync(sourceScriptPath, pdfScriptPath);
-        console.log('[PDF] 已更新 Python 脚本到:', pdfScriptPath, '来源:', sourceScriptPath);
-        // 同时复制字体文件（如果存在）
-        const sourceDir = path.dirname(sourceScriptPath);
-        const fontFile = path.join(sourceDir, 'wqy-microhei.ttc');
-        if (fs.existsSync(fontFile)) {
-          fs.copyFileSync(fontFile, '/tmp/wqy-microhei.ttc');
-          console.log('[PDF] 已复制字体文件到: /tmp/wqy-microhei.ttc');
-        }
-      }
-    } else {
-      console.error('[PDF] 源脚本不存在，已尝试路径:', possibleSourcePaths.join(', '));
-      // 回退到第一个路径（让 execSync 报错）
-      sourceScriptPath = possibleSourcePaths[0];
-    }
+    // 始终写入最新版本（嵌入在代码中，保证与 Express 代码同步）
+    const scriptContent = Buffer.from(PDF_SCRIPT_B64, 'base64').toString('utf-8');
+    fs.writeFileSync(pdfScriptPath, scriptContent);
+    // 同时写入字体文件（嵌入在代码中）
+    const fontBuffer = Buffer.from(FONT_B64, 'base64');
+    fs.writeFileSync('/tmp/wqy-microhei.ttc', fontBuffer);
+    console.log('[PDF] 已写入 Python 脚本和字体到 /tmp');
   } catch (e) {
     console.error('[PDF] 复制脚本失败:', e);
   }

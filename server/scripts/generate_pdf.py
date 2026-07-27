@@ -270,15 +270,12 @@ def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=
         
         # 获取完整路径或下载网络图片
         if photo_path.startswith('http'):
-            import requests
+            import urllib.request
             try:
-                response = requests.get(photo_path, timeout=30)
-                if response.status_code == 200:
-                    img_data = response.content
-                    print(f"[PDF draw_photo] 下载成功, 大小: {len(img_data)} bytes")
-                else:
-                    print(f"[PDF draw_photo] 下载照片失败: 状态码 {response.status_code}")
-                    return 0
+                req = urllib.request.Request(photo_path, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    img_data = resp.read()
+                print(f"[PDF draw_photo] 下载成功, 大小: {len(img_data)} bytes")
             except Exception as e:
                 print(f"[PDF draw_photo] 下载照片异常: {e}")
                 return 0

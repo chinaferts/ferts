@@ -1,10 +1,15 @@
 import * as esbuild from 'esbuild';
 import { copyFileSync, mkdirSync, existsSync } from 'fs';
+import { execSync } from 'child_process';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outDir = process.env.NODE_ENV === 'production' ? '/tmp/server_dist' : 'dist';
+
+// 构建时嵌入 Python 脚本和字体到 TypeScript 代码中
+console.log('Embedding Python script and font...');
+execSync(`node ${join(__dirname, 'embed_assets.cjs')}`, { stdio: 'inherit' });
 
 try {
   await esbuild.build({
