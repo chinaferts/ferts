@@ -366,7 +366,8 @@ export default function InspectionDetailScreen() {
             // 替换本地路径为服务器 URL
             const updatedItems = (inspectionRef.current?.checklist_items || []).map((checkItem) => {
               if (checkItem.record_id === targetRecordId) {
-                const filteredPhotos = (checkItem.photos || []).filter(p => p !== photoUri);
+                // 过滤掉所有本地路径（file: 或 content: 开头），添加服务器 URL
+                const filteredPhotos = (checkItem.photos || []).filter(p => p && !p.startsWith('file:') && !p.startsWith('content:'));
                 return { ...checkItem, photos: [...filteredPhotos, photoUrl] };
               }
               return checkItem;
