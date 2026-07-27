@@ -1535,6 +1535,13 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       if (needsCopy) {
         fs.copyFileSync(sourceScriptPath, pdfScriptPath);
         console.log('[PDF] 已更新 Python 脚本到:', pdfScriptPath, '来源:', sourceScriptPath);
+        // 同时复制字体文件（如果存在）
+        const sourceDir = path.dirname(sourceScriptPath);
+        const fontFile = path.join(sourceDir, 'wqy-microhei.ttc');
+        if (fs.existsSync(fontFile)) {
+          fs.copyFileSync(fontFile, '/tmp/wqy-microhei.ttc');
+          console.log('[PDF] 已复制字体文件到: /tmp/wqy-microhei.ttc');
+        }
       }
     } else {
       console.error('[PDF] 源脚本不存在，已尝试路径:', possibleSourcePaths.join(', '));

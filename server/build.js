@@ -19,7 +19,7 @@ try {
     minify: false,
   });
 
-  // 复制 Python 脚本到构建输出目录
+  // 复制 Python 脚本和字体文件到构建输出目录
   const scriptsDir = join(__dirname, 'scripts');
   const outScriptsDir = join(outDir, 'scripts');
   mkdirSync(outScriptsDir, { recursive: true });
@@ -27,6 +27,11 @@ try {
   if (existsSync(pdfScript)) {
     copyFileSync(pdfScript, join(outScriptsDir, 'generate_pdf.py'));
     console.log('⚡ Python 脚本已复制到构建输出目录');
+  }
+  const fontFile = join(scriptsDir, 'wqy-microhei.ttc');
+  if (existsSync(fontFile)) {
+    copyFileSync(fontFile, join(outScriptsDir, 'wqy-microhei.ttc'));
+    console.log('⚡ 中文字体已复制到构建输出目录');
   }
 
   console.log('⚡ Build complete!');

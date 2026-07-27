@@ -15,9 +15,19 @@ from reportlab.lib import colors
 
 # 注册中文字体 - 使用项目自带的文泉驿微米黑
 script_dir = os.path.dirname(os.path.abspath(__file__))
-FONT_PATH = os.path.join(script_dir, 'wqy-microhei.ttc')
-if not os.path.exists(FONT_PATH):
-    raise FileNotFoundError(f'中文字体文件不存在：{FONT_PATH}')
+# 多路径查找字体：脚本目录 → 生产环境原路径 → 备选路径
+FONT_CANDIDATES = [
+    os.path.join(script_dir, 'wqy-microhei.ttc'),
+    '/opt/bytefaas/server/scripts/wqy-microhei.ttc',
+    '/opt/bytefaas/scripts/wqy-microhei.ttc',
+]
+FONT_PATH = None
+for candidate in FONT_CANDIDATES:
+    if os.path.exists(candidate):
+        FONT_PATH = candidate
+        break
+if not FONT_PATH:
+    raise FileNotFoundError(f'中文字体文件不存在，已搜索路径：{FONT_CANDIDATES}')
 
 # TTC 是字体集合，需要指定 subfontIndex（0 是第一个字体）
 pdfmetrics.registerFont(TTFont('ChineseFont', FONT_PATH, subfontIndex=0))
