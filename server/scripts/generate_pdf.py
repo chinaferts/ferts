@@ -256,6 +256,8 @@ def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=
         import io
         import uuid
         
+        print(f"[PDF draw_photo] 开始绘制照片: {photo_path[:80]}...")
+        
         # 获取完整路径或下载网络图片
         if photo_path.startswith('http'):
             import requests
@@ -263,23 +265,26 @@ def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=
                 response = requests.get(photo_path, timeout=30)
                 if response.status_code == 200:
                     img_data = response.content
+                    print(f"[PDF draw_photo] 下载成功, 大小: {len(img_data)} bytes")
                 else:
-                    print(f"下载照片失败: {photo_path}, 状态码: {response.status_code}")
+                    print(f"[PDF draw_photo] 下载照片失败: 状态码 {response.status_code}")
                     return 0
             except Exception as e:
-                print(f"下载照片异常: {photo_path}, 错误: {e}")
+                print(f"[PDF draw_photo] 下载照片异常: {e}")
                 return 0
         else:
             full_path = get_full_photo_path(photo_path)
             if not full_path or not os.path.exists(full_path):
-                print(f"照片文件不存在: {photo_path}")
+                print(f"[PDF draw_photo] 照片文件不存在: {photo_path}")
                 return 0
             with open(full_path, 'rb') as f:
                 img_data = f.read()
+            print(f"[PDF draw_photo] 本地文件读取成功, 大小: {len(img_data)} bytes")
         
         # 使用Pillow处理图片
         from PIL import Image
         img = Image.open(io.BytesIO(img_data))
+        print(f"[PDF draw_photo] 图片原始尺寸: {img.size}")
         
         # 转换为RGB（处理PNG等格式）
         if img.mode in ('RGBA', 'P'):
@@ -296,9 +301,11 @@ def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=
         # 保存到临时文件（高分辨率）
         tmp_path = f'/tmp/pdf_photo_{uuid.uuid4().hex[:8]}.jpg'
         img.save(tmp_path, 'JPEG', quality=90, optimize=True)
+        print(f"[PDF draw_photo] 保存到临时文件: {tmp_path}")
         
         # 绘制压缩后的图片
         c.drawImage(tmp_path, x, y - draw_height, width=draw_width, height=draw_height)
+        print(f"[PDF draw_photo] 绘制成功, 位置: ({x}, {y - draw_height}), 尺寸: {draw_width}x{draw_height}")
         
         # 绘制边框
         c.setStrokeColor(colors.HexColor('#E5E7EB'))
@@ -310,7 +317,9 @@ def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=
         
         return draw_height
     except Exception as e:
-        print(f"绘制照片失败 {photo_path}: {e}")
+        print(f"[PDF draw_photo] 绘制照片失败: {e}")
+        import traceback
+        traceback.print_exc()
         return 0
 
 def draw_checklist(c, width, margin, y, height, data):
@@ -396,6 +405,7 @@ def draw_checklist(c, width, margin, y, height, data):
             notes = item.get('notes', '') or ''
             
             if photos:
+                print(f"[PDF checklist] 渲染检查项 '{item_name}' 的 {len(photos)} 张照片")
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#4F46E5'))
                 c.drawString(margin + 10*mm, y, f'📷 {len(photos)}张照片')
@@ -407,6 +417,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 
                 photo_y = y - photo_max_height
                 for i, photo_path in enumerate(photos):
+                    print(f"[PDF checklist] 照片 {i+1}/{len(photos)}: {str(photo_path)[:80]}")
                     photo_x = margin + 10*mm + (i % photos_per_row) * (photo_max_width + photo_spacing)
                     
                     # 如果当前行放不下，换行
@@ -550,14 +561,17 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
     """绘制问题统计表格（在报告最后显示）"""
     # 从checklist_items中找到问题统计项
     checklist_items = data.get('checklist_items', [])
+    print(f"[PDF defect_stats] checklist_items 总数: {len(checklist_items)}")
     defect_item = None
     for item in checklist_items:
         item_name = item.get('item_name', '') or item.get('name', '')
         if '问题统计' in item_name:
             defect_item = item
+            print(f"[PDF defect_stats] 找到问题统计项: {item_name}, photos: {len(item.get('photos', []))}")
             break
     
     if not defect_item:
+        print(f"[PDF defect_stats] 未找到问题统计项")
         return y
     
     # 如果y位置不够，换页
@@ -697,6 +711,7 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
     
     # 绘制问题照片（如果有）
     photos = defect_item.get('photos', []) or []
+    print(f"[PDF defect_stats] 问题照片数量: {len(photos)}")
     if photos:
         y -= 5 * mm
         c.setFont('ChineseFont', 9)
@@ -798,5 +813,14 @@ if __name__ == '__main__':
     
     with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
+    
+    # 调试：输出检查项照片信息
+    checklist_items = data.get('checklist_items', [])
+    print(f"[PDF main] 总共 {len(checklist_items)} 个检查项")
+    for item in checklist_items:
+        item_name = item.get('item_name', '') or item.get('name', '')
+        photos = item.get('photos', []) or []
+        if photos:
+            print(f"[PDF main] 检查项 '{item_name}' 有 {len(photos)} 张照片: {photos[0][:80]}...")
     
     generate_inspection_pdf(data, output_path)
