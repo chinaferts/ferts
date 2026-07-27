@@ -37,15 +37,15 @@ router.get('/', async (req: Request, res: Response) => {
 // 创建缺陷记录
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { inspection_id, defect_type, severity, description, location } = req.body;
+    const { inspection_id, title, severity, description, location_description, photo_urls } = req.body;
 
     if (!isSupabaseConfigured()) {
       const newDefect = mockCreateDefect({
         inspection_id,
-        defect_type,
+        title,
         severity,
         description,
-        location
+        location_description
       });
       return res.json({ success: true, data: newDefect });
     }
@@ -55,10 +55,12 @@ router.post('/', async (req: Request, res: Response) => {
       .from('defects')
       .insert({
         inspection_id,
-        defect_type,
+        title,
         severity,
         description,
-        location
+        location_description,
+        photo_urls,
+        status: 'open'
       })
       .select()
       .single();
