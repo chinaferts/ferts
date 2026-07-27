@@ -1,5 +1,9 @@
 import * as esbuild from 'esbuild';
+import { copyFileSync, mkdirSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const outDir = process.env.NODE_ENV === 'production' ? '/tmp/server_dist' : 'dist';
 
 try {
@@ -14,6 +18,17 @@ try {
     sourcemap: false,
     minify: false,
   });
+
+  // 复制 Python 脚本到构建输出目录
+  const scriptsDir = join(__dirname, 'scripts');
+  const outScriptsDir = join(outDir, 'scripts');
+  mkdirSync(outScriptsDir, { recursive: true });
+  const pdfScript = join(scriptsDir, 'generate_pdf.py');
+  if (existsSync(pdfScript)) {
+    copyFileSync(pdfScript, join(outScriptsDir, 'generate_pdf.py'));
+    console.log('⚡ Python 脚本已复制到构建输出目录');
+  }
+
   console.log('⚡ Build complete!');
 } catch (e) {
   console.error(e);

@@ -1498,10 +1498,52 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     }
 
   // 使用 Python reportlab 生成 PDF（支持中文）
+  // 始终将脚本复制到 /tmp 以确保使用最新版本（解决部署系统不更新 scripts 目录的问题）
   const isProduction = process.env.NODE_ENV === 'production';
-  const pdfScriptPath = isProduction 
-    ? '/opt/bytefaas/server/scripts/generate_pdf.py'
-    : path.join(process.cwd(), 'scripts', 'generate_pdf.py');
+  
+  // 查找源脚本：优先使用构建输出目录中的脚本（确保与代码版本一致）
+  const possibleSourcePaths = isProduction
+    ? [
+        '/tmp/server_dist/scripts/generate_pdf.py',  // 构建输出目录
+        '/opt/bytefaas/server/scripts/generate_pdf.py', // 传统部署路径
+        '/opt/bytefaas/scripts/generate_pdf.py',       // 备选路径
+      ]
+    : [path.join(process.cwd(), 'scripts', 'generate_pdf.py')];
+  
+  const pdfScriptPath = '/tmp/generate_pdf_latest.py';
+  let sourceScriptPath = '';
+
+  try {
+    const fs = await import('fs');
+    // 查找存在的源脚本
+    for (const p of possibleSourcePaths) {
+      if (fs.existsSync(p)) {
+        sourceScriptPath = p;
+        break;
+      }
+    }
+
+    if (sourceScriptPath) {
+      const sourceMtime = fs.statSync(sourceScriptPath).mtimeMs;
+      let needsCopy = true;
+      try {
+        const tmpMtime = fs.statSync(pdfScriptPath).mtimeMs;
+        needsCopy = sourceMtime > tmpMtime;
+      } catch {
+        // /tmp 文件不存在，需要复制
+      }
+      if (needsCopy) {
+        fs.copyFileSync(sourceScriptPath, pdfScriptPath);
+        console.log('[PDF] 已更新 Python 脚本到:', pdfScriptPath, '来源:', sourceScriptPath);
+      }
+    } else {
+      console.error('[PDF] 源脚本不存在，已尝试路径:', possibleSourcePaths.join(', '));
+      // 回退到第一个路径（让 execSync 报错）
+      sourceScriptPath = possibleSourcePaths[0];
+    }
+  } catch (e) {
+    console.error('[PDF] 复制脚本失败:', e);
+  }
   
   // 准备PDF数据 - 包含完整的表头信息
   const pdfData = {
