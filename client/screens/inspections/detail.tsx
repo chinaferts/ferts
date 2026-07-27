@@ -1315,11 +1315,13 @@ export default function InspectionDetailScreen() {
       }
     };
 
-    // 先上传所有照片到服务器
+    // 先上传所有本地照片到服务器（过滤掉已经上传过的服务器照片）
     const uploadedUrls: string[] = [];
-    for (const photoUri of tempPhotos) {
+    const localPhotos = tempPhotos.filter(p => p && (p.startsWith('file:') || p.startsWith('content:')));
+    
+    for (const photoUri of localPhotos) {
       try {
-        console.log('[CompletePhotos] Uploading photo:', photoUri);
+        console.log('[CompletePhotos] Uploading local photo:', photoUri);
         const filename = photoUri.split("/").pop() || `photo_${Date.now()}.jpg`;
         const match = /\.(\w+)$/.exec(filename);
         const ext = match ? match[1] : "jpg";
@@ -2472,6 +2474,8 @@ export default function InspectionDetailScreen() {
             setTempPhotos(prev => [...prev, ...photoUris]);
             
             // 上传照片到服务器（先压缩为1600x1200@96DPI, 90%质量）
+            // 只上传本地照片（file:// 或 content:// 开头），避免重复上传已上传的服务器照片
+            const uploadedServerUrls: string[] = [];
             try {
               for (let i = 0; i < photos.length; i++) {
                 const photo = photos[i];
@@ -2490,10 +2494,34 @@ export default function InspectionDetailScreen() {
                 formData.append('record_id', String(targetRecordId));
                 formData.append('file', fileObj as any);
                 
-                await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
+                const uploadRes = await fetch(`${baseUrl}/api/v1/inspections/${id}/photos`, {
                   method: 'POST',
                   body: formData,
                 });
+                
+                if (uploadRes.ok) {
+                  const result = await uploadRes.json();
+                  const serverUrl = result.data?.photo_url || result.data?.photoUrl || result.photoUrl;
+                  if (serverUrl) {
+                    uploadedServerUrls.push(serverUrl);
+                  }
+                }
+              }
+              
+              // 上传完成后，将本地路径替换为服务器路径，避免提交时重复上传
+              if (uploadedServerUrls.length > 0) {
+                const currentInspection = inspectionRef.current;
+                if (currentInspection) {
+                  const updatedItems = currentInspection.checklist_items.map(item => {
+                    if (item.record_id === targetRecordId) {
+                      // 过滤掉本地路径，添加服务器路径
+                      const filteredPhotos = (item.photos || []).filter(p => p && !p.startsWith('file:') && !p.startsWith('content:'));
+                      return { ...item, photos: [...filteredPhotos, ...uploadedServerUrls] };
+                    }
+                    return item;
+                  });
+                  setInspection(prev => prev ? { ...prev, checklist_items: updatedItems } : null);
+                }
               }
             } catch (error) {
               console.error('上传照片失败:', error);
