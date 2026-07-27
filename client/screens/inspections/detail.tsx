@@ -2746,7 +2746,8 @@ export default function InspectionDetailScreen() {
                         return item.photos && item.photos.length > 0 && !isProblemStatItem && !isNaItem ? (
                           <View style={styles.photoPreviewSection}>
                             <View style={styles.photoGridContainer}>
-                              {item.photos.map((photo, idx) => (
+                              {/* 前端去重：基于 URL 去重，避免显示重复照片 */}
+                              {Array.from(new Set(item.photos)).map((photo, idx) => (
                                 <TouchableOpacity key={idx} onPress={() => {
                                   if (isCompleted) {
                                     // 已完成验货：点击放大查看
