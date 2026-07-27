@@ -1120,7 +1120,7 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     // 接受前端发送的参数名称
-    const { name, category, result, photos, barcode_codes, barcode_formats, barcode_type } = req.body;
+    const { name, category, result, photos, barcode_codes, barcode_formats, barcode_type, temp_record_id } = req.body;
 
     if (!isSupabaseConfigured()) {
       const mockId = Math.floor(Math.random() * 1000000);
@@ -1173,6 +1173,24 @@ router.post('/:id/checklist-items', async (req: Request, res: Response) => {
 
     // 返回 inspection_records 的 id
     const record = recordData[0];
+
+    // 如果提供了 temp_record_id，将关联到临时 ID 的照片迁移到新记录
+    if (temp_record_id) {
+      const tempIdParsed = parseInt(String(temp_record_id));
+      if (!isNaN(tempIdParsed) && tempIdParsed > 0) {
+        const { error: reassociateError } = await client
+          .from('inspection_photos')
+          .update({ record_id: record.id })
+          .eq('inspection_id', parseInt(idStr))
+          .eq('record_id', tempIdParsed);
+        if (reassociateError) {
+          console.error('[POST checklist-items] Photo re-association error:', reassociateError);
+        } else {
+          console.log('[POST checklist-items] Photos re-associated from temp_record_id', tempIdParsed, 'to record_id', record.id);
+        }
+      }
+    }
+
     res.json({ success: true, data: { id: record.id, checklist_item_id: newChecklistItem.id } });
   } catch (err: any) {
     console.error('创建检查项失败:', err);

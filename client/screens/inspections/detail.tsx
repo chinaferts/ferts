@@ -476,7 +476,7 @@ export default function InspectionDetailScreen() {
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
   const isSyncingPhotosRef = useRef(false);
   // 跟踪已创建数据库记录的临时条码项 ID，防止重复创建
-  const savedTempBarcodeIdsRef = useRef<Set<string>>(new Set());
+
 
   // 检查是否有本地路径照片需要同步
   const localPhotosCount = inspection?.checklist_items?.reduce((count: number, item: ChecklistItem) => {
@@ -1108,9 +1108,7 @@ export default function InspectionDetailScreen() {
 
     // 判断是否是新建的条码扫描项（record_id 是临时生成的 Date.now()）
     const recordIdNum = Number(item.record_id);
-    const tempIdStr = String(item.record_id);
-    // 如果已经在其他地方创建过数据库记录，不再重复创建
-    const isNewBarcodeItem = recordIdNum > 1000000000000 && !savedTempBarcodeIdsRef.current.has(tempIdStr);
+    const isNewBarcodeItem = recordIdNum > 1000000000000;
     console.log('[UpdateStatus] record_id:', item.record_id, 'isNew:', isNewBarcodeItem);
 
     try {
@@ -1136,10 +1134,9 @@ export default function InspectionDetailScreen() {
             category: item.category,
             item_category: item.category,
             result: status,
-            // 不保存 photos 到 inspection_records.photos 字段，避免照片重复
-            // 照片已经保存到 inspection_photos 表
             barcode_codes: barcodeCodesToSave,
             barcode_type: item.barcodeType,
+            temp_record_id: recordIdNum, // 临时 ID，后端用于迁移照片关联
           }),
         });
 
@@ -1157,9 +1154,6 @@ export default function InspectionDetailScreen() {
           console.error('[SaveItem] No record_id in response:', saveData);
           throw new Error('Invalid response: missing id');
         }
-
-        // 标记该临时 ID 已创建过数据库记录，防止其他函数重复创建
-        savedTempBarcodeIdsRef.current.add(tempIdStr);
 
         // 更新本地状态，使用真实的 record_id
         const targetRecordId = String(newRecordId);
@@ -1415,117 +1409,31 @@ export default function InspectionDetailScreen() {
         : i
     );
     
-    // 同时更新inspection_records表的photos字段
-    let realRecordId: string | null = null;
+    // 照片已通过 POST /photos 上传到服务器并关联到 record_id
+    // 这里只需要更新前端状态中的照片列表
+    // 不再在此处创建数据库记录，记录创建统一由 updateChecklistItem 负责
     try {
-      const baseUrl = getApiBaseUrl();
-      
-      // 检查是否是新建条码项（record_id > 1000000000000 表示 Date.now()）
-      // 同时检查 ref，防止与 updateChecklistItem 重复创建
-      const tempIdStr = String(tempPhotoTarget.record_id);
-      const isNewBarcodeItem = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 1000000000000 && !savedTempBarcodeIdsRef.current.has(tempIdStr);
-      
-      // 保存照片前的 recordId
-      let saveRecordId: string;
-      
-      if (isNewBarcodeItem) {
-        // 对于新建条码项，先 POST 创建记录
-        console.log('[CompletePhotos] Creating new record for barcode item');
-        const createResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/checklist-items`, {
-          method: 'POST',
+      const saveRecordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0
+        ? String(tempPhotoTarget.record_id)
+        : String(tempPhotoTarget.id);
+
+      // 只有真实 record_id（非临时 ID）才 PUT 更新
+      const isTempId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 1000000000000;
+      if (!isTempId) {
+        const baseUrl = getApiBaseUrl();
+        console.log('[CompletePhotos] Updating record with photos, recordId:', saveRecordId);
+        const saveResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${saveRecordId}`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: tempPhotoTarget.name,
-            category: tempPhotoTarget.category,
-            item_category: tempPhotoTarget.category,
-            result: 'pass',
-            // 不保存 photos 到 inspection_records.photos 字段，避免照片重复
-            // 照片已经保存到 inspection_photos 表
-            barcode_codes: tempPhotoTarget.barcodeCodes || [],
-            barcode_type: tempPhotoTarget.barcodeType,
-          }),
+          body: JSON.stringify({ result: 'pass' }),
         });
-        
-        if (createResponse.ok) {
-          const createData = await createResponse.json();
-          realRecordId = String(createData.data?.id || createData.id);
-          saveRecordId = realRecordId;
-          console.log('[CompletePhotos] Created new record with id:', realRecordId);
-          
-          // 标记该临时 ID 已创建过数据库记录，防止其他函数重复创建
-          savedTempBarcodeIdsRef.current.add(tempIdStr);
-          
-          // 更新前端状态中的 record_id，同时保留照片
-          const tempTargetRecordId = String(tempPhotoTarget.record_id || tempPhotoTarget.id);
-          
-          // 更新 inspection.checklist_items 中的 record_id，保留照片
-          setInspection(prev => {
-            if (!prev) return null;
-            return {
-              ...prev,
-              checklist_items: prev.checklist_items.map(i =>
-                String(i.record_id) === tempTargetRecordId
-                  ? { ...i, record_id: parseInt(realRecordId!), photos: allPhotos }
-                  : i
-              )
-            };
-          });
-          
-          // 更新 barcodeItems 中的 record_id，保留照片
-          setBarcodeItems(prev => prev.map(i =>
-            String(i.record_id) === tempTargetRecordId
-              ? { ...i, record_id: parseInt(realRecordId!), photos: allPhotos }
-              : i
-          ));
+        if (saveResponse.ok) {
+          console.log('[CompletePhotos] Saved photos to record');
         } else {
-          console.log('[CompletePhotos] Create record failed:', createResponse.status);
-          // 如果创建失败，跳过保存
-          setTempPhotoTarget(null);
-          setTempPhotos([]);
-          return;
+          console.log('[CompletePhotos] Save failed:', saveResponse.status);
         }
       } else {
-        // 对于已有记录，直接使用 record_id
-        // 但如果临时 ID 已被其他函数创建过记录，需要从当前状态获取真实的 record_id
-        if (tempPhotoTarget.record_id && tempPhotoTarget.record_id > 1000000000000 && savedTempBarcodeIdsRef.current.has(tempIdStr)) {
-          // 临时 ID 已被创建过记录，从当前 inspection 状态中查找真实的 record_id
-          const currentItem = inspectionRef.current?.checklist_items?.find(
-            (i: any) => String(i.record_id) !== tempIdStr && String(i.id) === String(tempPhotoTarget.id)
-          ) || inspectionRef.current?.checklist_items?.find(
-            (i: any) => String(i.id) === String(tempPhotoTarget.id)
-          );
-          if (currentItem && currentItem.record_id && currentItem.record_id < 1000000000000) {
-            saveRecordId = String(currentItem.record_id);
-            console.log('[CompletePhotos] Using real record_id from state:', saveRecordId);
-          } else {
-            saveRecordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0 
-              ? String(tempPhotoTarget.record_id) 
-              : String(tempPhotoTarget.id);
-          }
-        } else {
-          saveRecordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0 
-            ? String(tempPhotoTarget.record_id) 
-            : String(tempPhotoTarget.id);
-        }
-      }
-      
-      console.log('[CompletePhotos] Saving with recordId:', saveRecordId, 'isNew:', isNewBarcodeItem);
-      
-      const saveResponse = await fetch(`${baseUrl}/api/v1/inspections/${id}/records/${saveRecordId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          result: 'pass',
-          // 不保存 photos 到 inspection_records.photos 字段，避免重复
-          // 照片已经保存到 inspection_photos 表
-        }),
-      });
-      
-      if (saveResponse.ok) {
-        const resultData = await saveResponse.json();
-        console.log('[CompletePhotos] Saved photos to inspection_records:', resultData);
-      } else {
-        console.log('[CompletePhotos] Save failed:', saveResponse.status);
+        console.log('[CompletePhotos] Temp record_id, skipping PUT. Photos already uploaded via POST /photos. Record will be created when status changes.');
       }
     } catch (error) {
       console.error('[CompletePhotos] Failed to save photos:', error);
