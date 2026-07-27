@@ -101,26 +101,8 @@ router.post('/import-photo', async (req: Request, res: Response) => {
     // 生成访问URL
     const photoUrl = await getPhotoUrl(storageKey);
     
-    // 如果提供了recordId和旧照片路径，更新数据库
-    if (recordId && isSupabaseConfigured()) {
-      try {
-        const client = requireSupabaseClient();
-        
-        // 获取当前照片列表
-        const { data: record } = await client
-          .from('inspection_records')
-          .select('photos')
-          .eq('id', recordId)
-          .single();
-        
-        if (record) {
-          // 不再更新 inspection_records.photos 字段，照片只保存到 inspection_photos 表
-        }
-      } catch (dbError) {
-        console.error('更新照片路径失败:', dbError);
-        // 即使数据库更新失败，文件已保存
-      }
-    }
+    // /import-photo 接口不保存到数据库，只返回对象存储的URL
+    // 照片保存由 POST /:id/photos 接口负责
     
     res.json({ success: true, serverPath: storageKey, photoUrl });
   } catch (error) {
@@ -1298,6 +1280,8 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
     
     // 如果 Supabase 配置了，保存到数据库
     const client = requireSupabaseClient();
+    console.log('[UPLOAD_PHOTO] 准备保存到数据库, inspection_id:', id, 'record_id:', record_id);
+    
     const { data, error } = await client
       .from('inspection_photos')
       .insert({
@@ -1315,6 +1299,8 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
       console.error('[UPLOAD_PHOTO] Database insert error:', JSON.stringify(error));
       return res.status(500).json({ success: false, error: error.message || '保存照片记录失败' });
     }
+    
+    console.log('[UPLOAD_PHOTO] 照片已保存到数据库, photo_id:', insertedPhoto?.id, 'record_id:', insertedPhoto?.record_id);
     res.json({ success: true, data: insertedPhoto });
   } catch (err: any) {
     console.error('[UPLOAD_PHOTO] Unexpected error:', err);
