@@ -475,6 +475,8 @@ export default function InspectionDetailScreen() {
   const [isSyncingPhotos, setIsSyncingPhotos] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
   const isSyncingPhotosRef = useRef(false);
+  // 跟踪已创建数据库记录的临时条码项 ID，防止重复创建
+  const savedTempBarcodeIdsRef = useRef<Set<string>>(new Set());
 
   // 检查是否有本地路径照片需要同步
   const localPhotosCount = inspection?.checklist_items?.reduce((count: number, item: ChecklistItem) => {
@@ -1106,11 +1108,14 @@ export default function InspectionDetailScreen() {
 
     // 判断是否是新建的条码扫描项（record_id 是临时生成的 Date.now()）
     const recordIdNum = Number(item.record_id);
-    const isNewBarcodeItem = recordIdNum > 1000000000000;
+    const tempIdStr = String(item.record_id);
+    // 如果已经在其他地方创建过数据库记录，不再重复创建
+    const isNewBarcodeItem = recordIdNum > 1000000000000 && !savedTempBarcodeIdsRef.current.has(tempIdStr);
     console.log('[UpdateStatus] record_id:', item.record_id, 'isNew:', isNewBarcodeItem);
 
     try {
       const baseUrl = getApiBaseUrl();
+      const tempIdStr = String(item.id);
 
       // 如果是新建的条码扫描项，先保存到数据库
       if (isNewBarcodeItem) {
@@ -1153,6 +1158,9 @@ export default function InspectionDetailScreen() {
           throw new Error('Invalid response: missing id');
         }
 
+        // 标记该临时 ID 已创建过数据库记录，防止其他函数重复创建
+        savedTempBarcodeIdsRef.current.add(tempIdStr);
+
         // 更新本地状态，使用真实的 record_id
         const targetRecordId = String(newRecordId);
         const updatedItems = inspection.checklist_items.map(i =>
@@ -1185,10 +1193,26 @@ export default function InspectionDetailScreen() {
       // 对于嵌入式模板的检查项，使用 record_id 来更新（不是 id）
       // item.record_id 是数据库中的实际记录ID，如344、345等
       // item.id 是检查项模板的ID，如151、146等
-      const recordId = item.record_id && item.record_id > 0 ? String(item.record_id) : String(item.id);
+      // 从当前状态中获取真实的 record_id（临时 ID 可能已被其他函数替换为真实 ID）
+      const currentInspection = inspectionRef.current;
+      let recordId: string;
+      
+      // 如果 item 的 record_id 是临时 ID，尝试从当前状态中查找真实的 record_id
+      if (item.record_id && item.record_id > 1000000000000) {
+        const realItem = currentInspection?.checklist_items.find(
+          (i: any) => String(i.id) === tempIdStr && i.record_id && i.record_id < 1000000000000
+        );
+        if (realItem && realItem.record_id) {
+          recordId = String(realItem.record_id);
+          console.log('[updateChecklistItem] Using real record_id from state:', recordId);
+        } else {
+          recordId = String(item.record_id);
+        }
+      } else {
+        recordId = item.record_id && item.record_id > 0 ? String(item.record_id) : String(item.id);
+      }
       
       // 从当前状态中获取最新的检查项数据（包含最新添加的照片）
-      const currentInspection = inspectionRef.current;
       // 对于条码扫描项，使用 record_id 来匹配；对于模板检查项，使用 id 来匹配
       const currentItem = currentInspection?.checklist_items.find(
         (i: any) => {
@@ -1397,7 +1421,9 @@ export default function InspectionDetailScreen() {
       const baseUrl = getApiBaseUrl();
       
       // 检查是否是新建条码项（record_id > 1000000000000 表示 Date.now()）
-      const isNewBarcodeItem = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 1000000000000;
+      // 同时检查 ref，防止与 updateChecklistItem 重复创建
+      const tempIdStr = String(tempPhotoTarget.record_id);
+      const isNewBarcodeItem = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 1000000000000 && !savedTempBarcodeIdsRef.current.has(tempIdStr);
       
       // 保存照片前的 recordId
       let saveRecordId: string;
@@ -1425,6 +1451,9 @@ export default function InspectionDetailScreen() {
           realRecordId = String(createData.data?.id || createData.id);
           saveRecordId = realRecordId;
           console.log('[CompletePhotos] Created new record with id:', realRecordId);
+          
+          // 标记该临时 ID 已创建过数据库记录，防止其他函数重复创建
+          savedTempBarcodeIdsRef.current.add(tempIdStr);
           
           // 更新前端状态中的 record_id，同时保留照片
           const tempTargetRecordId = String(tempPhotoTarget.record_id || tempPhotoTarget.id);
@@ -1457,9 +1486,27 @@ export default function InspectionDetailScreen() {
         }
       } else {
         // 对于已有记录，直接使用 record_id
-        saveRecordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0 
-          ? String(tempPhotoTarget.record_id) 
-          : String(tempPhotoTarget.id);
+        // 但如果临时 ID 已被其他函数创建过记录，需要从当前状态获取真实的 record_id
+        if (tempPhotoTarget.record_id && tempPhotoTarget.record_id > 1000000000000 && savedTempBarcodeIdsRef.current.has(tempIdStr)) {
+          // 临时 ID 已被创建过记录，从当前 inspection 状态中查找真实的 record_id
+          const currentItem = inspectionRef.current?.checklist_items?.find(
+            (i: any) => String(i.record_id) !== tempIdStr && String(i.id) === String(tempPhotoTarget.id)
+          ) || inspectionRef.current?.checklist_items?.find(
+            (i: any) => String(i.id) === String(tempPhotoTarget.id)
+          );
+          if (currentItem && currentItem.record_id && currentItem.record_id < 1000000000000) {
+            saveRecordId = String(currentItem.record_id);
+            console.log('[CompletePhotos] Using real record_id from state:', saveRecordId);
+          } else {
+            saveRecordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0 
+              ? String(tempPhotoTarget.record_id) 
+              : String(tempPhotoTarget.id);
+          }
+        } else {
+          saveRecordId = tempPhotoTarget.record_id && tempPhotoTarget.record_id > 0 
+            ? String(tempPhotoTarget.record_id) 
+            : String(tempPhotoTarget.id);
+        }
       }
       
       console.log('[CompletePhotos] Saving with recordId:', saveRecordId, 'isNew:', isNewBarcodeItem);
