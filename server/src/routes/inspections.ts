@@ -546,6 +546,17 @@ router.get('/:id', async (req: Request, res: Response) => {
       const filteredPhotos = photos?.filter((p: any) => p.record_id === record.id) || [];
       const rawRecordPhotos: string[] = filteredPhotos.map((p: any) => p.photo_url).filter(Boolean);
       
+      // 去重：基于 storage key 去重，避免同一张照片显示多次
+      const seenKeys = new Set<string>();
+      const deduplicatedPhotos: string[] = [];
+      for (const p of rawRecordPhotos) {
+        const key = getStorageKey(p);
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          deduplicatedPhotos.push(p);
+        }
+      }
+      
       const recordBarcodes = record.barcode_codes || [];
       const recordBarcodeFormats = record.barcode_formats || [];
       
@@ -558,7 +569,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         return validImageExtensions.some(ext => urlWithoutQuery.endsWith(ext));
       };
       
-      const rawPhotosFromTable = rawRecordPhotos.filter((p: string) => isValidImage(p));
+      const rawPhotosFromTable = deduplicatedPhotos.filter((p: string) => isValidImage(p));
       
       // 转换为完整 URL
       const allPhotos = await Promise.all(rawPhotosFromTable.map((p: string) => toFullUrlAsync(req, p)));
