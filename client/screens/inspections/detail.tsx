@@ -3294,19 +3294,20 @@ export default function InspectionDetailScreen() {
 
         {/* 导出按钮区域 - 所有状态都可导出 */}
         <View style={styles.exportButtonContainer}>
-          <TouchableOpacity style={styles.exportPhotosButton} onPress={handleExportPhotos}>
-            <Feather name="image" size={20} color="#FFFFFF" />
+          <TouchableOpacity style={styles.exportPhotosButton} onPress={handleExportPhotos} activeOpacity={0.85}>
+            <Feather name="image" size={22} color="#FFFFFF" />
             <Text style={styles.exportButtonText}>导出验货照片</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.exportReportButton, exportingReport && styles.exportButtonDisabled]}
             onPress={handleExportReport}
             disabled={exportingReport}
+            activeOpacity={0.85}
           >
             {exportingReport ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Feather name="file-text" size={20} color="#FFFFFF" />
+              <Feather name="file-text" size={22} color="#FFFFFF" />
             )}
             <Text style={styles.exportButtonText}>
               {exportingReport ? '生成中...' : '导出验货报告'}
@@ -4390,43 +4391,49 @@ const styles = StyleSheet.create({
   },
   // 导出按钮样式
   exportButtonContainer: {
-    marginTop: 20,
-    marginBottom: 10,
-    gap: 12,
+    marginTop: 24,
+    marginBottom: 16,
+    gap: 14,
+    paddingHorizontal: 4,
   },
   exportPhotosButton: {
     flexDirection: 'row',
     backgroundColor: '#0EA5E9',
     borderRadius: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
     shadowColor: '#0EA5E9',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   exportReportButton: {
     flexDirection: 'row',
     backgroundColor: '#8B5CF6',
     borderRadius: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
     shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   exportButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   exportButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   submitPassButton: {
     flex: 1,
