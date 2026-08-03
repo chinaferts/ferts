@@ -33,6 +33,19 @@ if not FONT_PATH:
 pdfmetrics.registerFont(TTFont('ChineseFont', FONT_PATH, subfontIndex=0))
 print(f'[INFO] 中文字体注册成功：{FONT_PATH}', file=sys.stderr)
 
+def find_file(filename):
+    """在多个路径中查找文件"""
+    candidates = [
+        os.path.join(script_dir, filename),
+        f'/tmp/{filename}',
+        f'/opt/bytefaas/server/scripts/{filename}',
+        f'/opt/bytefaas/scripts/{filename}',
+    ]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
 # 服务器uploads目录基础路径
 # 开发环境: /workspace/projects/server
 # 生产环境: /tmp (照片存储在 /tmp/uploads/photos/)
