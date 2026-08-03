@@ -565,11 +565,45 @@ def draw_defects(c, width, margin, y, height, data):
         severity_map = {'critical': '严重', 'major': '主要', 'minor': '轻微'}
         severity_text = severity_map.get(severity, '轻微')
         quantity = defect.get('quantity', 1)
+        photos = defect.get('photo_urls', []) or []
         
         text = f'• {description} | 等级: {severity_text} | 数量: {quantity}'
         c.setFont('ChineseFont', 9)
         c.drawString(margin + 5*mm, y, text)
         y -= 5 * mm
+        
+        # 显示问题照片
+        if photos:
+            print(f"[PDF defects] 绘制缺陷照片: {len(photos)}张")
+            for photo_path in photos:
+                if y < margin + 45 * mm:
+                    c.showPage()
+                    y = height - margin
+                
+                # 绘制照片（最大宽度120mm，高度80mm）
+                photo_width = 120 * mm
+                photo_height = 80 * mm
+                
+                # 计算实际绘制尺寸（保持宽高比）
+                draw_width = photo_width
+                draw_height = photo_height
+                
+                draw_photo(c, margin + 5*mm, y, photo_path, draw_width, draw_height)
+                y -= photo_height + 3 * mm
+                
+                # 显示问题描述
+                if description and description != 'N/A':
+                    c.setFont('ChineseFont', 8)
+                    c.setFillColor(colors.HexColor('#6B7280'))
+                    desc_text = f'问题描述：{description}'
+                    # 如果描述太长，截断
+                    if len(desc_text) > 80:
+                        desc_text = desc_text[:80] + '...'
+                    c.drawString(margin + 5*mm, y, desc_text)
+                    y -= 4 * mm
+                    c.setFillColor(colors.black)
+                
+                y -= 2 * mm
     
     y -= 5 * mm
     return y
