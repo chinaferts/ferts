@@ -92,7 +92,7 @@ def draw_header(c, width, margin, data):
     try:
         if os.path.exists(logo_path):
             # LOGO 底部与大标题文字基线对齐
-            c.drawImage(logo_path, margin, y - logo_height, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
+            c.drawImage(logo_path, margin, y, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
             print(f'[PDF header] LOGO 已绘制: {logo_path}, 尺寸: {logo_width:.1f}x{logo_height:.1f}mm')
         else:
             print(f'[PDF header] LOGO 文件不存在: {logo_path}')
