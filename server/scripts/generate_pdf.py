@@ -68,16 +68,30 @@ def draw_header(c, width, margin, data):
     """绘制报告头部区域"""
     y = height - margin
     
-    # 大标题 - 公司名称
-    c.setFont('ChineseFont', 22)
+    # 绘制 LOGO（左侧）
+    logo_path = find_file('ferts_logo.png')
+    logo_width = 35 * mm
+    logo_height = 12 * mm
+    try:
+        if os.path.exists(logo_path):
+            c.drawImage(logo_path, margin, y - logo_height + 2*mm, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
+            print(f'[PDF header] LOGO 已绘制: {logo_path}')
+        else:
+            print(f'[PDF header] LOGO 文件不存在: {logo_path}')
+    except Exception as e:
+        print(f'[PDF header] LOGO 绘制失败: {e}')
+    
+    # 大标题 - 公司名称（右侧，与 LOGO 对齐）
+    c.setFont('ChineseFont', 20)
     c.setFillColor(colors.HexColor('#333333'))
-    c.drawCentredString(width/2, y, '杭州福致自行车用品有限公司')
-    y -= 10 * mm
+    text_x = margin + logo_width + 5 * mm
+    c.drawString(text_x, y, '杭州福致自行车用品有限公司')
+    y -= 9 * mm
     
     # 副标题
-    c.setFont('ChineseFont', 12)
+    c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#666666'))
-    c.drawCentredString(width/2, y, '验货报告 / Inspection Report')
+    c.drawString(text_x, y, '验货报告 / Inspection Report')
     y -= 8 * mm
     
     # 分隔线

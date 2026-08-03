@@ -7,7 +7,7 @@ import PDFDocument from 'pdfkit';
 import { isSupabaseConfigured, getSupabaseClient, requireSupabaseClient } from '../storage/supabase.js';
 import { uploadPhoto, getPhotoUrl, getPhotoUrls } from '../utils/storage.js';
 import { getStorage } from '../utils/storage.js';
-import { PDF_SCRIPT_B64, FONT_B64 } from '../generated/pdf_assets.js';
+import { PDF_SCRIPT_B64, FONT_B64, LOGO_B64 } from '../generated/pdf_assets.js';
 
 // 从 session token 获取用户信息
 async function getUserFromSession(req: Request): Promise<{ id: string; name: string } | null> {
@@ -1476,7 +1476,10 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     // 同时写入字体文件（嵌入在代码中）
     const fontBuffer = Buffer.from(FONT_B64, 'base64');
     fs.writeFileSync('/tmp/wqy-microhei.ttc', fontBuffer);
-    console.log('[PDF] 已写入 Python 脚本和字体到 /tmp');
+    // 写入 LOGO 文件（嵌入在代码中）
+    const logoBuffer = Buffer.from(LOGO_B64, 'base64');
+    fs.writeFileSync('/tmp/ferts_logo.png', logoBuffer);
+    console.log('[PDF] 已写入 Python 脚本、字体和 LOGO 到 /tmp');
   } catch (e) {
     console.error('[PDF] 复制脚本失败:', e);
   }
