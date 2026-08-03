@@ -1455,42 +1455,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       return true;
     });
 
-    // 构建分类和检查项（从 filteredRecords 转换）
-    // 构建分类和检查项（从 filteredRecords 转换）
-    const checklistItems = filteredRecords.map((record: any) => {
-      // 从 photosByRecordId 获取照片（已转换为签名URL）
-      const photos = photosByRecordId.get(record.id) || [];
-      // 调试日志：记录每个检查项的照片数量
-      if (photos.length > 0) {
-        console.log(`[PDF] 检查项 ${record.item_name} (id: ${record.id}) 有 ${photos.length} 张照片`);
-      }
-      return {
-        id: record.checklist_item_id || record.id,
-        name: record.item_name,
-        name_en: getEnName(record.item_name || ''),
-        description: record.item_description,
-        category: record.item_category,
-        status: record.result,
-        notes: record.notes,
-        record_id: record.id,
-        photos,
-        barcodeCodes: record.barcode_codes || []
-      };
-    });
-    
-    // 调试日志：记录总共有多少检查项有照片
-    const itemsWithPhotos = checklistItems.filter((item: any) => item.photos.length > 0);
-    console.log(`[PDF] 总共 ${checklistItems.length} 个检查项，${itemsWithPhotos.length} 个有照片`);
-    
-    const categoriesMap = new Map<string, any[]>();
-    for (const item of checklistItems) {
-      const category = item.category || 'General';
-      if (!categoriesMap.has(category)) categoriesMap.set(category, []);
-      categoriesMap.get(category)!.push(item);
-    }
-    const recordsMap = new Map<number, any>();
-    for (const record of filteredRecords) recordsMap.set(record.checklist_item_id, record);
-
+    // 统计合格/不合格数量（用于 PDF summary）
     let passCount = 0, failCount = 0, naCount = 0, pendingCount = 0;
     for (const record of filteredRecords) {
       if (record.result === 'pass') passCount++;
@@ -1535,8 +1500,19 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     return ITEM_NAME_EN_MAP[cnName] || cnName;
   };
 
+  // 构建检查项列表
+  const checklistItems = filteredRecords.map((record: any) => {
+    const photos = photosByRecordId.get(record.id) || [];
+    return {
+      item_name: record.item_name || 'Unknown',
+      name_en: getEnName(record.item_name || ''),
+      status: record.status || 'pending',
+      photos: photos,
+    };
+  });
+
+  // 完整的 PDF 数据对象
   const pdfData = {
-    // 表头基本信息
     order_number: inspection.order_number || inspection.orderNo,
     inspection_number: inspection.inspection_number || inspection.order_number || inspection.orderNo,
     supplier: inspection.supplier || inspection.supplier_name,
@@ -1556,6 +1532,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     summary: { pass: passCount, fail: failCount, na: naCount, pending: pendingCount },
     defects: defects || [],
     generated_time: new Date().toLocaleString('zh-CN'),
+    checklist_items: checklistItems,
     // 尺寸重量统计表
     outer_carton_length: inspection.outer_carton_length,
     outer_carton_width: inspection.outer_carton_width,
