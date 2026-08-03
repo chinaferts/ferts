@@ -1467,6 +1467,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       return {
         id: record.checklist_item_id || record.id,
         name: record.item_name,
+        name_en: getEnName(record.item_name || ''),
         description: record.item_description,
         category: record.item_category,
         status: record.result,
@@ -1516,6 +1517,24 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   }
   
   // 准备PDF数据 - 包含完整的表头信息
+  // 中英文检查项名称映射
+  const ITEM_NAME_EN_MAP: Record<string, string> = {
+    '大货仓库照以及码堆照片': 'Warehouse Photos',
+    '外箱箱唛以及尺寸重量拍照': 'Outer Carton Markings & Measurements',
+    '内箱箱唛以及尺寸重量拍照': 'Inner Carton Markings & Measurements',
+    '产品细节拍照': 'Product Details',
+    '彩盒/彩卡信息以及其规格重量拍照': 'Color Box/Card Information',
+    '条码扫描以及拍照': 'Barcode Scan',
+    '组装以及功能测试拍照': 'Assembly & Function Test',
+    '与签样对比拍照': 'Comparison with Signed Sample',
+    '问题统计以及拍照并描述': 'Problem Statistics & Description',
+  };
+
+  // 获取英文检查项名称
+  const getEnName = (cnName: string): string => {
+    return ITEM_NAME_EN_MAP[cnName] || cnName;
+  };
+
   const pdfData = {
     // 表头基本信息
     order_number: inspection.order_number || inspection.orderNo,

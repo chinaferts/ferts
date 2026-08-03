@@ -369,12 +369,15 @@ def draw_checklist(c, width, margin, y, height, data):
                 last_category = category
             
             item_name = item.get('item_name', item.get('name', 'N/A'))
+            item_name_en = item.get('name_en', '')
             description = item.get('description', '')
             result = item.get('status', item.get('result', 'pending'))
             photos = item.get('photos', []) or []
             
-            # 估算需要的高度：名称(4mm) + 描述(4mm) + 照片行(如果有多张照片)
+            # 估算需要的高度：名称(4mm) + 英文名(3mm) + 描述(4mm) + 照片行(如果有多张照片)
             required = 8 * mm
+            if item_name_en:
+                required += 3 * mm
             if photos:
                 required += photo_max_height + 5 * mm
             check_page_break(required)
@@ -388,10 +391,17 @@ def draw_checklist(c, width, margin, y, height, data):
             }
             status_text, status_color = status_colors.get(result, ('○ 待检', '#F59E0B'))
             
-            # 检查项名称
+            # 检查项名称（中文）
             c.setFont('ChineseFont', 9)
             c.setFillColor(colors.black)
             c.drawString(margin + 5*mm, y, f'• {item_name}')
+            
+            # 检查项名称（英文）
+            if item_name_en:
+                y -= 3 * mm
+                c.setFont('Helvetica', 7)
+                c.setFillColor(colors.HexColor('#6B7280'))
+                c.drawString(margin + 5*mm, y, f'  {item_name_en}')
             
             # 状态
             c.setFillColor(colors.HexColor(status_color))
