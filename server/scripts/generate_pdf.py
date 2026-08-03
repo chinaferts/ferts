@@ -124,7 +124,7 @@ def draw_info_table(c, width, margin, y, data):
     """绘制表头信息表格"""
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#4F46E5'))
-    c.drawString(margin, y, '【 验货信息 / Inspection Info 】')
+    c.drawCentredString(width / 2, y, '【 验货信息 / Inspection Info 】')
     y -= 6 * mm
     
     # 表格数据 - 两列布局
@@ -172,7 +172,7 @@ def draw_summary(c, width, margin, y, data):
     """绘制汇总信息"""
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#4F46E5'))
-    c.drawString(margin, y, '【 检验汇总 / Summary 】')
+    c.drawCentredString(width / 2, y, '【 检验汇总 / Summary 】')
     y -= 6 * mm
     
     summary = data.get('summary', {})
@@ -229,7 +229,7 @@ def draw_dimensions_table(c, width, margin, y, data):
     # 始终绘制尺寸重量统计表（即使数据为空）
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#4F46E5'))
-    c.drawString(margin, y, '【 尺寸重量统计表 / Dimensional Table 】')
+    c.drawCentredString(width / 2, y, '【 尺寸重量统计表 / Dimensional Table 】')
     y -= 6 * mm
 
     # 表格配置 - 使用页面全宽（减去左右边距）
@@ -365,7 +365,7 @@ def draw_checklist(c, width, margin, y, height, data):
     """绘制检查项列表（包含照片），排除问题统计项"""
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#4F46E5'))
-    c.drawString(margin, y, '【 检验项目 / Inspection Items 】')
+    c.drawCentredString(width / 2, y, '【 检验项目 / Inspection Items 】')
     y -= 6 * mm
     
     # 过滤掉问题统计项（将在单独的表格中显示）
@@ -582,7 +582,7 @@ def draw_defects(c, width, margin, y, height, data):
     
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#EF4444'))
-    c.drawString(margin, y, '【 缺陷记录 / Defects 】')
+    c.drawCentredString(width / 2, y, '【 缺陷记录 / Defects 】')
     y -= 6 * mm
     
     c.setFillColor(colors.black)
@@ -690,7 +690,7 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
     # 标题
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#EF4444'))
-    c.drawString(margin, y, '【 问题统计表 / Defect Statistics 】')
+    c.drawCentredString(width / 2, y, '【 问题统计表 / Defect Statistics 】')
     y -= 8 * mm
     
     # 显示AQL信息
