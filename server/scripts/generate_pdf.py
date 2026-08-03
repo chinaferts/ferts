@@ -81,21 +81,26 @@ def draw_header(c, width, margin, data):
     """绘制报告头部区域"""
     y = height - margin
     
-    # 绘制 LOGO（左侧）
+    # 大标题字体大小和高度
+    title_font_size = 20
+    title_height = title_font_size * 0.35 * mm  # 约 7mm
+    
+    # 绘制 LOGO（左侧，与大标题同高度、同一水平线）
     logo_path = find_file('ferts_logo.png')
     logo_width = 35 * mm
-    logo_height = 12 * mm
+    logo_height = title_height  # 与大标题高度一致
     try:
         if os.path.exists(logo_path):
-            c.drawImage(logo_path, margin, y - logo_height + 2*mm, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
-            print(f'[PDF header] LOGO 已绘制: {logo_path}')
+            # LOGO 底部与大标题文字基线对齐
+            c.drawImage(logo_path, margin, y - logo_height, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
+            print(f'[PDF header] LOGO 已绘制: {logo_path}, 尺寸: {logo_width:.1f}x{logo_height:.1f}mm')
         else:
             print(f'[PDF header] LOGO 文件不存在: {logo_path}')
     except Exception as e:
         print(f'[PDF header] LOGO 绘制失败: {e}')
     
-    # 大标题 - 公司名称（右侧，与 LOGO 对齐）
-    c.setFont('ChineseFont', 20)
+    # 大标题 - 公司名称（右侧，与 LOGO 同一水平线）
+    c.setFont('ChineseFont', title_font_size)
     c.setFillColor(colors.HexColor('#333333'))
     text_x = margin + logo_width + 5 * mm
     c.drawString(text_x, y, '杭州福致自行车用品有限公司')
