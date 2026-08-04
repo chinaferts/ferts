@@ -1312,8 +1312,17 @@ router.post('/:id/photos', upload.single('file'), async (req: Request, res: Resp
       return res.status(500).json({ success: false, error: error.message || '保存照片记录失败' });
     }
     
-    console.log('[UPLOAD_PHOTO] 照片已保存到数据库, photo_id:', insertedPhoto?.id, 'record_id:', insertedPhoto?.record_id);
-    res.json({ success: true, data: insertedPhoto });
+    console.log('[UPLOAD_PHOTO] 照片已保存到数据库，photo_id:', insertedPhoto?.id, 'record_id:', insertedPhoto?.record_id);
+    
+    // 返回完整的签名 URL，而不是对象存储的 key
+    const fullPhotoUrl = await toFullUrlAsync(req, insertedPhoto.photo_url);
+    res.json({ 
+      success: true, 
+      data: {
+        ...insertedPhoto,
+        photo_url: fullPhotoUrl  // 返回完整的签名 URL
+      }
+    });
   } catch (err: any) {
     console.error('[UPLOAD_PHOTO] Unexpected error:', err);
     res.status(500).json({ success: false, error: err.message || '上传照片失败' });
