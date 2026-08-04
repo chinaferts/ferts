@@ -465,42 +465,40 @@ def draw_checklist(c, width, margin, y, height, data):
                 photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
                 
                 # 逐张绘制照片，按行排列，页面空间不足时自动换页
-                print(f"[PDF checklist] 开始绘制 {len(photos)} 张照片，photos_per_row={photos_per_row}")
-                photos_on_page = 0
+                # 计算每页最多能显示多少行照片
+                available_height = height - 2 * margin - 20 * mm  # 减去上下边距和额外空间
+                max_rows_per_page = max(1, int(available_height / (photo_max_height + photo_spacing)))
+                print(f"[PDF checklist] 开始绘制 {len(photos)} 张照片，photos_per_row={photos_per_row}, max_rows_per_page={max_rows_per_page}")
+                
                 row = 0
                 col = 0
+                rows_on_current_page = 0
                 
                 for i, photo_path in enumerate(photos):
-                    # 新行开始时检查页面空间
-                    if col == 0:
-                        current_y = y - row * (photo_max_height + photo_spacing)
-                        print(f"[PDF checklist] 照片 {i+1}: 准备新行，current_y={current_y:.1f}, margin={margin:.1f}, 需要空间={photo_max_height + 5*mm:.1f}")
-                        # 检查是否有足够空间放一行照片
-                        if current_y < margin + photo_max_height + 5 * mm:
-                            print(f"[PDF checklist] 照片 {i+1}: 空间不足，换页")
-                            c.showPage()
-                            y = height - margin
-                            row = 0
-                            col = 0
-                            photos_on_page = 0
-                            current_y = y
+                    # 新行开始时检查是否超过每页最大行数
+                    if col == 0 and rows_on_current_page >= max_rows_per_page:
+                        print(f"[PDF checklist] 照片 {i+1}: 已达每页最大行数 {max_rows_per_page}，换页")
+                        c.showPage()
+                        y = height - margin
+                        row = 0
+                        rows_on_current_page = 0
                     
                     # 计算当前照片的位置
                     photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
                     photo_y = y - row * (photo_max_height + photo_spacing)
                     
-                    print(f"[PDF checklist] 照片 {i+1}/{len(photos)}: row={row}, col={col}, photo_x={photo_x:.1f}, photo_y={photo_y:.1f}")
+                    print(f"[PDF checklist] 照片 {i+1}/{len(photos)}: row={row}, col={col}, photo_y={photo_y:.1f}")
                     
                     # 绘制照片
                     draw_photo(c, photo_x, photo_y, photo_path, photo_max_width, photo_max_height)
                     
                     col += 1
-                    photos_on_page += 1
                     
                     # 一行满后换行
                     if col >= photos_per_row:
                         col = 0
                         row += 1
+                        rows_on_current_page += 1
                 
                 # 更新 y 坐标
                 y -= row * (photo_max_height + photo_spacing)
@@ -858,19 +856,23 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
         photos_per_row = 4
         
         # 绘制照片，按行排列，页面空间不足时自动换页
-        defect_photos_per_row = 4
+        # 计算每页最多能显示多少行照片
+        available_height = height - 2 * margin - 20 * mm
+        max_rows_per_page = max(1, int(available_height / (photo_max_height + photo_spacing)))
+        print(f"[PDF defect] 开始绘制 {len(photos)} 张问题照片，photos_per_row={photos_per_row}, max_rows_per_page={max_rows_per_page}")
+        
         row = 0
         col = 0
+        rows_on_current_page = 0
         
         for i, photo in enumerate(photos):
-            # 新行开始时检查页面空间
-            if col == 0:
-                # 检查是否有足够空间放一行照片
-                if y - row * (photo_max_height + photo_spacing) < margin + photo_max_height + 5 * mm:
-                    c.showPage()
-                    y = height - margin
-                    row = 0
-                    col = 0
+            # 新行开始时检查是否超过每页最大行数
+            if col == 0 and rows_on_current_page >= max_rows_per_page:
+                print(f"[PDF defect] 照片 {i+1}: 已达每页最大行数 {max_rows_per_page}，换页")
+                c.showPage()
+                y = height - margin
+                row = 0
+                rows_on_current_page = 0
             
             # 计算当前照片的位置
             photo_x = margin + col * (photo_max_width + photo_spacing)
@@ -901,14 +903,16 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
             col += 1
             
             # 一行满后换行
-            if col >= defect_photos_per_row:
+            if col >= photos_per_row:
                 col = 0
                 row += 1
+                rows_on_current_page += 1
         
         # 更新 y 坐标
         y -= row * (photo_max_height + photo_spacing)
         if col > 0:
             y -= photo_max_height + photo_spacing
+        print(f"[PDF defect] 绘制完成，最终 y={y:.1f}")
     y -= 10 * mm
     return y
 
