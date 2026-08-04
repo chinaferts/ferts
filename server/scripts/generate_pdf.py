@@ -474,9 +474,17 @@ def draw_checklist(c, width, margin, y, height, data):
                     # 如果是新行的第一张照片，检查是否需要分页
                     if col == 0:
                         # 检查是否有足够空间放一行照片
-                        check_page_break(photo_max_height + 10 * mm)
+                        if y < margin + photo_max_height + 10 * mm:
+                            c.showPage()
+                            y = height - margin
                     
                     photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
+                    
+                    # 绘制照片前再次检查 y 坐标（防止照片超出页面）
+                    if y < margin + photo_max_height:
+                        c.showPage()
+                        y = height - margin
+                        photo_x = margin + 10*mm  # 新页从第一列开始
                     
                     # 绘制照片
                     draw_photo(c, photo_x, y, photo_path, photo_max_width, photo_max_height)
