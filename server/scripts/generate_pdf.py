@@ -464,34 +464,34 @@ def draw_checklist(c, width, margin, y, height, data):
                 content_width = width - 2 * margin - 10 * mm
                 photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
                 
-                # 逐张绘制照片，自动换行和分页
-                # 先计算总行数，然后按行绘制
-                total_photos = len(photos)
-                row = 0
-                photo_idx = 0
+                # 逐张绘制照片，每页最多 18 张（3 列×6 行），超过就换页
+                photos_on_page = 0
+                max_photos_per_page = 18
                 
-                while photo_idx < total_photos:
-                    # 计算当前行有多少张照片
-                    photos_in_row = min(photos_per_row, total_photos - photo_idx)
-                    
-                    # 检查是否有足够空间放一行照片
-                    if y < margin + photo_max_height + 5 * mm:
+                for i, photo_path in enumerate(photos):
+                    # 每页超过 18 张照片就换页
+                    if photos_on_page >= max_photos_per_page:
                         c.showPage()
                         y = height - margin
+                        photos_on_page = 0
                     
-                    # 绘制当前行的所有照片
-                    for col in range(photos_in_row):
-                        photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
-                        photo_path = photos[photo_idx]
-                        
-                        print(f"[PDF checklist] 照片 {photo_idx+1}/{total_photos}: {str(photo_path)[:80]}")
-                        
-                        # 绘制照片
-                        draw_photo(c, photo_x, y, photo_path, photo_max_width, photo_max_height)
-                        photo_idx += 1
+                    # 计算当前照片的位置（3 列布局）
+                    col = photos_on_page % photos_per_row
+                    row = photos_on_page // photos_per_row
                     
-                    # 一行绘制完成后，y 坐标下移
-                    y -= photo_max_height + photo_spacing
+                    photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
+                    photo_y = y - row * (photo_max_height + photo_spacing)
+                    
+                    print(f"[PDF checklist] 照片 {i+1}/{len(photos)}: {str(photo_path)[:80]}")
+                    
+                    # 绘制照片
+                    draw_photo(c, photo_x, photo_y, photo_path, photo_max_width, photo_max_height)
+                    
+                    photos_on_page += 1
+                
+                # 更新 y 坐标（根据实际绘制的行数）
+                rows_drawn = (photos_on_page + photos_per_row - 1) // photos_per_row
+                y -= rows_drawn * (photo_max_height + photo_spacing)
                 
                 # 额外间距
                 y -= 2 * mm
@@ -842,50 +842,52 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
         photo_spacing = 3 * mm
         photos_per_row = 4
         
-        # 按行绘制照片
-        total_photos = len(photos)
-        photo_idx = 0
+        # 绘制照片，每页最多 18 张（4 列×5 行，缺陷照片用 4 列）
+        photos_on_page = 0
+        max_photos_per_page = 18
+        defect_photos_per_row = 4
         
-        while photo_idx < total_photos:
-            # 计算当前行有多少张照片
-            photos_in_row = min(photos_per_row, total_photos - photo_idx)
-            
-            # 检查是否有足够空间放一行照片
-            if y < margin + photo_max_height + 5 * mm:
+        for i, photo in enumerate(photos):
+            # 每页超过 18 张照片就换页
+            if photos_on_page >= max_photos_per_page:
                 c.showPage()
                 y = height - margin
+                photos_on_page = 0
             
-            # 绘制当前行的所有照片
-            for col in range(photos_in_row):
-                photo = photos[photo_idx]
-                photo_x = margin + col * (photo_max_width + photo_spacing)
-                
-                # 兼容字符串 URL 和字典{'url': '...'}两种格式
-                if isinstance(photo, str):
-                    photo_url = photo
-                elif isinstance(photo, dict):
-                    photo_url = photo.get('url', '')
-                else:
-                    photo_url = str(photo) if photo else ''
-                
-                # HTTP URL 直接传给 draw_photo（内部会下载），本地文件才检查存在性
-                if photo_url.startswith('http'):
+            # 计算当前照片的位置
+            col = photos_on_page % defect_photos_per_row
+            row = photos_on_page // defect_photos_per_row
+            
+            photo_x = margin + col * (photo_max_width + photo_spacing)
+            photo_y = y - row * (photo_max_height + photo_spacing)
+            
+            # 兼容字符串 URL 和字典{'url': '...'}两种格式
+            if isinstance(photo, str):
+                photo_url = photo
+            elif isinstance(photo, dict):
+                photo_url = photo.get('url', '')
+            else:
+                photo_url = str(photo) if photo else ''
+            
+            # HTTP URL 直接传给 draw_photo（内部会下载），本地文件才检查存在性
+            if photo_url.startswith('http'):
+                try:
+                    draw_photo(c, photo_x, photo_y, photo_url, photo_max_width, photo_max_height)
+                except Exception as e:
+                    print(f"绘制问题照片失败：{e}")
+            else:
+                photo_path = get_full_photo_path(photo_url)
+                if photo_path and os.path.exists(photo_path):
                     try:
-                        draw_photo(c, photo_x, y, photo_url, photo_max_width, photo_max_height)
+                        draw_photo(c, photo_x, photo_y, photo_path, photo_max_width, photo_max_height)
                     except Exception as e:
                         print(f"绘制问题照片失败：{e}")
-                else:
-                    photo_path = get_full_photo_path(photo_url)
-                    if photo_path and os.path.exists(photo_path):
-                        try:
-                            draw_photo(c, photo_x, y, photo_path, photo_max_width, photo_max_height)
-                        except Exception as e:
-                            print(f"绘制问题照片失败：{e}")
-                
-                photo_idx += 1
             
-            # 一行绘制完成后，y 坐标下移
-            y -= photo_max_height + photo_spacing
+            photos_on_page += 1
+        
+        # 更新 y 坐标
+        rows_drawn = (photos_on_page + defect_photos_per_row - 1) // defect_photos_per_row
+        y -= rows_drawn * (photo_max_height + photo_spacing)
     y -= 10 * mm
     return y
 
