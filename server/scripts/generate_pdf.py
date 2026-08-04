@@ -448,7 +448,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 c.drawString(margin + 10*mm, y, f'检验标准: {desc}')
                 y -= 4 * mm
             
-            # 绘制照片
+            # 绘制照片（全部显示，不限张数，自动分页）
             barcode_codes = item.get('barcodeCodes', []) or []
             barcode_formats = item.get('barcodeFormats', []) or []
             notes = item.get('notes', '') or ''
@@ -457,26 +457,35 @@ def draw_checklist(c, width, margin, y, height, data):
                 print(f"[PDF checklist] 渲染检查项 '{item_name}' 的 {len(photos)} 张照片")
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#4F46E5'))
-                c.drawString(margin + 10*mm, y, f'📷 {len(photos)}张照片')
+                c.drawString(margin + 10*mm, y, f' {len(photos)}张照片')
                 y -= 4 * mm
                 
                 # 计算每行能放多少张照片
                 content_width = width - 2 * margin - 10 * mm
                 photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
                 
-                photo_y = y - photo_max_height
+                # 逐张绘制照片，自动换行和分页
                 for i, photo_path in enumerate(photos):
                     print(f"[PDF checklist] 照片 {i+1}/{len(photos)}: {str(photo_path)[:80]}")
-                    photo_x = margin + 10*mm + (i % photos_per_row) * (photo_max_width + photo_spacing)
                     
-                    # 如果当前行放不下，换行
-                    if i > 0 and i % photos_per_row == 0:
-                        photo_y -= photo_max_height + photo_spacing
+                    # 计算当前照片的位置
+                    row = i // photos_per_row
+                    col = i % photos_per_row
+                    
+                    # 如果是新行的第一张照片，检查是否需要分页
+                    if col == 0 and i > 0:
                         check_page_break(photo_max_height + 10 * mm)
+                        y -= photo_max_height + photo_spacing
+                    
+                    photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
+                    photo_y = y - photo_max_height
                     
                     draw_photo(c, photo_x, photo_y + photo_max_height, photo_path, photo_max_width, photo_max_height)
                 
-                y = photo_y - 5 * mm
+                # 更新y坐标到照片区域下方
+                if photos:
+                    last_row = (len(photos) - 1) // photos_per_row
+                    y = y - last_row * (photo_max_height + photo_spacing) - photo_max_height - 5 * mm
             
             # 绘制条码（带格式）
             if barcode_codes:
