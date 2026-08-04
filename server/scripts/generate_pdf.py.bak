@@ -448,7 +448,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 c.drawString(margin + 10*mm, y, f'检验标准: {desc}')
                 y -= 4 * mm
             
-            # 绘制照片（全部显示，不限张数，自动换行和分页）
+            # 绘制照片（全部显示，不限张数，自动分页）
             barcode_codes = item.get('barcodeCodes', []) or []
             barcode_formats = item.get('barcodeFormats', []) or []
             notes = item.get('notes', '') or ''
@@ -469,24 +469,23 @@ def draw_checklist(c, width, margin, y, height, data):
                     print(f"[PDF checklist] 照片 {i+1}/{len(photos)}: {str(photo_path)[:80]}")
                     
                     # 计算当前照片的位置
+                    row = i // photos_per_row
                     col = i % photos_per_row
                     
                     # 如果是新行的第一张照片，检查是否需要分页
-                    if col == 0:
-                        # 检查是否有足够空间放一行照片
+                    if col == 0 and i > 0:
                         check_page_break(photo_max_height + 10 * mm)
+                        y -= photo_max_height + photo_spacing
                     
                     photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
+                    photo_y = y - photo_max_height
                     
-                    # 绘制照片
-                    draw_photo(c, photo_x, y, photo_path, photo_max_width, photo_max_height)
-                    
-                    # 如果是行尾或最后一张，换行
-                    if col == photos_per_row - 1 or i == len(photos) - 1:
-                        y -= photo_max_height + photo_spacing
+                    draw_photo(c, photo_x, photo_y + photo_max_height, photo_path, photo_max_width, photo_max_height)
                 
-                # 额外间距
-                y -= 2 * mm
+                # 更新y坐标到照片区域下方
+                if photos:
+                    last_row = (len(photos) - 1) // photos_per_row
+                    y = y - last_row * (photo_max_height + photo_spacing) - photo_max_height - 5 * mm
             
             # 绘制条码（带格式）
             if barcode_codes:
