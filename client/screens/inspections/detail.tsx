@@ -2564,7 +2564,7 @@ export default function InspectionDetailScreen() {
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tempPhotoScroll}>
                           {tempPhotos.map((uri, idx) => (
                             <TouchableOpacity key={idx} style={styles.tempPhotoContainer}>
-                              <Image source={{ uri }} style={styles.tempPhotoThumb} />
+                              <ExpoImage source={{ uri }} style={styles.tempPhotoThumb} contentFit="cover" />
                               <View style={styles.tempPhotoBadge}>
                                 <Text style={styles.tempPhotoBadgeText}>{idx + 1}</Text>
                               </View>
@@ -2619,7 +2619,7 @@ export default function InspectionDetailScreen() {
                                     });
                                   }
                                 }} style={styles.photoContainer}>
-                                  <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
+                                  <ExpoImage source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} cachePolicy="memory-disk" contentFit="cover" />
                                   {item.status !== 'pass' && inspection.status !== 'completed' && (
                                     <TouchableOpacity style={styles.photoDeleteButton}
                                       onPress={() => {
@@ -3009,7 +3009,7 @@ export default function InspectionDetailScreen() {
                               itemId: item.id,
                             });
                           }}>
-                          <Image source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} />
+                          <ExpoImage source={{ uri: getImageUrl(photo) }} style={styles.photoThumb} cachePolicy="memory-disk" contentFit="cover" />
                           {item.status !== 'pass' && inspection?.status !== 'completed' && (
                             <TouchableOpacity style={styles.photoDeleteButton}
                               onPress={() => {
@@ -3242,7 +3242,7 @@ export default function InspectionDetailScreen() {
                             setPhotoModalVisible(true);
                           } : () => handleRemoveIssuePhoto(index, photoIndex)}
                         >
-                          <Image source={{ uri: getImageUrl(photo) }} style={styles.issuePhoto} />
+                          <ExpoImage source={{ uri: getImageUrl(photo) }} style={styles.issuePhoto} cachePolicy="memory-disk" contentFit="cover" />
                         </TouchableOpacity>
                       );
                     })}
@@ -3382,7 +3382,7 @@ export default function InspectionDetailScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.defectPhotoPreview}>
                 {defectPhotos.map((photo, idx) => (
                   <View key={idx} style={styles.defectPhotoItem}>
-                    <Image source={{ uri: getImageUrl(photo) }} style={styles.defectPhotoThumb} />
+                    <ExpoImage source={{ uri: getImageUrl(photo) }} style={styles.defectPhotoThumb} cachePolicy="memory-disk" contentFit="cover" />
                     <TouchableOpacity style={styles.removePhotoBtn}
                       onPress={() => setDefectPhotos(prev => prev.filter((_, i) => i !== idx))}>
                       <Feather name="x" size={14} color="#FF6B6B" />
@@ -3434,7 +3434,7 @@ export default function InspectionDetailScreen() {
                   }
                 }}
               >
-                <Image source={{ uri: selectedPhoto }} style={[styles.fullPhoto, { transform: [{ scale: photoScale }, { translateX: photoTranslate.x }, { translateY: photoTranslate.y }] }]} resizeMode="contain" />
+                <ExpoImage source={{ uri: selectedPhoto }} style={[styles.fullPhoto, { transform: [{ scale: photoScale }, { translateX: photoTranslate.x }, { translateY: photoTranslate.y }] }]} contentFit="contain" />
               </PanGestureHandler>
             </PinchGestureHandler>
           )}
