@@ -464,21 +464,23 @@ def draw_checklist(c, width, margin, y, height, data):
                 content_width = width - 2 * margin - 10 * mm
                 photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
                 
-                # 逐张绘制照片，每页最多 18 张（3 列×6 行），超过就换页
+                # 逐张绘制照片，按行排列，页面空间不足时自动换页
                 photos_on_page = 0
-                max_photos_per_page = 18
+                row = 0
+                col = 0
                 
                 for i, photo_path in enumerate(photos):
-                    # 每页超过 18 张照片就换页
-                    if photos_on_page >= max_photos_per_page:
-                        c.showPage()
-                        y = height - margin
-                        photos_on_page = 0
+                    # 新行开始时检查页面空间
+                    if col == 0:
+                        # 检查是否有足够空间放一行照片
+                        if y - row * (photo_max_height + photo_spacing) < margin + photo_max_height + 5 * mm:
+                            c.showPage()
+                            y = height - margin
+                            row = 0
+                            col = 0
+                            photos_on_page = 0
                     
-                    # 计算当前照片的位置（3 列布局）
-                    col = photos_on_page % photos_per_row
-                    row = photos_on_page // photos_per_row
-                    
+                    # 计算当前照片的位置
                     photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
                     photo_y = y - row * (photo_max_height + photo_spacing)
                     
@@ -487,11 +489,18 @@ def draw_checklist(c, width, margin, y, height, data):
                     # 绘制照片
                     draw_photo(c, photo_x, photo_y, photo_path, photo_max_width, photo_max_height)
                     
+                    col += 1
                     photos_on_page += 1
+                    
+                    # 一行满后换行
+                    if col >= photos_per_row:
+                        col = 0
+                        row += 1
                 
-                # 更新 y 坐标（根据实际绘制的行数）
-                rows_drawn = (photos_on_page + photos_per_row - 1) // photos_per_row
-                y -= rows_drawn * (photo_max_height + photo_spacing)
+                # 更新 y 坐标
+                y -= row * (photo_max_height + photo_spacing)
+                if col > 0:
+                    y -= photo_max_height + photo_spacing
                 
                 # 额外间距
                 y -= 2 * mm
@@ -842,22 +851,22 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
         photo_spacing = 3 * mm
         photos_per_row = 4
         
-        # 绘制照片，每页最多 18 张（4 列×5 行，缺陷照片用 4 列）
-        photos_on_page = 0
-        max_photos_per_page = 18
+        # 绘制照片，按行排列，页面空间不足时自动换页
         defect_photos_per_row = 4
+        row = 0
+        col = 0
         
         for i, photo in enumerate(photos):
-            # 每页超过 18 张照片就换页
-            if photos_on_page >= max_photos_per_page:
-                c.showPage()
-                y = height - margin
-                photos_on_page = 0
+            # 新行开始时检查页面空间
+            if col == 0:
+                # 检查是否有足够空间放一行照片
+                if y - row * (photo_max_height + photo_spacing) < margin + photo_max_height + 5 * mm:
+                    c.showPage()
+                    y = height - margin
+                    row = 0
+                    col = 0
             
             # 计算当前照片的位置
-            col = photos_on_page % defect_photos_per_row
-            row = photos_on_page // defect_photos_per_row
-            
             photo_x = margin + col * (photo_max_width + photo_spacing)
             photo_y = y - row * (photo_max_height + photo_spacing)
             
@@ -883,11 +892,17 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
                     except Exception as e:
                         print(f"绘制问题照片失败：{e}")
             
-            photos_on_page += 1
+            col += 1
+            
+            # 一行满后换行
+            if col >= defect_photos_per_row:
+                col = 0
+                row += 1
         
         # 更新 y 坐标
-        rows_drawn = (photos_on_page + defect_photos_per_row - 1) // defect_photos_per_row
-        y -= rows_drawn * (photo_max_height + photo_spacing)
+        y -= row * (photo_max_height + photo_spacing)
+        if col > 0:
+            y -= photo_max_height + photo_spacing
     y -= 10 * mm
     return y
 
