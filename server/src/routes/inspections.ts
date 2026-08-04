@@ -748,15 +748,8 @@ router.post('/', async (req: Request, res: Response) => {
       .select()
       .single();
 
-    // 处理唯一约束冲突（如订单号重复）
+    // 处理插入错误
     if (inspectionError) {
-      const errorMsg = inspectionError.message || '';
-      if (errorMsg.includes('duplicate key') || errorMsg.includes('unique') || errorMsg.includes('order_number')) {
-        return res.status(400).json({
-          success: false,
-          error: `订单号 "${orderNo || orderNo || `AUTO-${Date.now()}`}" 已存在，请使用不同的订单号`
-        });
-      }
       throw inspectionError;
     }
 
