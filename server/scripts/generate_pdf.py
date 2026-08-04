@@ -465,6 +465,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
                 
                 # 逐张绘制照片，按行排列，页面空间不足时自动换页
+                print(f"[PDF checklist] 开始绘制 {len(photos)} 张照片，photos_per_row={photos_per_row}")
                 photos_on_page = 0
                 row = 0
                 col = 0
@@ -472,19 +473,23 @@ def draw_checklist(c, width, margin, y, height, data):
                 for i, photo_path in enumerate(photos):
                     # 新行开始时检查页面空间
                     if col == 0:
+                        current_y = y - row * (photo_max_height + photo_spacing)
+                        print(f"[PDF checklist] 照片 {i+1}: 准备新行，current_y={current_y:.1f}, margin={margin:.1f}, 需要空间={photo_max_height + 5*mm:.1f}")
                         # 检查是否有足够空间放一行照片
-                        if y - row * (photo_max_height + photo_spacing) < margin + photo_max_height + 5 * mm:
+                        if current_y < margin + photo_max_height + 5 * mm:
+                            print(f"[PDF checklist] 照片 {i+1}: 空间不足，换页")
                             c.showPage()
                             y = height - margin
                             row = 0
                             col = 0
                             photos_on_page = 0
+                            current_y = y
                     
                     # 计算当前照片的位置
                     photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
                     photo_y = y - row * (photo_max_height + photo_spacing)
                     
-                    print(f"[PDF checklist] 照片 {i+1}/{len(photos)}: {str(photo_path)[:80]}")
+                    print(f"[PDF checklist] 照片 {i+1}/{len(photos)}: row={row}, col={col}, photo_x={photo_x:.1f}, photo_y={photo_y:.1f}")
                     
                     # 绘制照片
                     draw_photo(c, photo_x, photo_y, photo_path, photo_max_width, photo_max_height)
@@ -501,6 +506,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 y -= row * (photo_max_height + photo_spacing)
                 if col > 0:
                     y -= photo_max_height + photo_spacing
+                print(f"[PDF checklist] 绘制完成，最终 y={y:.1f}")
                 
                 # 额外间距
                 y -= 2 * mm
