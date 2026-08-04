@@ -821,7 +821,7 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
     
     # 绘制问题照片（如果有）
     photos = defect_item.get('photos', []) or []
-    print(f"[PDF defect_stats] 问题照片数量: {len(photos)}")
+    print(f"[PDF defect_stats] 问题照片数量：{len(photos)}")
     if photos:
         y -= 5 * mm
         c.setFont('ChineseFont', 9)
@@ -831,15 +831,23 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
         
         photo_max_width = 40 * mm
         photo_max_height = 35 * mm
-        photo_x = margin
+        photo_spacing = 3 * mm
         photos_per_row = 4
         
         for i, photo in enumerate(photos):
-            if i > 0 and i % photos_per_row == 0:
-                y -= photo_max_height + 3 * mm
-                photo_x = margin
+            col = i % photos_per_row
             
-            # 兼容字符串URL和字典{'url': '...'}两种格式
+            # 新行第一张照片时，检查是否需要分页
+            if col == 0:
+                # 检查是否有足够空间放一行照片
+                if y < margin + photo_max_height + 10 * mm:
+                    c.showPage()
+                    y = height - margin
+            
+            # 计算当前照片的 x 位置
+            photo_x = margin + col * (photo_max_width + photo_spacing)
+            
+            # 兼容字符串 URL 和字典{'url': '...'}两种格式
             if isinstance(photo, str):
                 photo_url = photo
             elif isinstance(photo, dict):
@@ -851,17 +859,19 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
             if photo_url.startswith('http'):
                 try:
                     draw_photo(c, photo_x, y, photo_url, photo_max_width, photo_max_height)
-                    photo_x += photo_max_width + 3 * mm
                 except Exception as e:
-                    print(f"绘制问题照片失败: {e}")
+                    print(f"绘制问题照片失败：{e}")
             else:
                 photo_path = get_full_photo_path(photo_url)
                 if photo_path and os.path.exists(photo_path):
                     try:
                         draw_photo(c, photo_x, y, photo_path, photo_max_width, photo_max_height)
-                        photo_x += photo_max_width + 3 * mm
                     except Exception as e:
-                        print(f"绘制问题照片失败: {e}")    
+                        print(f"绘制问题照片失败：{e}")
+            
+            # 行尾或最后一张照片时，换行
+            if col == photos_per_row - 1 or i == len(photos) - 1:
+                y -= photo_max_height + photo_spacing
     y -= 10 * mm
     return y
 
