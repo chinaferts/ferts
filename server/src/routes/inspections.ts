@@ -1580,7 +1580,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   };
   
   // 构建检查项列表，保持每个检查项独立显示（包括3个条码扫描项）
-  const sortedRecords = [...records].sort((a: any, b: any) => {
+  const sortedRecords = [...filteredRecords].sort((a: any, b: any) => {
     // 尝试按 item_order 排序
     const orderA = a.checklist_items?.item_order ?? 999;
     const orderB = b.checklist_items?.item_order ?? 999;
