@@ -406,12 +406,19 @@ def draw_checklist(c, width, margin, y, height, data):
             result = item.get('status', item.get('result', 'pending'))
             photos = item.get('photos', []) or []
             
-            # 估算需要的高度：名称(4mm) + 英文名(3mm) + 描述(4mm) + 照片行(如果有多张照片)
+            # 估算需要的高度：名称 (4mm) + 英文名 (3mm) + 描述 (4mm) + 照片行
             required = 8 * mm
             if item_name_en:
                 required += 3 * mm
+            
+            # 计算照片需要的总高度（考虑分页）
             if photos:
-                required += photo_max_height + 5 * mm
+                content_width = width - 2 * margin - 20 * mm
+                photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
+                total_rows = (len(photos) + photos_per_row - 1) // photos_per_row
+                # 每页最多 5 行，每行 43mm
+                row_height = photo_max_height + photo_spacing
+                required += total_rows * row_height
             check_page_break(required)
             
             # 状态颜色
