@@ -1472,16 +1472,38 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
 
   try {
     const fs = await import('fs');
+    const path = await import('path');
     // 始终写入最新版本（嵌入在代码中，保证与 Express 代码同步）
     const scriptContent = Buffer.from(PDF_SCRIPT_B64, 'base64').toString('utf-8');
     fs.writeFileSync(pdfScriptPath, scriptContent);
-    // 同时写入字体文件（嵌入在代码中）
-    const fontBuffer = Buffer.from(FONT_B64, 'base64');
-    fs.writeFileSync('/tmp/wqy-microhei.ttc', fontBuffer);
+    
+    // 字体文件从构建输出目录复制（不嵌入，避免构建超时）
+    // 构建时 build.js 会将字体复制到 scripts 目录
+    const possibleFontPaths = [
+      path.join(__dirname, '..', 'scripts', 'wqy-microhei.ttc'),  // 开发环境
+      path.join(__dirname, 'scripts', 'wqy-microhei.ttc'),  // 生产环境（dist目录）
+      '/tmp/server_dist/scripts/wqy-microhei.ttc',  // 生产环境备用路径
+      '/tmp/wqy-microhei.ttc'  // 临时目录
+    ];
+    
+    let fontCopied = false;
+    for (const fontPath of possibleFontPaths) {
+      if (fs.existsSync(fontPath)) {
+        fs.copyFileSync(fontPath, '/tmp/wqy-microhei.ttc');
+        console.log(`[PDF] 字体已从 ${fontPath} 复制到 /tmp`);
+        fontCopied = true;
+        break;
+      }
+    }
+    
+    if (!fontCopied) {
+      console.warn('[PDF] 警告：未找到字体文件，PDF可能无法显示中文');
+    }
+    
     // 写入 LOGO 文件（嵌入在代码中）
     const logoBuffer = Buffer.from(LOGO_B64, 'base64');
     fs.writeFileSync('/tmp/ferts_logo.png', logoBuffer);
-    console.log('[PDF] 已写入 Python 脚本、字体和 LOGO 到 /tmp');
+    console.log('[PDF] 已写入 Python 脚本和 LOGO 到 /tmp');
   } catch (e) {
     console.error('[PDF] 复制脚本失败:', e);
   }
