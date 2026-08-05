@@ -25,9 +25,9 @@ try {
     format: 'cjs',
     outdir: outDir,
     outExtension: { '.js': '.cjs' },
-    external: [],  // 所有依赖都打包进去
+    external: ['@supabase/supabase-js', 'pg', 'multer', 'uuid', 'express', 'cors', 'morgan', 'node-cron'],
     sourcemap: false,
-    minify: false,
+    minify: true,
   });
 
   // 复制 Python 脚本和字体文件到构建输出目录
