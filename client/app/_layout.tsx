@@ -5,6 +5,7 @@ import Toast from 'react-native-toast-message';
 import { Provider } from '@/components/Provider';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { UpdatePrompt } from '@/components/UpdatePrompt';
 import { useEffect } from 'react';
 import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
 
@@ -63,6 +64,7 @@ export default function RootLayout() {
               <Stack.Screen name="photo-preview" options={{ headerShown: false, presentation: 'modal', animation: 'fade' }} />
             </Stack>
             <Toast />
+            <UpdatePrompt />
           </AuthGuard>
         </AuthProvider>
       </LanguageProvider>

@@ -1775,4 +1775,42 @@ router.post('/admin/cleanup-duplicate-barcodes', async (req: Request, res: Respo
   }
 });
 
+// 获取当前部署版本信息（公开接口，无需认证）
+router.get('/version', async (req: Request, res: Response) => {
+  try {
+    // 尝试从 git 获取版本信息
+    let version = 'unknown';
+    let commitHash = '';
+    let deployTime = '';
+    
+    try {
+      commitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+      version = commitHash;
+    } catch {
+      // 如果 git 命令失败，使用环境变量
+      version = process.env.DEPLOY_VERSION || 'unknown';
+    }
+    
+    try {
+      deployTime = execSync('git log -1 --format=%ci', { encoding: 'utf-8' }).trim();
+    } catch {
+      deployTime = new Date().toISOString();
+    }
+    
+    res.json({
+      success: true,
+      version,
+      commitHash,
+      deployTime,
+      buildTime: new Date().toISOString()
+    });
+  } catch (err: any) {
+    res.json({
+      success: true,
+      version: 'unknown',
+      error: err.message
+    });
+  }
+});
+
 export default router;
