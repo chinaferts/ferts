@@ -1709,4 +1709,70 @@ router.delete('/admin/cleanup-photos', async (req: Request, res: Response) => {
   }
 });
 
+// 管理员：清理重复的条码扫描记录（保留每个验货任务的前 3 条）
+router.post('/admin/cleanup-duplicate-barcodes', async (req: Request, res: Response) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const supabase = requireSupabaseClient();
+    const { data: userData } = await supabase.from('users').select('role').eq('id', parseInt(userId)).single();
+    if (!userData || userData.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // 获取所有条码扫描记录
+    const { data: barcodeRecords, error: fetchError } = await supabase
+      .from('inspection_records')
+      .select('id, inspection_id')
+      .like('item_name', '%条码%')
+      .order('id', { ascending: true });
+
+    if (fetchError) {
+      console.error('Fetch barcode records error:', fetchError);
+      return res.status(500).json({ error: 'Failed to fetch records' });
+    }
+
+    // 按 inspection_id 分组，保留前 3 条，删除多余的
+    const recordsByInspection: Record<number, number[]> = {};
+    for (const record of barcodeRecords || []) {
+      const inspId = record.inspection_id;
+      if (!recordsByInspection[inspId]) {
+        recordsByInspection[inspId] = [];
+      }
+      recordsByInspection[inspId].push(record.id);
+    }
+
+    const idsToDelete: number[] = [];
+    for (const inspId in recordsByInspection) {
+      const ids = recordsByInspection[inspId];
+      if (ids.length > 3) {
+        // 保留前 3 条，删除后面的
+        idsToDelete.push(...ids.slice(3));
+      }
+    }
+
+    if (idsToDelete.length === 0) {
+      return res.json({ success: true, message: 'No duplicate records found', deletedCount: 0 });
+    }
+
+    // 批量删除
+    const { error: deleteError } = await supabase
+      .from('inspection_records')
+      .delete()
+      .in('id', idsToDelete);
+
+    if (deleteError) {
+      console.error('Delete duplicate records error:', deleteError);
+      return res.status(500).json({ error: 'Failed to delete records' });
+    }
+
+    console.log(`[Cleanup] Deleted ${idsToDelete.length} duplicate barcode records`);
+    res.json({ success: true, message: `Deleted ${idsToDelete.length} duplicate records`, deletedCount: idsToDelete.length });
+  } catch (err: any) {
+    console.error('Cleanup duplicate barcodes error:', err);
+    res.status(500).json({ error: err.message || 'Failed to cleanup duplicate records' });
+  }
+});
+
 export default router;
