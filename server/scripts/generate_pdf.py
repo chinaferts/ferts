@@ -467,7 +467,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 # 逐张绘制照片，每页固定显示 6 行，超过自动换页
                 print(f"[PDF checklist] 开始绘制 {len(photos)} 张照片，photos_per_row={photos_per_row}")
                 
-                max_rows_per_page = 6  # 每页最多 6 行
+                max_rows_per_page = 5  # 每页最多 5 行（A4 页面可用高度 237mm，5 行×43mm=215mm）
                 row_height = photo_max_height + photo_spacing
                 current_y = y  # 当前行的顶部位置
                 col = 0  # 当前列
@@ -858,7 +858,7 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
         # 绘制照片，每页固定显示 6 行，超过自动换页
         print(f"[PDF defect] 开始绘制 {len(photos)} 张问题照片，photos_per_row={photos_per_row}")
         
-        max_rows_per_page = 6  # 每页最多 6 行
+        max_rows_per_page = 5  # 每页最多 5 行（A4 页面可用高度 237mm，5 行×43mm=215mm）
         row_height = photo_max_height + photo_spacing
         current_y = y  # 当前行的顶部位置
         col = 0  # 当前列
