@@ -26,7 +26,7 @@ if [ ! -f "$FONT_PATH" ]; then
   info "安装中文字体..."
   # 尝试多种安装方式
   if command -v apt-get &> /dev/null; then
-    apt-get update -qq 2>/dev/null && apt-get install -y -qq fonts-wqy-microhei 2>/dev/null || \
+    apt-get install -y -qq fonts-wqy-microhei 2>/dev/null || \
     warn "apt-get 安装中文字体失败"
   elif command -v yum &> /dev/null; then
     yum install -y -q wqy-microhei-fonts 2>/dev/null || \
