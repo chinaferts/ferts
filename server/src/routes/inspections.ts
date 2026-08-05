@@ -1553,8 +1553,7 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     product_weight: inspection.product_weight,
   };
   
-  // 构建检查项列表，将相同名称的条码扫描项合并
-  // 先按 item_order 排序，然后分组处理
+  // 构建检查项列表，保持每个检查项独立显示（包括3个条码扫描项）
   const sortedRecords = [...records].sort((a: any, b: any) => {
     // 尝试按 item_order 排序
     const orderA = a.checklist_items?.item_order ?? 999;
@@ -1564,9 +1563,8 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     return (a.id || 0) - (b.id || 0);
   });
   
-  // 将条码扫描项按名称分组合并
-  const groupedRecords: Map<string, any> = new Map();
-  const nonBarcodeRecords: any[] = [];
+  // 所有检查项都独立显示，不合并
+  const checklistItemsForPdf: any[] = [];
   
   for (const record of sortedRecords) {
     const name = record.item_name || 'Unknown';
@@ -1581,66 +1579,22 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       console.log(`[PDF Debug] Record ${record.id} (${record.item_name}): NO photos`);
     }
     
-    // 不使用未关联照片（record_id为null的照片可能属于其它检查项）
-    
-    if (name === '条码扫描以及拍照' || name === '条码扫描') {
-      // 条码扫描项：合并到同名组
-      if (!groupedRecords.has(name)) {
-        groupedRecords.set(name, {
-          item_number: record.item_number || record.checklist_item_id,
-          item_name: name,
-          description: record.item_description,
-          category: record.item_category,
-          result: record.result || 'unchecked',
-          photos: [...photos],
-          barcodeCodes: [...(record.barcode_codes || [])],
-          barcodeFormats: [...(record.barcode_formats || [])],
-          notes: record.notes || ''
-        });
-      } else {
-        // 合并到现有组
-        const existing = groupedRecords.get(name);
-        // 合并照片（去重）
-        const allPhotos = [...new Set([...existing.photos, ...photos])];
-        // 合并条码（去重）
-        const allBarcodes = [...new Set([...existing.barcodeCodes, ...(record.barcode_codes || [])])];
-        // 合并条码格式
-        const allFormats = [...new Set([...(existing.barcodeFormats || []), ...(record.barcode_formats || [])])];
-        // 更新状态：pass > fail > unchecked > na
-        const statusPriority: Record<string, number> = { 'pass': 4, 'fail': 3, 'unchecked': 2, 'na': 1 };
-        const currentPriority = statusPriority[existing.result] || 0;
-        const newPriority = statusPriority[record.result || 'unchecked'] || 0;
-        if (newPriority > currentPriority) {
-          existing.result = record.result || 'unchecked';
-        }
-        existing.photos = allPhotos;
-        existing.barcodeCodes = allBarcodes;
-        existing.barcodeFormats = allFormats;
-        if (record.notes && record.notes !== existing.notes) {
-          existing.notes = existing.notes ? existing.notes + '; ' + record.notes : record.notes;
-        }
-      }
-    } else {
-      // 非条码扫描项：直接添加
-      nonBarcodeRecords.push({
-        item_number: record.item_number || record.checklist_item_id,
-        item_name: name,
-        description: record.item_description,
-        category: record.item_category,
-        result: record.result || 'unchecked',
-        photos: photos,
-        barcodeCodes: record.barcode_codes || [],
-        barcodeFormats: record.barcode_formats || [],
-        notes: record.notes || ''
-      });
-    }
+    // 每个检查项独立添加，不合并
+    checklistItemsForPdf.push({
+      item_number: record.item_number || record.checklist_item_id,
+      item_name: name,
+      description: record.item_description,
+      category: record.item_category,
+      result: record.result || 'unchecked',
+      photos: photos,
+      barcodeCodes: record.barcode_codes || [],
+      barcodeFormats: record.barcode_formats || [],
+      notes: record.notes || ''
+    });
   }
   
-  // 合并后的检查项列表
-  (pdfData as any).checklist_items = [
-    ...nonBarcodeRecords,
-    ...Array.from(groupedRecords.values())
-  ];
+  // 检查项列表（保持每个项独立）
+  (pdfData as any).checklist_items = checklistItemsForPdf;
   
   // 创建临时JSON文件
   const tempJsonPath = path.join('/tmp', 'pdf_data_' + Date.now() + '.json');
