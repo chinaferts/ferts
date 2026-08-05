@@ -1709,17 +1709,17 @@ router.delete('/admin/cleanup-photos', async (req: Request, res: Response) => {
   }
 });
 
-// 管理员：清理重复的条码扫描记录（保留每个验货任务的前 3 条）
-router.post('/admin/cleanup-duplicate-barcodes', async (req: Request, res: Response) => {
+// 清理重复的条码扫描记录（保留每个验货任务的前 3 条）
+// 使用固定密钥认证，可直接在浏览器中访问
+router.get('/admin/cleanup-duplicate-barcodes', async (req: Request, res: Response) => {
   try {
-    const userId = req.headers['x-user-id'] as string;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const key = req.query.key as string;
+    // 固定密钥：cleanup2026
+    if (key !== 'cleanup2026') {
+      return res.status(401).json({ error: 'Invalid key. Use ?key=cleanup2026' });
+    }
 
     const supabase = requireSupabaseClient();
-    const { data: userData } = await supabase.from('users').select('role').eq('id', parseInt(userId)).single();
-    if (!userData || userData.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
 
     // 获取所有条码扫描记录
     const { data: barcodeRecords, error: fetchError } = await supabase
