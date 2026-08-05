@@ -1535,6 +1535,10 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
       name_en: getEnName(record.item_name || ''),
       status: record.status || 'pending',
       photos: photos,
+      barcodeCodes: record.barcode_codes || [],
+      barcodeFormats: record.barcode_formats || [],
+      notes: record.notes || '',
+      description: record.description || record.checklist_description || '',
     };
   });
 
