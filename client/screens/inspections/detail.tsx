@@ -2012,10 +2012,9 @@ export default function InspectionDetailScreen() {
     setBarcodeItems(prev => {
       const targetIndex = prev.findIndex(item => String(item.record_id) === targetRecordId);
       if (targetIndex === -1) {
-        // 如果在 barcodeItems 中没找到，创建新项（不自动设置合格）
-        const newItem = { ...barcodeScanTarget, barcodeCodes: [scannedCode], barcodeFormats: [scannedFormat], photos: [], status: 'unchecked' as const, type: 'barcode' as const };
-        console.log('[BarcodeScan] Creating new item:', newItem);
-        return [...prev, newItem];
+        // 如果在 barcodeItems 中没找到，不创建新项，只使用模板中的3个
+        console.log('[BarcodeScan] Item not found in barcodeItems, skipping auto-create');
+        return prev;
       }
       const updated = [...prev];
       updated[targetIndex] = {
