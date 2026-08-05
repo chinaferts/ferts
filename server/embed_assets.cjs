@@ -9,10 +9,16 @@ const path = require('path');
 
 const outPath = path.join(__dirname, 'src', 'generated', 'pdf_assets.ts');
 
-// 如果输出文件已存在，跳过生成（生产环境预构建场景）
+// 确保输出目录存在
+const outDir = path.dirname(outPath);
+if (!fs.existsSync(outDir)) {
+  fs.mkdirSync(outDir, { recursive: true });
+}
+
+// 删除旧文件，确保总是重新生成（避免生产环境使用旧代码）
 if (fs.existsSync(outPath)) {
-  console.log('pdf_assets.ts already exists, skipping generation');
-  process.exit(0);
+  console.log('Removing old pdf_assets.ts to force regeneration');
+  fs.unlinkSync(outPath);
 }
 
 const pyPath = path.join(__dirname, 'scripts', 'generate_pdf.py');
