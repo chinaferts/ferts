@@ -15,11 +15,8 @@ if (!fs.existsSync(outDir)) {
   fs.mkdirSync(outDir, { recursive: true });
 }
 
-// 删除旧文件，确保总是重新生成（避免生产环境使用旧代码）
-if (fs.existsSync(outPath)) {
-  console.log('Removing old pdf_assets.ts to force regeneration');
-  fs.unlinkSync(outPath);
-}
+// 直接覆盖写入（不删除旧文件，兼容生产环境只读文件系统）
+// writeFileSync 会直接覆盖已有文件内容
 
 const pyPath = path.join(__dirname, 'scripts', 'generate_pdf.py');
 const fontPath = path.join(__dirname, 'scripts', 'wqy-microhei.ttc');
