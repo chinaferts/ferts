@@ -29,9 +29,6 @@ if (!isProduction) {
 }
 
 try {
-  // 标记大型 PDF 库为 external，减少打包体积和构建时间
-  const heavyExternals = ['pdfkit', 'pdfmake', 'fontkit', '@react-pdf/renderer', '@pdfme/pdf-lib', 'pdf-lib', 'pg'];
-  
   await esbuild.build({
     entryPoints: ['src/index.ts'],
     bundle: true,
@@ -39,7 +36,7 @@ try {
     format: 'cjs',
     outdir: outDir,
     outExtension: { '.js': '.cjs' },
-    external: heavyExternals,
+    external: [],
     sourcemap: false,
     minify: true,
   });
