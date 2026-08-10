@@ -7,11 +7,20 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outDir = process.env.NODE_ENV === 'production' ? '/tmp/server_dist' : 'dist';
 
-// 构建时嵌入 Python 脚本和字体到 TypeScript 代码中
-// 每次都重新生成，确保 generate_pdf.py 的修改被反映到嵌入版本中
+// 构建时嵌入 Python 脚本到 TypeScript 代码中
+// 优先尝试重新生成（本地开发），失败则使用仓库中已提交的版本（生产环境只读文件系统）
 const assetsPath = join(__dirname, 'src/generated/pdf_assets.ts');
-console.log('Embedding Python script into pdf_assets.ts...');
-execSync(`node ${join(__dirname, 'embed_assets.cjs')}`, { stdio: 'inherit' });
+try {
+  execSync(`node ${join(__dirname, 'embed_assets.cjs')}`, { stdio: 'inherit' });
+  console.log('✅ pdf_assets.ts 已从 generate_pdf.py 重新生成');
+} catch (e) {
+  if (existsSync(assetsPath)) {
+    console.log('⚠️ 嵌入失败，使用仓库中已提交的 pdf_assets.ts（生产环境）');
+  } else {
+    console.error('❌ 嵌入失败且无现有文件，构建终止');
+    throw e;
+  }
+}
 
 try {
   await esbuild.build({
