@@ -2,6 +2,7 @@
 """
 验货报告PDF生成脚本 - 使用reportlab支持中文
 包含照片显示功能
+VERSION: 2026-08-10-v5-FINAL
 """
 import sys
 import json
@@ -12,6 +13,9 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
+
+# 版本标记 - 用于确认生产环境使用的代码版本
+print('[PDF VERSION] 2026-08-10-v5-FINAL: Photo pagination with row_bottom check', file=sys.stderr)
 
 # 注册中文字体 - 使用项目自带的文泉驿微米黑
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -450,7 +454,7 @@ def draw_checklist(c, width, margin, y, height, data):
             notes = item.get('notes', '') or ''
             
             if photos:
-                print(f"[PDF checklist] 渲染检查项 '{item_name}' 的 {len(photos)} 张照片")
+                print(f"[PDF checklist] 渲染检查项 '{item_name}' 的 {len(photos)} 张照片", file=sys.stderr)
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#4F46E5'))
                 c.drawString(margin + 10*mm, y, f' {len(photos)}张照片')
@@ -461,7 +465,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
                 
                 # 逐张绘制照片，自动换行和分页
-                print(f"[PDF checklist] 开始绘制 {len(photos)} 张照片，photos_per_row={photos_per_row}")
+                print(f"[PDF checklist] 开始绘制 {len(photos)} 张照片，photos_per_row={photos_per_row}, y={y:.1f}mm, margin={margin:.1f}mm, height={height:.1f}mm", file=sys.stderr)
                 
                 row_height = photo_max_height + photo_spacing
                 current_y = y  # 当前行的顶部位置
@@ -472,17 +476,19 @@ def draw_checklist(c, width, margin, y, height, data):
                     if col == 0:
                         # 检查当前行底部是否超出页面边距
                         row_bottom = current_y - photo_max_height
+                        print(f"[PDF checklist] 照片 {i+1}: col=0, current_y={current_y:.1f}mm, row_bottom={row_bottom:.1f}mm, margin+2mm={margin+2*mm:.1f}mm", file=sys.stderr)
                         if row_bottom < margin + 2*mm:
                             # 空间不足，换到下一页
-                            print(f"[PDF checklist] 照片 {i+1}: 空间不足 (row_bottom={row_bottom:.1f}mm < margin+2mm={margin+2*mm:.1f}mm)，换页")
+                            print(f"[PDF checklist] 照片 {i+1}: 空间不足，换页", file=sys.stderr)
                             c.showPage()
                             current_y = height - margin
                             col = 0
+                            print(f"[PDF checklist] 照片 {i+1}: 换页后 current_y={current_y:.1f}mm", file=sys.stderr)
                     
                     # 计算当前照片的位置
                     photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
                     
-                    print(f"[PDF checklist] 照片 {i+1}/{len(photos)}: col={col}, current_y={current_y:.1f}")
+                    print(f"[PDF checklist] 照片 {i+1}/{len(photos)}: col={col}, current_y={current_y:.1f}mm, photo_x={photo_x:.1f}mm", file=sys.stderr)
                     
                     # 绘制照片
                     draw_photo(c, photo_x, current_y, photo_path, photo_max_width, photo_max_height)
@@ -493,6 +499,7 @@ def draw_checklist(c, width, margin, y, height, data):
                     if col >= photos_per_row:
                         col = 0
                         current_y -= row_height
+                        print(f"[PDF checklist] 照片 {i+1}: 行满，current_y={current_y:.1f}mm", file=sys.stderr)
                 
                 # 如果最后一行不满，也要更新 current_y
                 if col > 0:
