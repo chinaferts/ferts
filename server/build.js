@@ -8,21 +8,30 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const outDir = process.env.NODE_ENV === 'production' ? '/tmp/server_dist' : 'dist';
 
 // 构建时嵌入 Python 脚本到 TypeScript 代码中
-// 优先尝试重新生成（本地开发），失败则使用仓库中已提交的版本（生产环境只读文件系统）
+// 生产环境（只读文件系统）跳过嵌入，直接使用仓库中已提交的版本
 const assetsPath = join(__dirname, 'src/generated/pdf_assets.ts');
-try {
-  execSync(`node ${join(__dirname, 'embed_assets.cjs')}`, { stdio: 'inherit' });
-  console.log('✅ pdf_assets.ts 已从 generate_pdf.py 重新生成');
-} catch (e) {
+const isProduction = process.env.NODE_ENV === 'production';
+if (!isProduction) {
+  try {
+    execSync(`node ${join(__dirname, 'embed_assets.cjs')}`, { stdio: 'inherit' });
+    console.log('✅ pdf_assets.ts 已从 generate_pdf.py 重新生成');
+  } catch (e) {
+    console.error('❌ 嵌入失败:', e.message);
+    process.exit(1);
+  }
+} else {
   if (existsSync(assetsPath)) {
-    console.log('⚠️ 嵌入失败，使用仓库中已提交的 pdf_assets.ts（生产环境）');
+    console.log('✅ 生产环境：使用仓库中已提交的 pdf_assets.ts');
   } else {
-    console.error('❌ 嵌入失败且无现有文件，构建终止');
-    throw e;
+    console.error('❌ 生产环境缺少 pdf_assets.ts，构建终止');
+    process.exit(1);
   }
 }
 
 try {
+  // 标记大型 PDF 库为 external，减少打包体积和构建时间
+  const heavyExternals = ['pdfkit', 'pdfmake', 'fontkit', '@react-pdf/renderer', '@pdfme/pdf-lib', 'pdf-lib', 'pg'];
+  
   await esbuild.build({
     entryPoints: ['src/index.ts'],
     bundle: true,
@@ -30,9 +39,9 @@ try {
     format: 'cjs',
     outdir: outDir,
     outExtension: { '.js': '.cjs' },
-    external: [],  // 所有依赖都打包进去
+    external: heavyExternals,
     sourcemap: false,
-    minify: false,
+    minify: true,
   });
 
   // 复制 Python 脚本和字体文件到构建输出目录
