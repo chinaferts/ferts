@@ -453,6 +453,30 @@ def draw_checklist(c, width, margin, y, height, data):
             barcode_formats = item.get('barcodeFormats', []) or []
             notes = item.get('notes', '') or ''
             
+            # 显示条码扫描结果
+            if barcode_codes:
+                print(f"[PDF checklist] 显示条码扫描结果: {len(barcode_codes)} 个条码", file=sys.stderr)
+                sys.stderr.flush()
+                
+                c.setFont('ChineseFont', 8)
+                c.setFillColor(colors.HexColor('#059669'))
+                c.drawString(margin + 10*mm, y, f'📱 扫描结果: {len(barcode_codes)} 个条码')
+                y -= 4 * mm
+                
+                # 显示每个条码
+                for idx, (code, fmt) in enumerate(zip(barcode_codes, barcode_formats)):
+                    if y < margin + 5*mm:
+                        c.showPage()
+                        y = height - margin
+                    
+                    c.setFont('Helvetica', 7)
+                    c.setFillColor(colors.HexColor('#374151'))
+                    barcode_text = f'  {idx+1}. [{fmt}] {code}'
+                    c.drawString(margin + 12*mm, y, barcode_text)
+                    y -= 3.5 * mm
+                
+                y -= 2 * mm
+            
             if photos:
                 print(f"[PDF checklist] 渲染检查项 '{item_name}' 的 {len(photos)} 张照片", file=sys.stderr)
                 c.setFont('ChineseFont', 8)
@@ -615,6 +639,30 @@ def draw_checklist(c, width, margin, y, height, data):
                     current_y -= row_height
                 
                 y = current_y - 5 * mm
+                
+                # 显示条码扫描结果
+                if barcode_codes:
+                    print(f"[PDF checklist] 显示条码扫描结果: {len(barcode_codes)} 个条码", file=sys.stderr)
+                    sys.stderr.flush()
+                    
+                    c.setFont('ChineseFont', 8)
+                    c.setFillColor(colors.HexColor('#059669'))
+                    c.drawString(margin + 10*mm, y, f'📱 扫描结果: {len(barcode_codes)} 个条码')
+                    y -= 4 * mm
+                    
+                    # 显示每个条码
+                    for idx, (code, fmt) in enumerate(zip(barcode_codes, barcode_formats)):
+                        if y < margin + 5*mm:
+                            c.showPage()
+                            y = height - margin
+                        
+                        c.setFont('Helvetica', 7)
+                        c.setFillColor(colors.HexColor('#374151'))
+                        barcode_text = f'  {idx+1}. [{fmt}] {code}'
+                        c.drawString(margin + 12*mm, y, barcode_text)
+                        y -= 3.5 * mm
+                    
+                    y -= 2 * mm
             
             y -= 3 * mm
     
