@@ -487,8 +487,10 @@ def draw_checklist(c, width, margin, y, height, data):
                             rows_on_this_page = 0
                             col = 0
                             y = current_y
-                        else:
                             photo_bottom = current_y - photo_max_height
+                        # 如果 col != 0，photo_bottom 未定义，使用默认值
+                    else:
+                        photo_bottom = current_y - photo_max_height
                     
                     # 计算当前照片的位置
                     photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
