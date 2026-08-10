@@ -578,6 +578,9 @@ def draw_checklist(c, width, margin, y, height, data):
                 y -= 4 * mm
             
             if photos:
+                print(f'[PDF checklist] Drawing {len(photos)} photos (no categories) at y={y:.1f}mm', file=sys.stderr)
+                sys.stderr.flush()
+                
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#4F46E5'))
                 c.drawString(margin + 10*mm, y, f'📷 {len(photos)}张照片')
@@ -585,18 +588,33 @@ def draw_checklist(c, width, margin, y, height, data):
                 
                 content_width = width - 2 * margin - 10 * mm
                 photos_per_row = max(1, int(content_width / (photo_max_width + photo_spacing)))
+                row_height = photo_max_height + photo_spacing
                 
-                photo_y = y - photo_max_height
+                current_y = y
+                col = 0
+                
                 for i, photo_path in enumerate(photos):
-                    photo_x = margin + 10*mm + (i % photos_per_row) * (photo_max_width + photo_spacing)
+                    if col == 0:
+                        row_bottom = current_y - photo_max_height
+                        if row_bottom < margin + 2*mm:
+                            print(f'[PDF checklist] Page break before photo {i+1}: current_y={current_y:.1f}mm, row_bottom={row_bottom:.1f}mm', file=sys.stderr)
+                            sys.stderr.flush()
+                            c.showPage()
+                            current_y = height - margin
+                            col = 0
                     
-                    if i > 0 and i % photos_per_row == 0:
-                        photo_y -= photo_max_height + photo_spacing
-                        check_page_break(photo_max_height + 10 * mm)
+                    photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
+                    draw_photo(c, photo_x, current_y, photo_path, photo_max_width, photo_max_height)
                     
-                    draw_photo(c, photo_x, photo_y + photo_max_height, photo_path, photo_max_width, photo_max_height)
+                    col += 1
+                    if col >= photos_per_row:
+                        col = 0
+                        current_y -= row_height
                 
-                y = photo_y - 5 * mm
+                if col != 0:
+                    current_y -= row_height
+                
+                y = current_y - 5 * mm
             
             y -= 3 * mm
     
