@@ -8,14 +8,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const outDir = process.env.NODE_ENV === 'production' ? '/tmp/server_dist' : 'dist';
 
 // 构建时嵌入 Python 脚本和字体到 TypeScript 代码中
-// 如果 pdf_assets.ts 已存在（如生产环境从仓库拉取），则跳过生成
+// 每次都重新生成，确保 generate_pdf.py 的修改被反映到嵌入版本中
 const assetsPath = join(__dirname, 'src/generated/pdf_assets.ts');
-if (!existsSync(assetsPath)) {
-  console.log('Embedding Python script and font...');
-  execSync(`node ${join(__dirname, 'embed_assets.cjs')}`, { stdio: 'inherit' });
-} else {
-  console.log('pdf_assets.ts already exists, skipping embed step');
-}
+console.log('Embedding Python script into pdf_assets.ts...');
+execSync(`node ${join(__dirname, 'embed_assets.cjs')}`, { stdio: 'inherit' });
 
 try {
   await esbuild.build({
