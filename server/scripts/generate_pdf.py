@@ -485,6 +485,8 @@ def draw_checklist(c, width, margin, y, height, data):
                         current_y = height - margin
                         rows_on_this_page = 0
                         col = 0
+                        # 更新 y 以便后续检查项使用正确的页面位置
+                        y = current_y
                     
                     # 计算当前照片的位置
                     photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
