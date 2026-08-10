@@ -477,16 +477,18 @@ def draw_checklist(c, width, margin, y, height, data):
                         current_y = height - margin
                         rows_on_this_page = 0
                     
-                    # 检查照片是否会超出页面底部
-                    photo_bottom = current_y - photo_max_height
-                    if photo_bottom < margin:
-                        print(f"[PDF checklist] 照片 {i+1}: 即将超出页面底部 (photo_bottom={photo_bottom:.1f} < margin={margin:.1f})，换页")
-                        c.showPage()
-                        current_y = height - margin
-                        rows_on_this_page = 0
-                        col = 0
-                        # 更新 y 以便后续检查项使用正确的页面位置
-                        y = current_y
+                    # 每行开始时检查是否会超出页面底部
+                    if col == 0:
+                        photo_bottom = current_y - photo_max_height
+                        if photo_bottom < margin:
+                            print(f"[PDF checklist] 照片 {i+1}: 即将超出页面底部 (photo_bottom={photo_bottom:.1f} < margin={margin:.1f})，换页")
+                            c.showPage()
+                            current_y = height - margin
+                            rows_on_this_page = 0
+                            col = 0
+                            y = current_y
+                        else:
+                            photo_bottom = current_y - photo_max_height
                     
                     # 计算当前照片的位置
                     photo_x = margin + 10*mm + col * (photo_max_width + photo_spacing)
