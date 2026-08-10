@@ -578,7 +578,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 y -= 4 * mm
             
             if photos:
-                print(f'[PDF checklist] Drawing {len(photos)} photos (no categories) at y={y:.1f}mm', file=sys.stderr)
+                print(f'[PDF checklist] Drawing {len(photos)} photos (no categories) at y={y/mm:.1f}mm', file=sys.stderr)
                 sys.stderr.flush()
                 
                 c.setFont('ChineseFont', 8)
@@ -597,7 +597,7 @@ def draw_checklist(c, width, margin, y, height, data):
                     if col == 0:
                         row_bottom = current_y - photo_max_height
                         if row_bottom < margin + 2*mm:
-                            print(f'[PDF checklist] Page break before photo {i+1}: current_y={current_y:.1f}mm, row_bottom={row_bottom:.1f}mm', file=sys.stderr)
+                            print(f'[PDF checklist] Page break before photo {i+1}: current_y={current_y/mm:.1f}mm, row_bottom={row_bottom/mm:.1f}mm', file=sys.stderr)
                             sys.stderr.flush()
                             c.showPage()
                             current_y = height - margin
