@@ -2,7 +2,7 @@
 """
 验货报告PDF生成脚本 - 使用reportlab支持中文
 包含照片显示功能
-VERSION: 2026-08-10-v5-FINAL
+VERSION: 2026-08-10-v6-BILINGUAL
 """
 import sys
 import json
@@ -15,7 +15,77 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
 
 # 版本标记 - 用于确认生产环境使用的代码版本
-print('[PDF VERSION] 2026-08-10-v5-FINAL: Photo pagination with row_bottom check', file=sys.stderr)
+print('[PDF VERSION] 2026-08-10-v6-BILINGUAL: Bilingual Chinese-English PDF report', file=sys.stderr)
+
+# 中英文翻译映射表
+TRANSLATIONS = {
+    # 报告标题
+    '验货报告': 'Inspection Report',
+    '检验概况': 'Inspection Summary',
+    '检验日期': 'Inspection Date',
+    '客户名称': 'Client',
+    '产品名称': 'Product',
+    '订单号': 'Order No.',
+    '检验数量': 'Inspection Qty',
+    '检验结果': 'Result',
+    '通过': 'Pass',
+    '不通过': 'Fail',
+    '待确认': 'Pending',
+    '检验员': 'Inspector',
+    '备注': 'Remarks',
+
+    # 检查项类型
+    '问题统计以及拍照并描述': 'Issue Statistics with Photos & Description',
+    '组装以及功能测试拍照': 'Assembly & Function Test Photos',
+    '与签样对比拍照': 'Comparison with Signed Sample Photos',
+    '条码扫描以及拍照': 'Barcode Scanning & Photos',
+    '产品细节拍照（包括产品尺寸和重量照）': 'Product Detail Photos (incl. Size & Weight)',
+    '内箱箱唛以及尺寸重量拍照': 'Inner Box Marking & Size/Weight Photos',
+    '彩盒/彩卡信息以及其规格重量拍照': 'Color Box/Card Info & Spec/Weight Photos',
+    '外箱箱唛以及尺寸重量拍照': 'Outer Box Marking & Size/Weight Photos',
+    '外箱跌落测试拍照': 'Outer Box Drop Test Photos',
+    '包装以及配件拍照': 'Packaging & Accessories Photos',
+    '封箱拍照': 'Sealing Photos',
+
+    # 检验标准
+    '检验标准': 'Inspection Standard',
+    '检查产品细节、尺寸和重量照': 'Check product details, dimensions and weight',
+    '拍摄产品细节、尺寸和重量照': 'Photograph product details, dimensions and weight',
+    '检查内箱唛头及规格重量': 'Check inner box marking and specifications/weight',
+    '检查彩盒信息及规格重量': 'Check color box info and specifications/weight',
+    '检查外箱唛头及规格重量': 'Check outer box marking and specifications/weight',
+    '扫描所有含有条码的地方': 'Scan all areas containing barcodes',
+
+    # 状态和标签
+    '通过': 'Pass',
+    '不通过': 'Fail',
+    '待确认': 'Pending',
+    '照片': 'Photos',
+    '张': 'pcs',
+    '个条码': 'barcodes',
+    '扫描结果': 'Scan Results',
+    '无扫描结果': 'No scan results',
+
+    # 问题等级
+    '严重问题': 'Critical Issues',
+    '主要问题': 'Major Issues',
+    '次要问题': 'Minor Issues',
+
+    # 其他
+    '备注': 'Remarks',
+    '检验员': 'Inspector',
+    '日期': 'Date',
+    '签名': 'Signature',
+}
+
+def t(chinese_text):
+    """翻译函数：返回中英文双语字符串"""
+    if not chinese_text:
+        return ''
+    en_text = TRANSLATIONS.get(chinese_text, '')
+    if en_text:
+        return f'{chinese_text} / {en_text}'
+    return chinese_text
 
 # 注册中文字体 - 使用项目自带的文泉驿微米黑
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -416,12 +486,12 @@ def draw_checklist(c, width, margin, y, height, data):
             
             # 状态颜色
             status_colors = {
-                'pass': ('✓ 通过', '#10B981'),
-                'fail': ('✗ 不通过', '#EF4444'),
-                'na': ('- 不适用', '#6B7280'),
-                'pending': ('○ 待检', '#F59E0B'),
+                'pass': ('✓ 通过 / PASS', '#10B981'),
+                'fail': ('✗ 不通过 / FAIL', '#EF4444'),
+                'na': ('- 不适用 / N/A', '#6B7280'),
+                'pending': ('○ 待检 / PENDING', '#F59E0B'),
             }
-            status_text, status_color = status_colors.get(result, ('○ 待检', '#F59E0B'))
+            status_text, status_color = status_colors.get(result, ('○ 待检 / PENDING', '#F59E0B'))
             
             # 检查项名称（中文）
             c.setFont('ChineseFont', 9)
@@ -440,12 +510,18 @@ def draw_checklist(c, width, margin, y, height, data):
             c.drawRightString(width - margin, y, status_text)
             y -= 4 * mm
             
-            # 检验标准描述
+            # 检验标准描述（中英双语）
             if description:
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#6B7280'))
                 desc = description[:50] + '...' if len(description) > 50 else description
-                c.drawString(margin + 10*mm, y, f'检验标准: {desc}')
+                desc_en = get_en_desc(description)
+                if desc_en:
+                    c.drawString(margin + 10*mm, y, f'检验标准/Standard: {desc}')
+                    y -= 3.5 * mm
+                    c.drawString(margin + 10*mm, y, f'  {desc_en}')
+                else:
+                    c.drawString(margin + 10*mm, y, f'检验标准/Standard: {desc}')
                 y -= 4 * mm
             
             # 绘制照片（全部显示，不限张数，自动换行和分页）
@@ -460,7 +536,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#059669'))
-                c.drawString(margin + 10*mm, y, f'📱 扫描结果: {len(barcode_codes)} 个条码')
+                c.drawString(margin + 10*mm, y, f' 扫描结果 / Scan Results: {len(barcode_codes)} 个条码 / barcodes')
                 y -= 4 * mm
                 
                 # 显示每个条码
@@ -481,7 +557,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 print(f"[PDF checklist] 渲染检查项 '{item_name}' 的 {len(photos)} 张照片", file=sys.stderr)
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#4F46E5'))
-                c.drawString(margin + 10*mm, y, f' {len(photos)}张照片')
+                c.drawString(margin + 10*mm, y, f' {len(photos)}张照片 / Photos')
                 y -= 4 * mm
                 
                 # 计算每行能放多少张照片
@@ -607,7 +683,7 @@ def draw_checklist(c, width, margin, y, height, data):
                 
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#4F46E5'))
-                c.drawString(margin + 10*mm, y, f'📷 {len(photos)}张照片')
+                c.drawString(margin + 10*mm, y, f' {len(photos)}张照片 / Photos')
                 y -= 4 * mm
                 
                 content_width = width - 2 * margin - 10 * mm
@@ -647,7 +723,7 @@ def draw_checklist(c, width, margin, y, height, data):
                     
                     c.setFont('ChineseFont', 8)
                     c.setFillColor(colors.HexColor('#059669'))
-                    c.drawString(margin + 10*mm, y, f'📱 扫描结果: {len(barcode_codes)} 个条码')
+                    c.drawString(margin + 10*mm, y, f' 扫描结果 / Scan Results: {len(barcode_codes)} 个条码 / barcodes')
                     y -= 4 * mm
                     
                     # 显示每个条码
