@@ -87,6 +87,19 @@ def t(chinese_text):
         return f'{chinese_text} / {en_text}'
     return chinese_text
 
+def get_en_desc(chinese_desc):
+    """获取检验标准的英文翻译"""
+    if not chinese_desc:
+        return ''
+    en = TRANSLATIONS.get(chinese_desc, '')
+    if en:
+        return en
+    # 尝试部分匹配
+    for cn, en_trans in TRANSLATIONS.items():
+        if cn in chinese_desc:
+            return en_trans
+    return ''
+
 # 注册中文字体 - 使用项目自带的文泉驿微米黑
 script_dir = os.path.dirname(os.path.abspath(__file__))
 # 多路径查找字体：脚本目录 → 生产环境原路径 → 备选路径
