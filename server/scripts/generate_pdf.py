@@ -558,7 +558,6 @@ def draw_checklist(c, width, margin, y, height, data):
                 table_data = [
                     ('条形码能被扫描 / Barcode Scannable', '合格 / PASS'),
                     ('已扫描的条形码 / Scanned Barcode', ', '.join(barcode_codes[:5])),
-                    ('来自订单数据的条形码 / Order Barcode', order_barcode),
                     ('扫描的格式 / Scan Format', barcode_formats[0] if barcode_formats else ''),
                 ]
                 
@@ -752,7 +751,6 @@ def draw_checklist(c, width, margin, y, height, data):
                     table_data = [
                         ('条形码能被扫描 / Barcode Scannable', '合格 / PASS'),
                         ('已扫描的条形码 / Scanned Barcode', ', '.join(barcode_codes[:5])),
-                        ('来自订单数据的条形码 / Order Barcode', order_barcode),
                         ('扫描的格式 / Scan Format', barcode_formats[0] if barcode_formats else ''),
                     ]
                     
