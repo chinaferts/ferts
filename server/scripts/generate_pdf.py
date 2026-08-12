@@ -658,6 +658,7 @@ def draw_checklist(c, width, margin, y, height, data):
         # 无分类，直接显示
         for item in checklist_items:
             item_name = item.get('item_name', item.get('name', 'N/A'))
+            item_name_en = item.get('name_en', '')
             description = item.get('description', '')
             result = item.get('status', item.get('result', 'pending'))
             photos = item.get('photos', []) or []
