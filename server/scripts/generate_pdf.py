@@ -543,6 +543,14 @@ def draw_checklist(c, width, margin, y, height, data):
                 # 从 data 获取订单条码
                 order_barcode = data.get('order_barcode', data.get('orderBarcode', '')) or ''
                 
+                # 计算表格所需高度：标题 + 3行数据
+                table_total_height = 5*mm + 3*6*mm + 2*mm
+                
+                # 检查是否有足够空间，不足则换页
+                if y < margin + table_total_height:
+                    c.showPage()
+                    y = height - margin
+                
                 c.setFont('ChineseFont', 9)
                 c.setFillColor(colors.HexColor('#000000'))
                 # 表格标题
@@ -735,6 +743,14 @@ def draw_checklist(c, width, margin, y, height, data):
                 if barcode_codes:
                     # 从 data 获取订单条码
                     order_barcode = data.get('order_barcode', data.get('orderBarcode', '')) or ''
+                    
+                    # 计算表格所需高度：标题 + 3行数据
+                    table_total_height = 5*mm + 3*6*mm + 2*mm
+                    
+                    # 检查是否有足够空间，不足则换页
+                    if y < margin + table_total_height:
+                        c.showPage()
+                        y = height - margin
                     
                     c.setFont('ChineseFont', 9)
                     c.setFillColor(colors.HexColor('#000000'))
