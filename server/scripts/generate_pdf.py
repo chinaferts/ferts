@@ -538,27 +538,44 @@ def draw_checklist(c, width, margin, y, height, data):
             barcode_formats = item.get('barcodeFormats', []) or []
             notes = item.get('notes', '') or ''
             
-            # 显示条码扫描结果
+            # 绘制条码扫描结果表格
             if barcode_codes:
-                print(f"[PDF checklist] 显示条码扫描结果: {len(barcode_codes)} 个条码", file=sys.stderr)
-                sys.stderr.flush()
+                # 从 data 获取订单条码
+                order_barcode = data.get('order_barcode', data.get('orderBarcode', '')) or ''
                 
-                c.setFont('ChineseFont', 8)
-                c.setFillColor(colors.HexColor('#059669'))
-                c.drawString(margin + 10*mm, y, f' 扫描结果 / Scan Results: {len(barcode_codes)} 个条码 / barcodes')
-                y -= 4 * mm
+                c.setFont('ChineseFont', 9)
+                c.setFillColor(colors.HexColor('#000000'))
+                # 表格标题
+                c.drawString(margin + 10*mm, y, '条码扫描结果 / Barcode Scan Results')
+                y -= 5 * mm
                 
-                # 显示每个条码
-                for idx, (code, fmt) in enumerate(zip(barcode_codes, barcode_formats)):
-                    if y < margin + 5*mm:
-                        c.showPage()
-                        y = height - margin
+                # 表格边框和标题
+                table_x = margin + 10*mm
+                table_width = width - 2*margin - 10*mm
+                row_height = 6 * mm
+                
+                # 绘制表格行
+                table_data = [
+                    ('条形码能被扫描 / Barcode Scannable', '合格 / PASS'),
+                    ('已扫描的条形码 / Scanned Barcode', ', '.join(barcode_codes[:5])),
+                    ('来自订单数据的条形码 / Order Barcode', order_barcode),
+                    ('扫描的格式 / Scan Format', barcode_formats[0] if barcode_formats else ''),
+                ]
+                
+                c.setFont('ChineseFont', 9)
+                for label, value in table_data:
+                    # 绘制边框
+                    c.setStrokeColor(colors.HexColor('#CCCCCC'))
+                    c.setLineWidth(0.5)
+                    c.rect(table_x, y - row_height + 1*mm, table_width, row_height)
                     
-                    c.setFont('Helvetica', 7)
-                    c.setFillColor(colors.HexColor('#374151'))
-                    barcode_text = f'  {idx+1}. [{fmt}] {code}'
-                    c.drawString(margin + 12*mm, y, barcode_text)
-                    y -= 3.5 * mm
+                    # 绘制标签
+                    c.setFillColor(colors.HexColor('#000000'))
+                    c.drawString(table_x + 2*mm, y - row_height + 2*mm, label)
+                    
+                    # 绘制值
+                    c.drawString(table_x + table_width/2, y - row_height + 2*mm, str(value))
+                    y -= row_height
                 
                 y -= 2 * mm
             
@@ -618,44 +635,6 @@ def draw_checklist(c, width, margin, y, height, data):
                 print(f"[PDF checklist] 绘制完成，最终 y={y:.1f}")
                 
                 # 额外间距
-                y -= 2 * mm
-            
-            # 绘制条码扫描结果表格
-            if barcode_codes:
-                c.setFont('ChineseFont', 9)
-                c.setFillColor(colors.HexColor('#000000'))
-                # 表格标题
-                c.drawString(margin + 10*mm, y, 'Barcode')
-                y -= 5 * mm
-                
-                # 表格边框和标题
-                table_x = margin + 10*mm
-                table_width = width - 2*margin - 10*mm
-                row_height = 6 * mm
-                
-                # 绘制表格行
-                table_data = [
-                    ('条形码能被扫描', '合格'),
-                    ('已扫描的条形码', ', '.join(barcode_codes[:5])),
-                    ('来自订单数据的条形码', order_barcode or ''),
-                    ('扫描的格式', barcode_formats[0] if barcode_formats else ''),
-                ]
-                
-                c.setFont('ChineseFont', 9)
-                for label, value in table_data:
-                    # 绘制边框
-                    c.setStrokeColor(colors.HexColor('#CCCCCC'))
-                    c.setLineWidth(0.5)
-                    c.rect(table_x, y - row_height + 1*mm, table_width, row_height)
-                    
-                    # 绘制标签
-                    c.setFillColor(colors.HexColor('#000000'))
-                    c.drawString(table_x + 2*mm, y - row_height + 2*mm, label)
-                    
-                    # 绘制值
-                    c.drawString(table_x + table_width/2, y - row_height + 2*mm, str(value))
-                    y -= row_height
-                
                 y -= 2 * mm
             
             # 绘制备注
@@ -753,27 +732,44 @@ def draw_checklist(c, width, margin, y, height, data):
                 
                 y = current_y - 5 * mm
                 
-                # 显示条码扫描结果
+                # 绘制条码扫描结果表格
                 if barcode_codes:
-                    print(f"[PDF checklist] 显示条码扫描结果: {len(barcode_codes)} 个条码", file=sys.stderr)
-                    sys.stderr.flush()
+                    # 从 data 获取订单条码
+                    order_barcode = data.get('order_barcode', data.get('orderBarcode', '')) or ''
                     
-                    c.setFont('ChineseFont', 8)
-                    c.setFillColor(colors.HexColor('#059669'))
-                    c.drawString(margin + 10*mm, y, f' 扫描结果 / Scan Results: {len(barcode_codes)} 个条码 / barcodes')
-                    y -= 4 * mm
+                    c.setFont('ChineseFont', 9)
+                    c.setFillColor(colors.HexColor('#000000'))
+                    # 表格标题
+                    c.drawString(margin + 10*mm, y, '条码扫描结果 / Barcode Scan Results')
+                    y -= 5 * mm
                     
-                    # 显示每个条码
-                    for idx, (code, fmt) in enumerate(zip(barcode_codes, barcode_formats)):
-                        if y < margin + 5*mm:
-                            c.showPage()
-                            y = height - margin
+                    # 表格边框和标题
+                    table_x = margin + 10*mm
+                    table_width = width - 2*margin - 10*mm
+                    row_height = 6 * mm
+                    
+                    # 绘制表格行
+                    table_data = [
+                        ('条形码能被扫描 / Barcode Scannable', '合格 / PASS'),
+                        ('已扫描的条形码 / Scanned Barcode', ', '.join(barcode_codes[:5])),
+                        ('来自订单数据的条形码 / Order Barcode', order_barcode),
+                        ('扫描的格式 / Scan Format', barcode_formats[0] if barcode_formats else ''),
+                    ]
+                    
+                    c.setFont('ChineseFont', 9)
+                    for label, value in table_data:
+                        # 绘制边框
+                        c.setStrokeColor(colors.HexColor('#CCCCCC'))
+                        c.setLineWidth(0.5)
+                        c.rect(table_x, y - row_height + 1*mm, table_width, row_height)
                         
-                        c.setFont('Helvetica', 7)
-                        c.setFillColor(colors.HexColor('#374151'))
-                        barcode_text = f'  {idx+1}. [{fmt}] {code}'
-                        c.drawString(margin + 12*mm, y, barcode_text)
-                        y -= 3.5 * mm
+                        # 绘制标签
+                        c.setFillColor(colors.HexColor('#000000'))
+                        c.drawString(table_x + 2*mm, y - row_height + 2*mm, label)
+                        
+                        # 绘制值
+                        c.drawString(table_x + table_width/2, y - row_height + 2*mm, str(value))
+                        y -= row_height
                     
                     y -= 2 * mm
             
