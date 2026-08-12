@@ -493,17 +493,13 @@ def draw_checklist(c, width, margin, y, height, data):
             }
             status_text, status_color = status_colors.get(result, ('○ 待检 / PENDING', '#F59E0B'))
             
-            # 检查项名称（中文）
+            # 检查项名称（中英双语：英文 + 中文）
             c.setFont('ChineseFont', 9)
             c.setFillColor(colors.black)
-            c.drawString(margin + 5*mm, y, f'• {item_name}')
-            
-            # 检查项名称（英文）
             if item_name_en:
-                y -= 3 * mm
-                c.setFont('Helvetica', 7)
-                c.setFillColor(colors.HexColor('#6B7280'))
-                c.drawString(margin + 5*mm, y, f'  {item_name_en}')
+                c.drawString(margin + 5*mm, y, f'{item_name_en} {item_name}')
+            else:
+                c.drawString(margin + 5*mm, y, f'• {item_name}')
             
             # 状态
             c.setFillColor(colors.HexColor(status_color))
@@ -664,7 +660,10 @@ def draw_checklist(c, width, margin, y, height, data):
             
             c.setFont('ChineseFont', 9)
             c.setFillColor(colors.black)
-            c.drawString(margin + 5*mm, y, f'• {item_name}')
+            if item_name_en:
+                c.drawString(margin + 5*mm, y, f'{item_name_en} {item_name}')
+            else:
+                c.drawString(margin + 5*mm, y, f'• {item_name}')
             
             c.setFillColor(colors.HexColor(status_color))
             c.drawRightString(width - margin, y, status_text)
@@ -674,7 +673,11 @@ def draw_checklist(c, width, margin, y, height, data):
                 c.setFont('ChineseFont', 8)
                 c.setFillColor(colors.HexColor('#6B7280'))
                 desc = description[:50] + '...' if len(description) > 50 else description
-                c.drawString(margin + 10*mm, y, f'检验标准: {desc}')
+                desc_en = get_en_desc(description)
+                if desc_en:
+                    c.drawString(margin + 10*mm, y, f'Standard/检验标准: {desc_en} {desc}')
+                else:
+                    c.drawString(margin + 10*mm, y, f'检验标准/Standard: {desc}')
                 y -= 4 * mm
             
             if photos:
