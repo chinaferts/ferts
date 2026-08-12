@@ -922,9 +922,12 @@ def draw_defect_statistics_table(c, width, margin, y, height, data):
     critical_ac = 0
     critical_re = 1
     
-    # 主要/轻微缺陷根据AQL等级和抽样数量确定
+    # 主要缺陷根据AQL等级和抽样数量确定
     major_ac, major_re = aql_row.get(aql_key, (7, 8))
-    minor_ac, minor_re = aql_row.get(aql_key, (7, 8))
+    
+    # 轻微缺陷使用AQL 4.0标准
+    minor_aql_key = '4.0'
+    minor_ac, minor_re = aql_row.get(minor_aql_key, (10, 11))
     
     # 标题
     c.setFont('ChineseFont', 11)
