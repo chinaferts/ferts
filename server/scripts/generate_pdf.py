@@ -607,23 +607,43 @@ def draw_checklist(c, width, margin, y, height, data):
                 # 额外间距
                 y -= 2 * mm
             
-            # 绘制条码（带格式）
+            # 绘制条码扫描结果表格
             if barcode_codes:
-                c.setFont('ChineseFont', 8)
-                c.setFillColor(colors.HexColor('#059669'))
-                # 显示条码和格式
-                codes_with_format = []
-                for i, code in enumerate(barcode_codes[:5]):
-                    fmt = barcode_formats[i] if i < len(barcode_formats) else ''
-                    if fmt:
-                        codes_with_format.append(f'{code} [{fmt}]')
-                    else:
-                        codes_with_format.append(code)
-                codes_text = ', '.join(codes_with_format)
-                if len(barcode_codes) > 5:
-                    codes_text += f' ... (+{len(barcode_codes) - 5})'
-                c.drawString(margin + 10*mm, y, f'📱 条码: {codes_text}')
-                y -= 4 * mm
+                c.setFont('ChineseFont', 9)
+                c.setFillColor(colors.HexColor('#000000'))
+                # 表格标题
+                c.drawString(margin + 10*mm, y, 'Barcode')
+                y -= 5 * mm
+                
+                # 表格边框和标题
+                table_x = margin + 10*mm
+                table_width = width - 2*margin - 10*mm
+                row_height = 6 * mm
+                
+                # 绘制表格行
+                table_data = [
+                    ('条形码能被扫描', '合格'),
+                    ('已扫描的条形码', ', '.join(barcode_codes[:5])),
+                    ('来自订单数据的条形码', order_barcode or ''),
+                    ('扫描的格式', barcode_formats[0] if barcode_formats else ''),
+                ]
+                
+                c.setFont('ChineseFont', 9)
+                for label, value in table_data:
+                    # 绘制边框
+                    c.setStrokeColor(colors.HexColor('#CCCCCC'))
+                    c.setLineWidth(0.5)
+                    c.rect(table_x, y - row_height + 1*mm, table_width, row_height)
+                    
+                    # 绘制标签
+                    c.setFillColor(colors.HexColor('#000000'))
+                    c.drawString(table_x + 2*mm, y - row_height + 2*mm, label)
+                    
+                    # 绘制值
+                    c.drawString(table_x + table_width/2, y - row_height + 2*mm, str(value))
+                    y -= row_height
+                
+                y -= 2 * mm
             
             # 绘制备注
             if notes:
