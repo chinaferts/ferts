@@ -3073,8 +3073,27 @@ export default function InspectionDetailScreen() {
                       {/* 删除按钮 */}
                       <TouchableOpacity 
                           style={[styles.actionButton, styles.removeIssueButton]}
-                          onPress={() => {
-                            setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
+                          onPress={async () => {
+                            // 调用后端 API 删除数据库中的记录
+                            try {
+                              const baseUrl = getApiBaseUrl();
+                              const response = await fetch(`${baseUrl}/api/v1/inspections/records/${item.record_id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'x-user-id': userId || '',
+                                },
+                              });
+                              
+                              if (response.ok) {
+                                // 删除成功后更新前端状态
+                                setBarcodeItems(barcodeItems.filter(i => i.record_id !== item.record_id));
+                              } else {
+                                console.error('[DeleteBarcode] Failed to delete record:', response.status);
+                              }
+                            } catch (error) {
+                              console.error('[DeleteBarcode] Delete error:', error);
+                            }
                           }}
                         >
                           <Feather name="trash-2" size={14} color="#FF6B6B" />

@@ -1680,6 +1680,33 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   }
 });
 
+// 删除单个检查项（用于删除多余的条码扫描子项）
+router.delete('/records/:recordId', async (req: Request, res: Response) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { recordId } = req.params;
+    const supabase = requireSupabaseClient();
+
+    // 删除检查项
+    const { error } = await supabase
+      .from('inspection_records')
+      .delete()
+      .eq('id', recordId);
+
+    if (error) {
+      console.error('Delete record error:', error);
+      return res.status(500).json({ error: 'Failed to delete record' });
+    }
+
+    res.json({ success: true, message: 'Record deleted' });
+  } catch (err: any) {
+    console.error('Delete record error:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete record' });
+  }
+});
+
 // 管理员：删除所有验货记录（含关联照片和缺陷）
 router.delete('/admin/cleanup-records', async (req: Request, res: Response) => {
   try {
