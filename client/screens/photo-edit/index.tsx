@@ -15,6 +15,7 @@ import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { createFormDataFile } from '@/utils';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -68,6 +69,8 @@ export default function PhotoEditScreen() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [rotation, setRotation] = useState(0); // 旋转角度：0, 90, 180, 270
+  const [rotating, setRotating] = useState(false); // 旋转中状态
 
   // 解析照片数组
   useEffect(() => {
@@ -190,6 +193,49 @@ export default function PhotoEditScreen() {
     }
   };
 
+  // 旋转照片
+  const handleRotate = async () => {
+    if (rotating) return;
+    
+    try {
+      setRotating(true);
+      
+      const currentPhotoUrl = getPhotoUrl(currentPhoto);
+      
+      // 使用 ImageManipulator 旋转照片
+      const newRotation = (rotation + 90) % 360;
+      const manipResult = await ImageManipulator.manipulateAsync(
+        currentPhotoUrl,
+        [{ rotate: newRotation }],
+        { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      
+      // 更新照片数组
+      const newPhotos = [...photos];
+      newPhotos[currentIndex] = manipResult.uri;
+      
+      // 保存到服务器
+      if (params.inspectionId && params.itemRecordId) {
+        const saved = await savePhotoUpdates(params.inspectionId, params.itemRecordId, newPhotos);
+        if (!saved) {
+          Alert.alert('错误', '保存失败，请重试');
+          setRotating(false);
+          return;
+        }
+      }
+      
+      setPhotos(newPhotos);
+      setRotation(newRotation);
+      setLoading(true);
+      setError(false);
+    } catch (error) {
+      console.error('旋转照片失败:', error);
+      Alert.alert('错误', '旋转照片失败，请重试');
+    } finally {
+      setRotating(false);
+    }
+  };
+
   // 如果没有照片，显示错误
   if (!currentPhoto) {
     return (
@@ -227,7 +273,7 @@ export default function PhotoEditScreen() {
 
       {/* 照片显示 */}
       <View className="flex-1 justify-center items-center">
-        {loading && (
+        {(loading || rotating) && (
           <View className="absolute z-10">
             <Ionicons name="sync" size={48} color="white" className="animate-spin" />
           </View>
@@ -240,7 +286,7 @@ export default function PhotoEditScreen() {
         ) : (
           <Image
             source={{ uri: currentPhotoUrl }}
-            style={styles.image}
+            style={[styles.image, { transform: [{ rotate: `${rotation}deg` }] }]}
             resizeMode="contain"
             onLoadStart={() => setLoading(true)}
             onLoadEnd={() => setLoading(false)}
@@ -269,6 +315,17 @@ export default function PhotoEditScreen() {
         
         {/* 操作按钮 */}
         <View className="flex-row justify-center px-8">
+          <TouchableOpacity 
+            onPress={handleRotate}
+            disabled={rotating}
+            style={[styles.actionButton, rotating && { opacity: 0.5 }]}
+          >
+            <Ionicons name="refresh-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>旋转</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.buttonSpacer} />
+          
           <TouchableOpacity 
             onPress={handleDelete}
             style={styles.actionButton}
