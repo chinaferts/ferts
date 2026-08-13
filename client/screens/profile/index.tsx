@@ -46,8 +46,8 @@ export default function ProfileScreen() {
   };
 
   const handleVersionPress = () => {
-    // 点击版本栏时触发版本检查
-    checkUpdate();
+    // 点击版本栏时强制检查更新，忽略用户的忽略状态
+    checkUpdate(true);
   };
 
   return (

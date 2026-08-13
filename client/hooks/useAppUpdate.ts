@@ -38,7 +38,7 @@ export function useAppUpdate(): UseAppUpdateReturn {
   const [updateUrl, setUpdateUrl] = useState('');
   const [releaseNotes, setReleaseNotes] = useState('');
 
-  const checkUpdate = useCallback(async () => {
+  const checkUpdate = useCallback(async (force = false) => {
     try {
       const version = getCurrentVersion();
       
@@ -52,12 +52,15 @@ export function useAppUpdate(): UseAppUpdateReturn {
       const data: VersionCheckResult = await response.json();
       
       if (data.needUpdate) {
-        // 检查用户是否已经忽略过这个版本
-        const dismissedVersion = await AsyncStorage.getItem(DISMISSED_VERSION_KEY);
-        
-        if (dismissedVersion === data.latestVersion && !data.forceUpdate) {
-          // 用户已忽略此版本且非强制更新，不提示
-          return;
+        // 强制检查时，忽略用户的忽略状态
+        if (!force) {
+          // 检查用户是否已经忽略过这个版本
+          const dismissedVersion = await AsyncStorage.getItem(DISMISSED_VERSION_KEY);
+          
+          if (dismissedVersion === data.latestVersion && !data.forceUpdate) {
+            // 用户已忽略此版本且非强制更新，不提示
+            return;
+          }
         }
         
         setCurrentVersion(version);
