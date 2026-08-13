@@ -450,6 +450,19 @@ def draw_photo(c, x, y, photo_path, max_display_width=50*mm, max_display_height=
 
 def draw_checklist(c, width, margin, y, height, data):
     """绘制检查项列表（包含照片），排除问题统计项"""
+    # 检查项名称中英文映射
+    ITEM_NAME_EN_MAP = {
+        '大货仓库照以及码堆照片': 'Warehouse Photos',
+        '外箱箱唛以及尺寸重量拍照': 'Outer Carton Markings & Measurements',
+        '内箱箱以及尺寸重量拍照': 'Inner Carton Markings & Measurements',
+        '产品细节拍照': 'Product Details',
+        '彩盒/彩卡信息以及其规格重量拍照': 'Color Box/Card Information',
+        '条码扫描以及拍照': 'Barcode Scan',
+        '组装以及功能测试拍照': 'Assembly & Function Test',
+        '与签样对比拍照': 'Comparison with Signed Sample',
+        '问题统计以及拍照并描述': 'Problem Statistics & Description',
+    }
+    
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#4F46E5'))
     c.drawString(margin, y, '【 检验项目 / Inspection Items 】')
@@ -489,6 +502,9 @@ def draw_checklist(c, width, margin, y, height, data):
             
             item_name = item.get('item_name', item.get('name', 'N/A'))
             item_name_en = item.get('name_en', '')
+            # 如果 name_en 为空，尝试从 ITEM_NAME_EN_MAP 获取
+            if not item_name_en:
+                item_name_en = ITEM_NAME_EN_MAP.get(item_name, '')
             description = item.get('description', '')
             result = item.get('status', item.get('result', 'pending'))
             photos = item.get('photos', []) or []
