@@ -2990,7 +2990,7 @@ export default function InspectionDetailScreen() {
                         <TouchableOpacity
                           key={idx}
                           style={styles.photoContainer}
-                          onPress={() => {
+                          onPress={async () => {
                             // 转换照片路径为完整 URL，确保照片编辑页面能正确加载
                             const fullPhotoUrls = item.photos.map(p => getImageUrl(p));
                             const photoDataKey = `photo_data_${Date.now()}`;
