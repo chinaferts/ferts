@@ -3016,7 +3016,7 @@ export default function InspectionDetailScreen() {
                             };
                             
                             router.push('/photo-edit' as any, {
-                              photos: 'global',
+                              photos: '__photoEditData__',
                               initialIndex: idx,
                               inspectionId: id,
                               itemRecordId: item.record_id,
