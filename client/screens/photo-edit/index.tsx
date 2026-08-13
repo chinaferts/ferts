@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from '@/utils/api';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
   Text,
   Alert,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
@@ -18,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { createFormDataFile } from '@/utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PinchGestureHandler, State } from 'react-native-gesture-handler';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -72,6 +74,15 @@ export default function PhotoEditScreen() {
   const [error, setError] = useState(false);
   const [rotation, setRotation] = useState(0); // 旋转角度：0, 90, 180, 270
   const [rotating, setRotating] = useState(false); // 旋转中状态
+  
+  // 缩放相关状态
+  const baseScale = useRef(new Animated.Value(1)).current;
+  const pinchScale = useRef(new Animated.Value(1)).current;
+  const [currentScale, setCurrentScale] = useState(1);
+  const MIN_SCALE = 0.5;
+  const MAX_SCALE = 3;
+  
+  const scale = Animated.multiply(baseScale, pinchScale);
 
   // 解析照片数组
   useEffect(() => {
@@ -131,11 +142,52 @@ export default function PhotoEditScreen() {
     router.back();
   };
 
+  // 缩放处理
+  const onPinchEvent = Animated.event(
+    [{ nativeEvent: { scale: pinchScale } }],
+    { useNativeDriver: true }
+  );
+
+  const onPinchStateChange = (event: any) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      // 缩放结束，保存当前缩放比例
+      const newScale = currentScale * event.nativeEvent.scale;
+      const clampedScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+      setCurrentScale(clampedScale);
+      
+      // 重置动画值
+      baseScale.setValue(clampedScale);
+      pinchScale.setValue(1);
+    }
+  };
+
+  // 重置缩放
+  const handleResetZoom = () => {
+    setCurrentScale(1);
+    baseScale.setValue(1);
+    pinchScale.setValue(1);
+  };
+
+  // 放大
+  const handleZoomIn = () => {
+    const newScale = Math.min(MAX_SCALE, currentScale * 1.3);
+    setCurrentScale(newScale);
+    baseScale.setValue(newScale);
+  };
+
+  // 缩小
+  const handleZoomOut = () => {
+    const newScale = Math.max(MIN_SCALE, currentScale * 0.7);
+    setCurrentScale(newScale);
+    baseScale.setValue(newScale);
+  };
   const goToPrevious = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
       setLoading(true);
       setError(false);
+      // 重置缩放
+      handleResetZoom();
     }
   };
 
@@ -144,6 +196,8 @@ export default function PhotoEditScreen() {
       setCurrentIndex(currentIndex + 1);
       setLoading(true);
       setError(false);
+      // 重置缩放
+      handleResetZoom();
     }
   };
 
@@ -314,19 +368,26 @@ export default function PhotoEditScreen() {
             <Text className="text-gray-400 mt-4">照片加载失败</Text>
           </View>
         ) : (
-          <ExpoImage
-            source={{ uri: currentPhotoUrl }}
-            style={[styles.image, { transform: [{ rotate: `${rotation}deg` }] }]}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-            onLoadStart={() => setLoading(true)}
-            onLoadEnd={() => setLoading(false)}
-            onError={(e) => {
-              console.log('图片加载错误:', e.nativeEvent);
-              setLoading(false);
-              setError(true);
-            }}
-          />
+          <PinchGestureHandler
+            onGestureEvent={onPinchEvent}
+            onHandlerStateChange={onPinchStateChange}
+          >
+            <Animated.View style={{ transform: [{ scale }] }}>
+              <ExpoImage
+                source={{ uri: currentPhotoUrl }}
+                style={[styles.image, { transform: [{ rotate: `${rotation}deg` }] }]}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                onLoadStart={() => setLoading(true)}
+                onLoadEnd={() => setLoading(false)}
+                onError={(e) => {
+                  console.log('图片加载错误:', e.nativeEvent);
+                  setLoading(false);
+                  setError(true);
+                }}
+              />
+            </Animated.View>
+          </PinchGestureHandler>
         )}
       </View>
 
@@ -346,6 +407,38 @@ export default function PhotoEditScreen() {
         
         {/* 操作按钮 */}
         <View className="flex-row justify-center px-8">
+          <TouchableOpacity 
+            onPress={handleZoomOut}
+            disabled={currentScale <= MIN_SCALE}
+            style={[styles.actionButton, currentScale <= MIN_SCALE && { opacity: 0.5 }]}
+          >
+            <Ionicons name="remove-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>缩小</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.buttonSpacer} />
+          
+          <TouchableOpacity 
+            onPress={handleResetZoom}
+            style={styles.actionButton}
+          >
+            <Ionicons name="expand-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>重置</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.buttonSpacer} />
+          
+          <TouchableOpacity 
+            onPress={handleZoomIn}
+            disabled={currentScale >= MAX_SCALE}
+            style={[styles.actionButton, currentScale >= MAX_SCALE && { opacity: 0.5 }]}
+          >
+            <Ionicons name="add-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>放大</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.buttonSpacer} />
+          
           <TouchableOpacity 
             onPress={handleRotate}
             disabled={rotating}
