@@ -3004,10 +3004,19 @@ export default function InspectionDetailScreen() {
                           onPress={async () => {
                             // 转换照片路径为完整 URL，确保照片编辑页面能正确加载
                             const fullPhotoUrls = item.photos.map(p => getImageUrl(p));
-                            const photoDataKey = `photo_data_${Date.now()}`;
-                            await AsyncStorage.setItem(photoDataKey, JSON.stringify(fullPhotoUrls));
+                            console.log('[Detail] Barcode fullPhotoUrls:', fullPhotoUrls);
+                            
+                            // 使用全局变量传递照片数据，解决 AsyncStorage 异步问题
+                            (globalThis as any).__photoEditData = {
+                              photos: fullPhotoUrls,
+                              initialIndex: idx,
+                              inspectionId: id,
+                              itemRecordId: item.record_id,
+                              itemId: item.id,
+                            };
+                            
                             router.push('/photo-edit' as any, {
-                              photos: photoDataKey,
+                              photos: 'global',
                               initialIndex: idx,
                               inspectionId: id,
                               itemRecordId: item.record_id,
