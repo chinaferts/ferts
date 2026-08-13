@@ -61,6 +61,13 @@ info "客户端构建检查完成"
 # ============== 构建服务端代码 ======================
 info "构建服务端代码..."
 cd "$ROOT_DIR/server"
+
+# 安装 Node.js 依赖
+if [ ! -d "node_modules" ]; then
+  info "安装服务端依赖..."
+  pnpm install --prod || error "服务端依赖安装失败"
+fi
+
 NODE_ENV=production pnpm run build || error "服务端构建失败"
 cd "$ROOT_DIR"
 info "服务端构建完成"
