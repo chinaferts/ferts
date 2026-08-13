@@ -18,6 +18,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { GestureHandlerRootView, PinchGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 获取完整的图片 URL（同步版本，用于 Image source）
 const getImageUrl = (photo: string): string => {
@@ -2595,10 +2596,12 @@ export default function InspectionDetailScreen() {
                                     setPhotoModalVisible(true);
                                   } else {
                                     // 未完成验货：跳转到编辑页面
-                                    // 转换照片路径为完整 URL，确保照片编辑页面能正确加载
+                                    // 将照片数据存储到 AsyncStorage，避免 URL 参数过长
                                     const fullPhotoUrls = item.photos.map(p => getImageUrl(p));
+                                    const photoDataKey = `photo_data_${Date.now()}`;
+                                    await AsyncStorage.setItem(photoDataKey, JSON.stringify(fullPhotoUrls));
                                     router.push('/photo-edit' as any, {
-                                      photos: JSON.stringify(fullPhotoUrls),
+                                      photos: photoDataKey,
                                       initialIndex: idx,
                                       itemRecordId: item.record_id,
                                       itemId: item.id,
@@ -2990,8 +2993,10 @@ export default function InspectionDetailScreen() {
                           onPress={() => {
                             // 转换照片路径为完整 URL，确保照片编辑页面能正确加载
                             const fullPhotoUrls = item.photos.map(p => getImageUrl(p));
+                            const photoDataKey = `photo_data_${Date.now()}`;
+                            await AsyncStorage.setItem(photoDataKey, JSON.stringify(fullPhotoUrls));
                             router.push('/photo-edit' as any, {
-                              photos: JSON.stringify(fullPhotoUrls),
+                              photos: photoDataKey,
                               initialIndex: idx,
                               inspectionId: id,
                               itemRecordId: item.record_id,

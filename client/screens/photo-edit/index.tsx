@@ -75,17 +75,35 @@ export default function PhotoEditScreen() {
   // 解析照片数组
   useEffect(() => {
     if (params.photos) {
-      let parsed: string[] = [];
-      if (typeof params.photos === 'string') {
-        try {
-          parsed = JSON.parse(params.photos);
-        } catch {
-          parsed = [params.photos];
+      const loadPhotos = async () => {
+        let parsed: string[] = [];
+        if (typeof params.photos === 'string') {
+          // 检查是否是 AsyncStorage 的 key
+          if (params.photos.startsWith('photo_data_')) {
+            try {
+              const stored = await AsyncStorage.getItem(params.photos);
+              if (stored) {
+                parsed = JSON.parse(stored);
+                // 清理 AsyncStorage
+                await AsyncStorage.removeItem(params.photos);
+              }
+            } catch {
+              parsed = [params.photos];
+            }
+          } else {
+            // 尝试 JSON 解析
+            try {
+              parsed = JSON.parse(params.photos);
+            } catch {
+              parsed = [params.photos];
+            }
+          }
+        } else if (Array.isArray(params.photos)) {
+          parsed = params.photos;
         }
-      } else if (Array.isArray(params.photos)) {
-        parsed = params.photos;
-      }
-      setPhotos(parsed);
+        setPhotos(parsed);
+      };
+      loadPhotos();
     }
     
     // 解析初始索引
