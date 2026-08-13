@@ -75,6 +75,10 @@ info "服务端构建完成"
 # ============== 启动服务 ======================
 info "开始启动服务..."
 cd /tmp/server_dist
+
+# 设置 NODE_PATH 指向服务端依赖目录
+export NODE_PATH="$ROOT_DIR/server/node_modules"
+
 NODE_ENV=production PORT="$PORT" node index.cjs &
 sleep 3
 if pgrep -f "index.cjs" > /dev/null; then
