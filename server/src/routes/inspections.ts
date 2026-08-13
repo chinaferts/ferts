@@ -1510,16 +1510,28 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
   
   // 准备PDF数据 - 包含完整的表头信息
   // 中英文检查项名称映射
+  // 使用与 APP 相同的映射表
   const ITEM_NAME_EN_MAP: Record<string, string> = {
-    '大货仓库照以及码堆照片': 'Warehouse Photos',
-    '外箱箱唛以及尺寸重量拍照': 'Outer Carton Markings & Measurements',
-    '内箱箱唛以及尺寸重量拍照': 'Inner Carton Markings & Measurements',
-    '产品细节拍照': 'Product Details',
-    '彩盒/彩卡信息以及其规格重量拍照': 'Color Box/Card Information',
-    '条码扫描以及拍照': 'Barcode Scan',
+    '大货仓库照以及码堆照片': 'Warehouse & Stacking',
+    '外箱箱唛以及尺寸重量拍照': 'Carton Marking & Dimensions',
+    '内箱箱唛以及尺寸重量拍照': 'Inner Carton Marking & Dimensions',
+    '产品细节拍照（包括产品尺寸和重量照）': 'Product Detail',
+    '产品细节拍照': 'Product Detail',
+    '彩盒/彩卡信息以及其规格重量拍照': 'Color Box/Manual & Specs',
+    '与签样对比拍照': 'Sample Comparison',
     '组装以及功能测试拍照': 'Assembly & Function Test',
-    '与签样对比拍照': 'Comparison with Signed Sample',
-    '问题统计以及拍照并描述': 'Problem Statistics & Description',
+    '条码扫描以及拍照': 'Barcode Scan',
+    '条码扫描': 'Barcode Scan',
+    '问题统计以及拍照并描述': 'Problem Statistics',
+    '问题描述': 'Problem Statistics',
+    '仓库': 'Warehouse & Stacking',
+    '外箱': 'Carton Marking & Dimensions',
+    '内箱': 'Inner Carton Marking & Dimensions',
+    '产品': 'Product Detail',
+    '彩盒': 'Color Box/Manual & Specs',
+    '对比': 'Sample Comparison',
+    '组装': 'Assembly & Function Test',
+    '条码': 'Barcode Scan',
   };
 
   // 获取英文检查项名称（支持模糊匹配）
