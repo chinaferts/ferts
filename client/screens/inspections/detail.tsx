@@ -2082,6 +2082,11 @@ export default function InspectionDetailScreen() {
       };
     });
     
+    // 同时更新 barcodeItems 状态
+    setBarcodeItems(prev => prev.map(i => 
+      i.id === itemId ? { ...i, barcodeCodes: newCodes, barcodeFormats: newFormats } : i
+    ));
+    
     try {
       console.log("[BarcodeDelete] Deleting barcode:", itemId, codeToDelete, "newCodes:", newCodes);
       const response = await fetch(`${getApiBaseUrl()}/api/v1/inspections/${id}/checklist-items/${itemId}`, {
