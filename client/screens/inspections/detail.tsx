@@ -2598,8 +2598,10 @@ export default function InspectionDetailScreen() {
                                     // 未完成验货：跳转到编辑页面
                                     // 将照片数据存储到 AsyncStorage，避免 URL 参数过长
                                     const fullPhotoUrls = item.photos.map(p => getImageUrl(p));
+                                    console.log('[Detail] fullPhotoUrls:', fullPhotoUrls);
                                     const photoDataKey = `photo_data_${Date.now()}`;
                                     await AsyncStorage.setItem(photoDataKey, JSON.stringify(fullPhotoUrls));
+                                    console.log('[Detail] Stored to AsyncStorage with key:', photoDataKey);
                                     router.push('/photo-edit' as any, {
                                       photos: photoDataKey,
                                       initialIndex: idx,

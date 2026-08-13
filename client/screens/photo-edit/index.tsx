@@ -88,8 +88,9 @@ export default function PhotoEditScreen() {
               if (stored) {
                 parsed = JSON.parse(stored);
                 console.log('[PhotoEdit] Parsed photos:', parsed);
-                // 清理 AsyncStorage
-                await AsyncStorage.removeItem(params.photos);
+                // 不立即清理 AsyncStorage，等页面卸载时再清理
+              } else {
+                console.log('[PhotoEdit] AsyncStorage 中没有数据');
               }
             } catch (e) {
               console.error('[PhotoEdit] Failed to load from AsyncStorage:', e);
@@ -106,11 +107,13 @@ export default function PhotoEditScreen() {
         } else if (Array.isArray(params.photos)) {
           parsed = params.photos;
         }
+        console.log('[PhotoEdit] Final photos:', parsed);
         setPhotos(parsed);
         setLoading(false);
       };
       loadPhotos();
     } else {
+      console.log('[PhotoEdit] No photos param');
       setLoading(false);
     }
     
