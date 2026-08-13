@@ -1,50 +1,71 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 const VERSION_STORAGE_KEY = 'last_known_version';
+const DISMISSED_VERSION_KEY = 'dismissed_version';
 const CHECK_INTERVAL = 5 * 60 * 1000; // 5 分钟检查一次
 
-interface VersionInfo {
-  version: string;
-  commitHash: string;
-  deployTime: string;
+interface VersionCheckResult {
+  needUpdate: boolean;
+  forceUpdate: boolean;
+  latestVersion: string;
+  updateUrl: string;
+  releaseNotes: string;
 }
 
 interface UseAppUpdateReturn {
   hasUpdate: boolean;
-  currentVersion: string | null;
-  newVersion: string | null;
+  forceUpdate: boolean;
+  currentVersion: string;
+  newVersion: string;
+  updateUrl: string;
+  releaseNotes: string;
   checkUpdate: () => Promise<void>;
   dismissUpdate: () => Promise<void>;
 }
 
+// 获取当前 APP 版本号
+function getCurrentVersion(): string {
+  return Constants.expoConfig?.version || '1.0.0';
+}
+
 export function useAppUpdate(): UseAppUpdateReturn {
   const [hasUpdate, setHasUpdate] = useState(false);
-  const [currentVersion, setCurrentVersion] = useState<string | null>(null);
-  const [newVersion, setNewVersion] = useState<string | null>(null);
+  const [forceUpdate, setForceUpdate] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState(getCurrentVersion());
+  const [newVersion, setNewVersion] = useState('');
+  const [updateUrl, setUpdateUrl] = useState('');
+  const [releaseNotes, setReleaseNotes] = useState('');
 
   const checkUpdate = useCallback(async () => {
     try {
-      // 获取服务器版本
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/version`);
+      const version = getCurrentVersion();
+      
+      // 调用版本检查 API
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/versions/check?currentVersion=${version}`
+      );
+      
       if (!response.ok) return;
       
-      const data = await response.json();
-      if (!data.success) return;
-
-      const serverVersion = data.version;
+      const data: VersionCheckResult = await response.json();
       
-      // 获取本地存储的版本
-      const localVersion = await AsyncStorage.getItem(VERSION_STORAGE_KEY);
-      
-      if (localVersion && localVersion !== serverVersion) {
-        // 版本不同，有新版本
-        setCurrentVersion(localVersion);
-        setNewVersion(serverVersion);
+      if (data.needUpdate) {
+        // 检查用户是否已经忽略过这个版本
+        const dismissedVersion = await AsyncStorage.getItem(DISMISSED_VERSION_KEY);
+        
+        if (dismissedVersion === data.latestVersion && !data.forceUpdate) {
+          // 用户已忽略此版本且非强制更新，不提示
+          return;
+        }
+        
+        setCurrentVersion(version);
+        setNewVersion(data.latestVersion);
+        setUpdateUrl(data.updateUrl);
+        setReleaseNotes(data.releaseNotes);
+        setForceUpdate(data.forceUpdate);
         setHasUpdate(true);
-      } else if (!localVersion) {
-        // 首次使用，存储当前版本
-        await AsyncStorage.setItem(VERSION_STORAGE_KEY, serverVersion);
       }
     } catch (error) {
       console.error('[useAppUpdate] Check update failed:', error);
@@ -52,14 +73,12 @@ export function useAppUpdate(): UseAppUpdateReturn {
   }, []);
 
   const dismissUpdate = useCallback(async () => {
-    // 用户点击更新后，存储新版本
-    if (newVersion) {
-      await AsyncStorage.setItem(VERSION_STORAGE_KEY, newVersion);
+    // 存储已忽略的版本（非强制更新时）
+    if (newVersion && !forceUpdate) {
+      await AsyncStorage.setItem(DISMISSED_VERSION_KEY, newVersion);
     }
     setHasUpdate(false);
-    setCurrentVersion(null);
-    setNewVersion(null);
-  }, [newVersion]);
+  }, [newVersion, forceUpdate]);
 
   useEffect(() => {
     // 立即检查一次
@@ -73,9 +92,12 @@ export function useAppUpdate(): UseAppUpdateReturn {
 
   return {
     hasUpdate,
+    forceUpdate,
     currentVersion,
     newVersion,
+    updateUrl,
+    releaseNotes,
     checkUpdate,
-    dismissUpdate
+    dismissUpdate,
   };
 }

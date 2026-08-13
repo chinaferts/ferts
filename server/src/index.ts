@@ -7,6 +7,7 @@ import inspectionsRouter from "./routes/inspections.js";
 import defectsRouter from "./routes/defects.js";
 import photosRouter from "./routes/photos.js";
 import usersRouter from "./routes/users.js";
+import versionsRouter from "./routes/versions.js";
 
 const app = express();
 const port = parseInt(process.env.PORT || '9091', 10);
@@ -56,6 +57,7 @@ app.use('/api/v1/defects', defectsRouter);
 app.use('/api/v1/photos', photosRouter);
 app.use('/api/v1/users', usersRouter);
 app.use('/api/v1/auth', usersRouter);
+app.use('/api/v1/versions', versionsRouter);
 
 // Catch-all: serve index.html for client-side routing
 app.get('*', (req, res) => {
