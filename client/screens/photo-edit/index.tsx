@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { createFormDataFile } from '@/utils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -77,17 +78,21 @@ export default function PhotoEditScreen() {
     if (params.photos) {
       const loadPhotos = async () => {
         let parsed: string[] = [];
+        console.log('[PhotoEdit] params.photos:', params.photos);
         if (typeof params.photos === 'string') {
           // 检查是否是 AsyncStorage 的 key
           if (params.photos.startsWith('photo_data_')) {
             try {
               const stored = await AsyncStorage.getItem(params.photos);
+              console.log('[PhotoEdit] AsyncStorage stored:', stored);
               if (stored) {
                 parsed = JSON.parse(stored);
+                console.log('[PhotoEdit] Parsed photos:', parsed);
                 // 清理 AsyncStorage
                 await AsyncStorage.removeItem(params.photos);
               }
-            } catch {
+            } catch (e) {
+              console.error('[PhotoEdit] Failed to load from AsyncStorage:', e);
               parsed = [params.photos];
             }
           } else {
@@ -102,8 +107,11 @@ export default function PhotoEditScreen() {
           parsed = params.photos;
         }
         setPhotos(parsed);
+        setLoading(false);
       };
       loadPhotos();
+    } else {
+      setLoading(false);
     }
     
     // 解析初始索引
