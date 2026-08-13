@@ -20,7 +20,7 @@ export default function ProfileScreen() {
 
   const { user, isAdmin, logout } = useAuth();
   const router = useRouter();
-  const { latestVersion, releaseNotes, updateUrl, hasUpdate, checkUpdate } = useAppUpdate();
+  const { currentVersion, newVersion, releaseNotes, updateUrl, hasUpdate, checkUpdate } = useAppUpdate();
 
   const handleLogout = () => {
     Alert.alert(
@@ -43,6 +43,11 @@ export default function ProfileScreen() {
         [{ text: `${t('confirm')} / ${t('confirmEn')}` }]
       );
     }
+  };
+
+  const handleVersionPress = () => {
+    // 点击版本栏时触发版本检查
+    checkUpdate();
   };
 
   return (
@@ -135,20 +140,20 @@ export default function ProfileScreen() {
 
         {/* Version & Logout */}
         <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
-          <TouchableOpacity style={styles.menuItem} onPress={checkUpdate}>
+          <TouchableOpacity style={styles.menuItem} onPress={handleVersionPress}>
             <View style={styles.menuLeft}>
               <Feather name="smartphone" size={18} color="#6B7280" style={styles.menuIcon} />
               <View style={styles.menuTextContainer}>
                 <Text style={[styles.menuText, { color: text }]}>{t('version')}</Text>
                 <Text style={[styles.menuTextEn, { color: muted }]}>{t('versionEn')}</Text>
-                {hasUpdate && latestVersion && (
+                {hasUpdate && newVersion && (
                   <Text style={[styles.updateBadge, { color: '#DC2626' }]}>
-                    {latestVersion} {t('available')} / {t('availableEn')}
+                    {newVersion} {t('available')} / {t('availableEn')}
                   </Text>
                 )}
               </View>
             </View>
-            <Text style={{ color: muted }}>v1.0.0</Text>
+            <Text style={{ color: muted }}>{currentVersion}</Text>
           </TouchableOpacity>
           {hasUpdate && releaseNotes && (
             <>
