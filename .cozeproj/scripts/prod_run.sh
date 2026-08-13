@@ -62,11 +62,9 @@ info "客户端构建检查完成"
 info "构建服务端代码..."
 cd "$ROOT_DIR/server"
 
-# 安装 Node.js 依赖
-if [ ! -d "node_modules" ]; then
-  info "安装服务端依赖..."
-  pnpm install --prod || error "服务端依赖安装失败"
-fi
+# 始终安装 Node.js 依赖（确保外部化依赖可用）
+info "安装服务端依赖..."
+pnpm install --prod --frozen-lockfile || error "服务端依赖安装失败"
 
 NODE_ENV=production pnpm run build || error "服务端构建失败"
 cd "$ROOT_DIR"
