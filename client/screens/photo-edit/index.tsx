@@ -2,7 +2,6 @@ import { getApiBaseUrl } from '@/utils/api';
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Image,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
@@ -11,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { Ionicons } from '@expo/vector-icons';
@@ -284,10 +284,11 @@ export default function PhotoEditScreen() {
             <Text className="text-gray-400 mt-4">照片加载失败</Text>
           </View>
         ) : (
-          <Image
+          <ExpoImage
             source={{ uri: currentPhotoUrl }}
             style={[styles.image, { transform: [{ rotate: `${rotation}deg` }] }]}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="memory-disk"
             onLoadStart={() => setLoading(true)}
             onLoadEnd={() => setLoading(false)}
             onError={(e) => {
