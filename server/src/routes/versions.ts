@@ -6,8 +6,8 @@ const router = express.Router();
 const VERSION_INFO = {
   latestVersion: '1.0.2',
   minVersion: '1.0.0',
-  updateUrl: '', // APK 下载链接，需要配置对象存储 URL
-  releaseNotes: '修复照片加载失败问题，优化照片编辑功能，修复部署构建超时问题',
+  updateUrl: 'https://github.com/chinaferts/ferts/releases/download/v1.0.2/app-release.apk', // APK 下载链接
+  releaseNotes: '修复照片加载失败问题，优化照片编辑功能，修复部署构建超时问题，修复条码扫描删除功能',
   forceUpdate: false,
 };
 
