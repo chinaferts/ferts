@@ -4,10 +4,10 @@ const router = express.Router();
 
 // 版本信息存储（实际项目中应该从数据库或配置文件读取）
 const VERSION_INFO = {
-  latestVersion: '1.0.1',
+  latestVersion: '1.0.2',
   minVersion: '1.0.0',
   updateUrl: '', // APK 下载链接，需要配置对象存储 URL
-  releaseNotes: '修复 PDF 报告生成问题，优化条码扫描结果显示',
+  releaseNotes: '修复照片加载失败问题，优化照片编辑功能，修复部署构建超时问题',
   forceUpdate: false,
 };
 
