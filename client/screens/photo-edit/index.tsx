@@ -89,7 +89,7 @@ export default function PhotoEditScreen() {
     }
     
     // 解析初始索引
-    if (params.initialIndex) {
+    if (params.initialIndex !== undefined) {
       setCurrentIndex(Number(params.initialIndex));
     }
   }, [params.photos, params.initialIndex]);

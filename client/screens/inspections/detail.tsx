@@ -2598,7 +2598,7 @@ export default function InspectionDetailScreen() {
                                     // 转换照片路径为完整 URL，确保照片编辑页面能正确加载
                                     const fullPhotoUrls = item.photos.map(p => getImageUrl(p));
                                     router.push('/photo-edit' as any, {
-                                      photos: fullPhotoUrls,
+                                      photos: JSON.stringify(fullPhotoUrls),
                                       initialIndex: idx,
                                       itemRecordId: item.record_id,
                                       itemId: item.id,
@@ -2991,7 +2991,7 @@ export default function InspectionDetailScreen() {
                             // 转换照片路径为完整 URL，确保照片编辑页面能正确加载
                             const fullPhotoUrls = item.photos.map(p => getImageUrl(p));
                             router.push('/photo-edit' as any, {
-                              photos: fullPhotoUrls,
+                              photos: JSON.stringify(fullPhotoUrls),
                               initialIndex: idx,
                               inspectionId: id,
                               itemRecordId: item.record_id,
