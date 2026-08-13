@@ -510,7 +510,7 @@ def draw_checklist(c, width, margin, y, height, data):
             c.setFont('ChineseFont', 9)
             c.setFillColor(colors.black)
             if item_name_en:
-                c.drawString(margin + 5*mm, y, f'{item_name_en} {item_name}')
+                c.drawString(margin + 5*mm, y, f'• {item_name} {item_name_en}')
             else:
                 c.drawString(margin + 5*mm, y, f'• {item_name}')
             
@@ -681,7 +681,7 @@ def draw_checklist(c, width, margin, y, height, data):
             c.setFont('ChineseFont', 9)
             c.setFillColor(colors.black)
             if item_name_en:
-                c.drawString(margin + 5*mm, y, f'{item_name_en} {item_name}')
+                c.drawString(margin + 5*mm, y, f'• {item_name} {item_name_en}')
             else:
                 c.drawString(margin + 5*mm, y, f'• {item_name}')
             
