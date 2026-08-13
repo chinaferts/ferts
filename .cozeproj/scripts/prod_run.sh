@@ -62,10 +62,6 @@ info "客户端构建检查完成"
 info "构建服务端代码..."
 cd "$ROOT_DIR/server"
 
-# 始终安装 Node.js 依赖（确保外部化依赖可用）
-info "安装服务端依赖..."
-pnpm install --prod --frozen-lockfile || error "服务端依赖安装失败"
-
 NODE_ENV=production pnpm run build || error "服务端构建失败"
 cd "$ROOT_DIR"
 info "服务端构建完成"
@@ -73,9 +69,6 @@ info "服务端构建完成"
 # ============== 启动服务 ======================
 info "开始启动服务..."
 cd /tmp/server_dist
-
-# 设置 NODE_PATH 指向服务端依赖目录
-export NODE_PATH="$ROOT_DIR/server/node_modules"
 
 NODE_ENV=production PORT="$PORT" node index.cjs &
 sleep 3

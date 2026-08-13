@@ -36,15 +36,7 @@ try {
     format: 'cjs',
     outdir: outDir,
     outExtension: { '.js': '.cjs' },
-    external: [
-      'pg',
-      'pdfkit',
-      'pdfmake',
-      'fontkit',
-      '@react-pdf/renderer',
-      '@pdfme/pdf-lib',
-      'pdf-lib',
-    ],
+    external: [],
     sourcemap: false,
     minify: true,
   });
