@@ -454,7 +454,7 @@ def draw_checklist(c, width, margin, y, height, data):
     ITEM_NAME_EN_MAP = {
         '大货仓库照以及码堆照片': 'Warehouse Photos',
         '外箱箱唛以及尺寸重量拍照': 'Outer Carton Markings & Measurements',
-        '内箱箱以及尺寸重量拍照': 'Inner Carton Markings & Measurements',
+        '内箱箱唛以及尺寸重量拍照': 'Inner Carton Markings & Measurements',
         '产品细节拍照': 'Product Details',
         '彩盒/彩卡信息以及其规格重量拍照': 'Color Box/Card Information',
         '条码扫描以及拍照': 'Barcode Scan',
@@ -462,6 +462,20 @@ def draw_checklist(c, width, margin, y, height, data):
         '与签样对比拍照': 'Comparison with Signed Sample',
         '问题统计以及拍照并描述': 'Problem Statistics & Description',
     }
+    
+    def get_en_name(cn_name):
+        """获取英文检查项名称（支持模糊匹配）"""
+        # 先尝试精确匹配
+        if cn_name in ITEM_NAME_EN_MAP:
+            return ITEM_NAME_EN_MAP[cn_name]
+        
+        # 模糊匹配：检查 cn_name 是否包含映射表中的键
+        for key, value in ITEM_NAME_EN_MAP.items():
+            if key in cn_name or cn_name in key:
+                return value
+        
+        # 如果没有匹配，返回原名称
+        return cn_name
     
     c.setFont('ChineseFont', 11)
     c.setFillColor(colors.HexColor('#4F46E5'))
@@ -504,7 +518,7 @@ def draw_checklist(c, width, margin, y, height, data):
             item_name_en = item.get('name_en', '')
             # 如果 name_en 为空，尝试从 ITEM_NAME_EN_MAP 获取
             if not item_name_en:
-                item_name_en = ITEM_NAME_EN_MAP.get(item_name, '')
+                item_name_en = get_en_name(item_name)
             description = item.get('description', '')
             result = item.get('status', item.get('result', 'pending'))
             photos = item.get('photos', []) or []

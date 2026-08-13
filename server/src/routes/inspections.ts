@@ -1522,9 +1522,22 @@ router.get('/:id/export-pdf', async (req: Request, res: Response) => {
     '问题统计以及拍照并描述': 'Problem Statistics & Description',
   };
 
-  // 获取英文检查项名称
+  // 获取英文检查项名称（支持模糊匹配）
   const getEnName = (cnName: string): string => {
-    return ITEM_NAME_EN_MAP[cnName] || cnName;
+    // 先尝试精确匹配
+    if (ITEM_NAME_EN_MAP[cnName]) {
+      return ITEM_NAME_EN_MAP[cnName];
+    }
+    
+    // 模糊匹配：检查 cnName 是否包含映射表中的键
+    for (const [key, value] of Object.entries(ITEM_NAME_EN_MAP)) {
+      if (cnName.includes(key) || key.includes(cnName)) {
+        return value;
+      }
+    }
+    
+    // 如果没有匹配，返回原名称
+    return cnName;
   };
 
   // 构建检查项列表
