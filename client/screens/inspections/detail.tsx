@@ -922,8 +922,12 @@ export default function InspectionDetailScreen() {
             })
           : [];
         
-        const checkedCount = checklistItems.filter((i: ChecklistItem) => i.status !== 'unchecked').length;
-        const defectCount = checklistItems.filter((i: ChecklistItem) => i.status === 'fail').length;
+        // 排除"问题统计"和"条码扫描"分类，不统计到待检数据中
+        const normalItems = checklistItems.filter((i: ChecklistItem) => 
+          i.category !== '问题统计以及拍照并描述' && i.category !== '条码扫描以及拍照'
+        );
+        const checkedCount = normalItems.filter((i: ChecklistItem) => i.status !== 'unchecked').length;
+        const defectCount = normalItems.filter((i: ChecklistItem) => i.status === 'fail').length;
         
         // 设置 issuePhotosUploaded：如果问题统计检查项有照片，说明照片已上传
         const problemItem = checklistItems.find(
@@ -2189,12 +2193,15 @@ export default function InspectionDetailScreen() {
     console.log('[DEBUG] Items with photos:', itemsWithPhotos.map(i => ({ name: i.name, photos: i.photos })));
   }
 
-  // 按分类分组
-  const categories = [...new Set(inspection.checklist_items.map(item => item.category))];
-  const progress = inspection.checklist_items.length > 0
-    ? Math.round((inspection.checkedCount / inspection.checklist_items.length) * 100)
+  // 按分类分组（排除"问题统计"和"条码扫描"分类）
+  const normalChecklistItems = inspection.checklist_items.filter(item => 
+    item.category !== '问题统计以及拍照并描述' && item.category !== '条码扫描以及拍照'
+  );
+  const categories = [...new Set(normalChecklistItems.map(item => item.category))];
+  const progress = normalChecklistItems.length > 0
+    ? Math.round((normalChecklistItems.filter(i => i.status !== 'unchecked').length / normalChecklistItems.length) * 100)
     : 0;
-  const totalPhotos = inspection.checklist_items.reduce((sum, item) => sum + (item.photos?.length || 0), 0);
+  const totalPhotos = normalChecklistItems.reduce((sum, item) => sum + (item.photos?.length || 0), 0);
 
   return (
     <Screen>
