@@ -2588,8 +2588,10 @@ export default function InspectionDetailScreen() {
                                     setPhotoModalVisible(true);
                                   } else {
                                     // 未完成验货：跳转到编辑页面
+                                    // 转换照片路径为完整 URL，确保照片编辑页面能正确加载
+                                    const fullPhotoUrls = item.photos.map(p => getImageUrl(p));
                                     router.push('/photo-edit' as any, {
-                                      photos: item.photos,
+                                      photos: fullPhotoUrls,
                                       initialIndex: idx,
                                       itemRecordId: item.record_id,
                                       itemId: item.id,
@@ -2979,8 +2981,10 @@ export default function InspectionDetailScreen() {
                           key={idx}
                           style={styles.photoContainer}
                           onPress={() => {
+                            // 转换照片路径为完整 URL，确保照片编辑页面能正确加载
+                            const fullPhotoUrls = item.photos.map(p => getImageUrl(p));
                             router.push('/photo-edit' as any, {
-                              photos: item.photos,
+                              photos: fullPhotoUrls,
                               initialIndex: idx,
                               inspectionId: id,
                               itemRecordId: item.record_id,
