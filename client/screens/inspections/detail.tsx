@@ -2596,14 +2596,18 @@ export default function InspectionDetailScreen() {
                                     setPhotoModalVisible(true);
                                   } else {
                                     // 未完成验货：跳转到编辑页面
-                                    // 将照片数据存储到 AsyncStorage，避免 URL 参数过长
+                                    // 使用全局变量传递照片数据，避免 AsyncStorage 异步问题
                                     const fullPhotoUrls = item.photos.map(p => getImageUrl(p));
                                     console.log('[Detail] fullPhotoUrls:', fullPhotoUrls);
-                                    const photoDataKey = `photo_data_${Date.now()}`;
-                                    await AsyncStorage.setItem(photoDataKey, JSON.stringify(fullPhotoUrls));
-                                    console.log('[Detail] Stored to AsyncStorage with key:', photoDataKey);
+                                    (globalThis as any).__photoEditData = {
+                                      photos: fullPhotoUrls,
+                                      initialIndex: idx,
+                                      itemRecordId: item.record_id,
+                                      itemId: item.id,
+                                      inspectionId: id,
+                                    };
                                     router.push('/photo-edit' as any, {
-                                      photos: photoDataKey,
+                                      photos: '__photoEditData__',
                                       initialIndex: idx,
                                       itemRecordId: item.record_id,
                                       itemId: item.id,

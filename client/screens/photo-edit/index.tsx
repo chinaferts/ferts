@@ -80,20 +80,21 @@ export default function PhotoEditScreen() {
         let parsed: string[] = [];
         console.log('[PhotoEdit] params.photos:', params.photos);
         if (typeof params.photos === 'string') {
-          // 检查是否是 AsyncStorage 的 key
-          if (params.photos.startsWith('photo_data_')) {
+          // 检查是否从全局变量获取数据
+          if (params.photos === '__photoEditData__') {
             try {
-              const stored = await AsyncStorage.getItem(params.photos);
-              console.log('[PhotoEdit] AsyncStorage stored:', stored);
-              if (stored) {
-                parsed = JSON.parse(stored);
-                console.log('[PhotoEdit] Parsed photos:', parsed);
-                // 不立即清理 AsyncStorage，等页面卸载时再清理
+              const globalData = (globalThis as any).__photoEditData;
+              console.log('[PhotoEdit] Global data:', globalData);
+              if (globalData && globalData.photos) {
+                parsed = globalData.photos;
+                console.log('[PhotoEdit] Parsed photos from global:', parsed);
+                // 清理全局变量
+                delete (globalThis as any).__photoEditData;
               } else {
-                console.log('[PhotoEdit] AsyncStorage 中没有数据');
+                console.log('[PhotoEdit] Global data 中没有照片数据');
               }
             } catch (e) {
-              console.error('[PhotoEdit] Failed to load from AsyncStorage:', e);
+              console.error('[PhotoEdit] Failed to load from global data:', e);
               parsed = [params.photos];
             }
           } else {
