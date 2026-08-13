@@ -1,10 +1,11 @@
 import { Screen } from '@/components/Screen';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCSSVariable } from 'uniwind';
 import { Feather } from '@expo/vector-icons';
+import { useAppUpdate } from '@/hooks/useAppUpdate';
 
 export default function ProfileScreen() {
   const { t } = useLanguage();
@@ -19,6 +20,7 @@ export default function ProfileScreen() {
 
   const { user, isAdmin, logout } = useAuth();
   const router = useRouter();
+  const { latestVersion, releaseNotes, updateUrl, hasUpdate, checkUpdate } = useAppUpdate();
 
   const handleLogout = () => {
     Alert.alert(
@@ -29,6 +31,18 @@ export default function ProfileScreen() {
         { text: `${t('confirm')} / ${t('confirmEn')}`, onPress: logout, style: 'destructive' },
       ]
     );
+  };
+
+  const handleUpdate = () => {
+    if (updateUrl) {
+      Linking.openURL(updateUrl);
+    } else {
+      Alert.alert(
+        `${t('update')} / ${t('updateEn')}`,
+        t('noUpdateUrl'),
+        [{ text: `${t('confirm')} / ${t('confirmEn')}` }]
+      );
+    }
   };
 
   return (
@@ -121,16 +135,43 @@ export default function ProfileScreen() {
 
         {/* Version & Logout */}
         <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
-          <View style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={checkUpdate}>
             <View style={styles.menuLeft}>
               <Feather name="smartphone" size={18} color="#6B7280" style={styles.menuIcon} />
-              <View>
+              <View style={styles.menuTextContainer}>
                 <Text style={[styles.menuText, { color: text }]}>{t('version')}</Text>
                 <Text style={[styles.menuTextEn, { color: muted }]}>{t('versionEn')}</Text>
+                {hasUpdate && latestVersion && (
+                  <Text style={[styles.updateBadge, { color: '#DC2626' }]}>
+                    {latestVersion} {t('available')} / {t('availableEn')}
+                  </Text>
+                )}
               </View>
             </View>
             <Text style={{ color: muted }}>v1.0.0</Text>
-          </View>
+          </TouchableOpacity>
+          {hasUpdate && releaseNotes && (
+            <>
+              <View style={[styles.divider, { backgroundColor: border }]} />
+              <View style={styles.releaseNotesContainer}>
+                <Text style={[styles.releaseNotesTitle, { color: text }]}>
+                  {t('updateContent')} / {t('updateContentEn')}
+                </Text>
+                <Text style={[styles.releaseNotesText, { color: muted }]}>{releaseNotes}</Text>
+              </View>
+            </>
+          )}
+          {hasUpdate && (
+            <>
+              <View style={[styles.divider, { backgroundColor: border }]} />
+              <TouchableOpacity style={styles.updateButton} onPress={handleUpdate}>
+                <Feather name="download" size={18} color="#fff" />
+                <Text style={styles.updateButtonText}>
+                  {t('downloadUpdate')} / {t('downloadUpdateEn')}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         <TouchableOpacity
@@ -220,6 +261,43 @@ const styles = StyleSheet.create({
   menuTextEn: {
     fontSize: 11,
     marginTop: 2,
+  },
+  menuTextContainer: {
+    flex: 1,
+  },
+  updateBadge: {
+    fontSize: 11,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  releaseNotesContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  releaseNotesTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  releaseNotesText: {
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  updateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4F46E5',
+    marginHorizontal: 16,
+    marginVertical: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  updateButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   divider: {
     height: 1,
