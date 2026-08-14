@@ -62,7 +62,7 @@ info "客户端构建检查完成"
 info "构建服务端代码..."
 cd "$ROOT_DIR/server"
 
-NODE_ENV=production pnpm run build || error "服务端构建失败"
+NODE_ENV=production pnpm run build 2>&1 || error "服务端构建失败"
 cd "$ROOT_DIR"
 info "服务端构建完成"
 
