@@ -1,6 +1,6 @@
 #!/bin/bash
 # 自动增加版本号脚本
-# 在每次部署前运行，自动将 app.config.ts 中的版本号增加 0.0.1
+# 在每次部署前运行，自动将版本号增加 0.1（MINOR+1, PATCH 重置为 0）
 
 set -e
 
@@ -22,9 +22,9 @@ echo "📌 当前版本号：$CURRENT_VERSION"
 # 解析版本号的各个部分
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
-# 增加 PATCH 版本号
-NEW_PATCH=$((PATCH + 1))
-NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+# 增加 MINOR 版本号，PATCH 重置为 0
+NEW_MINOR=$((MINOR + 1))
+NEW_VERSION="${MAJOR}.${NEW_MINOR}.0"
 
 echo "🆕 新版本号：$NEW_VERSION"
 
