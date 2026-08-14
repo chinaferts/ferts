@@ -58,22 +58,19 @@ if [ ! -d "$ROOT_DIR/client/dist" ]; then
 fi
 info "客户端构建检查完成"
 
-# ============== 构建服务端代码 ======================
-info "构建服务端代码..."
-cd "$ROOT_DIR/server"
-
-NODE_ENV=production pnpm run build || error "服务端构建失败"
-cd "$ROOT_DIR"
-info "服务端构建完成"
-
 # ============== 启动服务 ======================
 info "开始启动服务..."
 cd /tmp/server_dist
 
 NODE_ENV=production PORT="$PORT" node index.cjs &
-sleep 3
-if pgrep -f "index.cjs" > /dev/null; then
-  info "服务启动成功！"
-else
-  error "服务启动失败"
-fi
+
+# 等待服务启动（最多 10 秒）
+for i in {1..10}; do
+  if curl -s http://localhost:$PORT/api/v1/health > /dev/null 2>&1; then
+    info "服务启动成功！"
+    exit 0
+  fi
+  sleep 1
+done
+
+error "服务启动超时"
