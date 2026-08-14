@@ -508,12 +508,17 @@ def draw_checklist(c, width, margin, y, height, data):
         for item in checklist_items:
             category = item.get('category', '')
             
-            # 只在category变化时显示分类标题
+            # 只在 category 变化时显示分类标题（中英双语）
             if category != last_category:
                 check_page_break(15 * mm)
                 c.setFont('ChineseFont', 10)
                 c.setFillColor(colors.HexColor('#374151'))
-                c.drawString(margin, y, f'▸ {category}')
+                # 获取分类的英文翻译
+                category_en = get_en_name(category)
+                if category_en:
+                    c.drawString(margin, y, f'▸ {category} / {category_en}')
+                else:
+                    c.drawString(margin, y, f'▸ {category}')
                 y -= 5 * mm
                 last_category = category
             
