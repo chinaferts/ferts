@@ -60,7 +60,7 @@ info "客户端构建检查完成"
 
 # ============== 启动服务 ======================
 info "开始启动服务..."
-cd /tmp/server_dist
+cd "$ROOT_DIR/server/dist"
 
 NODE_ENV=production PORT="$PORT" node index.cjs &
 

@@ -5,8 +5,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// 生产环境始终输出到 /tmp/server_dist
-const outDir = '/tmp/server_dist';
+const outDir = join(__dirname, 'dist');
 
 // 构建时嵌入 Python 脚本到 TypeScript 代码中
 // 生产环境（只读文件系统）跳过嵌入，直接使用仓库中已提交的版本
