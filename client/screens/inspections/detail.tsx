@@ -4200,25 +4200,28 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
-    marginTop: 12,
-    gap: 10,
+    marginTop: 20,
+    gap: 12,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    borderRadius: 14,
+    gap: 8,
     flexShrink: 1,
     minWidth: 0,
+    minHeight: 56,
   },
   passButton: {
     backgroundColor: 'rgba(0,184,148,0.15)',
     minWidth: 0,
+    flex: 1,
   },
   passButtonText: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
     color: '#00B894',
     flexShrink: 1,
@@ -4226,9 +4229,10 @@ const styles = StyleSheet.create({
   failButton: {
     backgroundColor: 'rgba(255,107,107,0.15)',
     minWidth: 0,
+    flex: 1,
   },
   failButtonText: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
     color: '#FF6B6B',
     flexShrink: 1,
@@ -4236,9 +4240,10 @@ const styles = StyleSheet.create({
   naButton: {
     backgroundColor: 'rgba(128,128,128,0.15)',
     minWidth: 0,
+    flex: 1,
   },
   naButtonText: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
     color: '#808080',
     flexShrink: 1,
@@ -4246,9 +4251,10 @@ const styles = StyleSheet.create({
   photoButton: {
     backgroundColor: '#8B7FF5',
     minWidth: 0,
+    flex: 1,
   },
   photoButtonText: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
     flexShrink: 1,
