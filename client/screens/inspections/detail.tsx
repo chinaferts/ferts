@@ -2865,11 +2865,11 @@ export default function InspectionDetailScreen() {
                           {/* 条码分类显示扫码按钮 */}
                           {(item.category === '条码扫描以及拍照' || item.name?.includes('条码')) && (
                             <TouchableOpacity
-                              style={[styles.actionButton, styles.scanButton]}
+                              style={styles.barcodeScanButton}
                               onPress={() => openBarcodeScanner(item)}
                             >
-                              <Feather name="maximize-2" size={18} color="#6C63FF" />
-                              <Text style={styles.scanButtonText}>扫码 / Scan</Text>
+                              <Feather name="maximize-2" size={14} color="#FFFFFF" />
+                              <Text style={styles.barcodeScanButtonText}>扫码</Text>
                             </TouchableOpacity>
                           )}
                         </View>
@@ -2949,11 +2949,11 @@ export default function InspectionDetailScreen() {
                         )}
                         {/* 扫码按钮 - 在导入后面 */}
                         <TouchableOpacity
-                          style={[styles.actionButton, { backgroundColor: '#6C63FF' }]}
+                          style={[styles.barcodeScanButton]}
                           onPress={() => openBarcodeScanner(item)}
                         >
                           <Feather name="maximize-2" size={14} color="#FFFFFF" />
-                          <Text style={[styles.photoButtonText, { color: '#FFFFFF' }]}>扫码</Text>
+                          <Text style={styles.barcodeScanButtonText}>扫码</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -4255,6 +4255,25 @@ const styles = StyleSheet.create({
   },
   photoButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    flexShrink: 1,
+  },
+  barcodeScanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 4,
+    backgroundColor: '#6C63FF',
+    flexShrink: 1,
+    minWidth: 0,
+    minHeight: 36,
+  },
+  barcodeScanButtonText: {
+    fontSize: 13,
     fontWeight: '600',
     color: '#FFFFFF',
     flexShrink: 1,
