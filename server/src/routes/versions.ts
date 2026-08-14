@@ -4,7 +4,7 @@ const router = express.Router();
 
 // 版本信息存储（实际项目中应该从数据库或配置文件读取）
 const VERSION_INFO = {
-  latestVersion: '1.0.3',
+  latestVersion: '1.1.0',
   minVersion: '1.0.0',
   updateUrl: 'https://github.com/chinaferts/ferts/releases/download/v1.0.3/app-release.apk', // APK 下载链接
   releaseNotes: '修复条码扫描照片显示问题，添加删除条码扫描子项功能，优化版本更新体验',
