@@ -6,7 +6,7 @@ const router = express.Router();
 const VERSION_INFO = {
   latestVersion: '1.2.0',
   minVersion: '1.0.0',
-  updateUrl: 'https://github.com/chinaferts/ferts/releases/download/v1.0.3/app-release.apk', // APK 下载链接
+  updateUrl: 'https://github.com/chinaferts/ferts/releases/download/v1.2.0/app-release.apk', // APK 下载链接
   releaseNotes: '修复条码扫描照片显示问题，添加删除条码扫描子项功能，优化版本更新体验',
   forceUpdate: false,
 };
