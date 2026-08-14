@@ -21,8 +21,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install pnpm
-        run: npm install -g pnpm@9.0.0
+      - name: Install pnpm and add to PATH
+        run: |
+          npm install -g pnpm@9.0.0
+          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
+
+      - name: Verify pnpm
+        run: pnpm --version
 
       - name: Setup Java
         uses: actions/setup-java@v4
