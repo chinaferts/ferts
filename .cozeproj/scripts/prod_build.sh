@@ -90,8 +90,8 @@ info "开始执行：npx expo export (client)"
 info "==================== 客户端打包完成！===================="
 
 info "==================== dist打包 ===================="
-info "开始执行：pnpm run build (server)"
-(pushd "$ROOT_DIR/server" > /dev/null && pnpm run build; popd > /dev/null) || error "dist打包失败"
+info "开始执行：NODE_ENV=production pnpm run build (server)"
+(pushd "$ROOT_DIR/server" > /dev/null && NODE_ENV=production pnpm run build; popd > /dev/null) || error "dist打包失败"
 info "==================== dist打包完成！====================\n"
 
 info "下一步：执行 ./prod_run.sh 启动服务"
