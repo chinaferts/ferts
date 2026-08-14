@@ -58,22 +58,25 @@ if [ ! -d "$ROOT_DIR/client/dist" ]; then
 fi
 info "客户端构建检查完成"
 
-# ============== 构建服务端代码 ======================
-info "构建服务端代码..."
-cd "$ROOT_DIR/server"
-
-NODE_ENV=production pnpm run build 2>&1 || error "服务端构建失败"
-cd "$ROOT_DIR"
-info "服务端构建完成"
-
 # ============== 启动服务 ======================
 info "开始启动服务..."
 cd /tmp/server_dist
 
-NODE_ENV=production PORT="$PORT" node index.cjs &
-sleep 3
-if pgrep -f "index.cjs" > /dev/null; then
-  info "服务启动成功！"
-else
-  error "服务启动失败"
-fi
+NODE_ENV=production PORT="$PORT" node index.cjs > /tmp/server.log 2>&1 &
+SERVER_PID=$!
+info "服务进程 PID: $SERVER_PID"
+
+# 等待服务启动，最多等待 25 秒
+for i in $(seq 1 25); do
+  if curl -s http://localhost:$PORT/api/v1/health > /dev/null 2>&1; then
+    info "服务启动成功！监听端口 $PORT"
+    break
+  fi
+  if [ $i -eq 25 ]; then
+    error "服务启动超时，最后 50 行日志：\n$(tail -n 50 /tmp/server.log)"
+  fi
+  sleep 1
+done
+
+# 保持脚本运行
+wait $SERVER_PID
