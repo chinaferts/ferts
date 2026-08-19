@@ -22,10 +22,14 @@ const VERSION_INFO = {
   releaseNotes: '自动版本号管理，每次部署自动增加 0.1',
   forceUpdate: false,
   apkKey: '', // 对象存储中的 APK key
+  githubMirrorUrl: '', // GitHub 镜像下载链接（备选）
 };
 
 // 启动时生成下载链接
 async function initDownloadUrl() {
+  // 设置 GitHub 镜像下载链接作为备选
+  VERSION_INFO.githubMirrorUrl = `https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`;
+
   if (VERSION_INFO.apkKey) {
     try {
       VERSION_INFO.updateUrl = await storage.generatePresignedUrl({
@@ -35,11 +39,18 @@ async function initDownloadUrl() {
       console.log('[Version] 下载链接已生成');
     } catch (error) {
       console.error('[Version] 生成下载链接失败:', error);
+      // 使用镜像链接作为备选
+      VERSION_INFO.updateUrl = VERSION_INFO.githubMirrorUrl;
     }
   } else {
     // 如果没有 APK key，尝试从 GitHub Release 下载
     console.log('[Version] 未找到 APK key，尝试从 GitHub Release 同步...');
     await syncFromGitHubRelease();
+    // 如果同步后仍没有对象存储链接，使用镜像链接
+    if (!VERSION_INFO.updateUrl) {
+      VERSION_INFO.updateUrl = VERSION_INFO.githubMirrorUrl;
+      console.log('[Version] 使用 GitHub 镜像下载链接');
+    }
   }
 }
 
@@ -214,11 +225,18 @@ router.get('/check', (req, res) => {
   const needUpdate = compareVersions(currentVersion, VERSION_INFO.latestVersion) < 0;
   const forceUpdate = needUpdate && compareVersions(currentVersion, VERSION_INFO.minVersion) < 0;
 
+  // 确保 updateUrl 不为空
+  let updateUrl = VERSION_INFO.updateUrl;
+  if (!updateUrl) {
+    // 使用 GitHub 镜像链接作为备选
+    updateUrl = `https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`;
+  }
+
   res.json({
     needUpdate,
     forceUpdate,
     latestVersion: VERSION_INFO.latestVersion,
-    updateUrl: VERSION_INFO.updateUrl,
+    updateUrl,
     releaseNotes: VERSION_INFO.releaseNotes,
   });
 });
