@@ -61,8 +61,8 @@ async function syncFromGitHubRelease() {
   try {
     const version = VERSION_INFO.latestVersion;
     const githubUrl = `https://github.com/chinaferts/ferts/releases/download/v${version}/app-release.apk`;
-    // 使用 GitHub 镜像加速
-    const mirrorUrl = `https://ghproxy.com/${githubUrl}`;
+    // 使用 GitHub 镜像加速（使用多个镜像源）
+    const mirrorUrl = `https://mirror.ghproxy.com/${githubUrl}`;
     
     console.log('[Version] 从 GitHub 镜像下载 APK:', mirrorUrl);
     
@@ -232,12 +232,13 @@ router.get('/check', (req, res) => {
   const backupUrls: string[] = [];
   
   if (!updateUrl) {
-    // 使用 GitHub 镜像链接作为备选
-    updateUrl = `https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`;
+    // 使用 GitHub 镜像链接作为备选（使用多个镜像源）
+    updateUrl = `https://mirror.ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`;
   }
   
-  // 添加备用下载链接
-  backupUrls.push(`https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`);
+  // 添加备用下载链接（多个镜像源）
+  backupUrls.push(`https://mirror.ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`);
+  backupUrls.push(`https://gh-proxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`);
   backupUrls.push(`https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`);
 
   res.json({
