@@ -47,14 +47,14 @@ export function useAppUpdate(): UseAppUpdateReturn {
       
       // 调用版本检查 API
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/versions/check?currentVersion=${version}`
+        `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/versions/latest`
       );
       
       if (!response.ok) return;
       
-      const data: VersionCheckResult = await response.json();
+      const data = await response.json();
       
-      if (data.needUpdate) {
+      if (data.latestVersion && data.latestVersion !== version) {
         // 强制检查时，忽略用户的忽略状态
         if (!force) {
           // 检查用户是否已经忽略过这个版本
@@ -68,11 +68,10 @@ export function useAppUpdate(): UseAppUpdateReturn {
         
         setCurrentVersion(version);
         setNewVersion(data.latestVersion);
-        // 使用主下载链接，如果不可用则使用备用链接
         setUpdateUrl(data.updateUrl || '');
-        setBackupUrls(data.backupUrls || []);
-        setReleaseNotes(data.releaseNotes);
-        setForceUpdate(data.forceUpdate);
+        setBackupUrls([]);
+        setReleaseNotes(data.releaseNotes || '');
+        setForceUpdate(data.forceUpdate || false);
         setHasUpdate(true);
       }
     } catch (error) {
