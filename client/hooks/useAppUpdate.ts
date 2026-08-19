@@ -11,6 +11,7 @@ interface VersionCheckResult {
   forceUpdate: boolean;
   latestVersion: string;
   updateUrl: string;
+  backupUrls: string[];
   releaseNotes: string;
 }
 
@@ -20,6 +21,7 @@ interface UseAppUpdateReturn {
   currentVersion: string;
   newVersion: string;
   updateUrl: string;
+  backupUrls: string[];
   releaseNotes: string;
   checkUpdate: () => Promise<void>;
   dismissUpdate: () => Promise<void>;
@@ -36,6 +38,7 @@ export function useAppUpdate(): UseAppUpdateReturn {
   const [currentVersion, setCurrentVersion] = useState(getCurrentVersion());
   const [newVersion, setNewVersion] = useState('');
   const [updateUrl, setUpdateUrl] = useState('');
+  const [backupUrls, setBackupUrls] = useState<string[]>([]);
   const [releaseNotes, setReleaseNotes] = useState('');
 
   const checkUpdate = useCallback(async (force = false) => {
@@ -65,12 +68,9 @@ export function useAppUpdate(): UseAppUpdateReturn {
         
         setCurrentVersion(version);
         setNewVersion(data.latestVersion);
-        // 如果有对象存储链接，使用对象存储；否则使用 GitHub 镜像加速
-        let downloadUrl = data.updateUrl;
-        if (!downloadUrl || downloadUrl.includes('github.com')) {
-          downloadUrl = `https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${data.latestVersion}/app-release.apk`;
-        }
-        setUpdateUrl(downloadUrl);
+        // 使用主下载链接，如果不可用则使用备用链接
+        setUpdateUrl(data.updateUrl || '');
+        setBackupUrls(data.backupUrls || []);
         setReleaseNotes(data.releaseNotes);
         setForceUpdate(data.forceUpdate);
         setHasUpdate(true);
@@ -104,6 +104,7 @@ export function useAppUpdate(): UseAppUpdateReturn {
     currentVersion,
     newVersion,
     updateUrl,
+    backupUrls,
     releaseNotes,
     checkUpdate,
     dismissUpdate,

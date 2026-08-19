@@ -4,7 +4,7 @@ import { useAppUpdate } from '@/hooks/useAppUpdate';
 import { FontAwesome6 } from '@expo/vector-icons';
 
 export function UpdatePrompt() {
-  const { hasUpdate, forceUpdate, currentVersion, newVersion, updateUrl, releaseNotes, dismissUpdate } = useAppUpdate();
+  const { hasUpdate, forceUpdate, currentVersion, newVersion, updateUrl, backupUrls, releaseNotes, dismissUpdate } = useAppUpdate();
 
   const handleUpdate = async () => {
     // 关闭提示
@@ -13,6 +13,9 @@ export function UpdatePrompt() {
     // 如果有下载链接，打开链接下载 APK
     if (updateUrl) {
       Linking.openURL(updateUrl);
+    } else if (backupUrls && backupUrls.length > 0) {
+      // 尝试备用链接
+      Linking.openURL(backupUrls[0]);
     } else {
       // 如果是 web 平台，刷新页面
       if (Platform.OS === 'web') {
@@ -62,7 +65,7 @@ export function UpdatePrompt() {
             activeOpacity={0.8}
           >
             <Text style={styles.buttonText}>
-              {updateUrl ? '立即下载' : '立即刷新'}
+              {(updateUrl || (backupUrls && backupUrls.length > 0)) ? '立即下载' : '立即刷新'}
             </Text>
           </TouchableOpacity>
           

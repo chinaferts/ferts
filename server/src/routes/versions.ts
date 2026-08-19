@@ -16,7 +16,7 @@ const storage = new S3Storage({
 
 // 版本信息存储（实际项目中应该从数据库或配置文件读取）
 const VERSION_INFO = {
-  latestVersion: '1.3.0',
+  latestVersion: '1.4.0',
   minVersion: '1.0.0',
   updateUrl: '', // 下载链接（优先使用镜像）
   releaseNotes: '自动版本号管理，每次部署自动增加 0.1',
@@ -27,9 +27,17 @@ const VERSION_INFO = {
 
 // 启动时生成下载链接
 async function initDownloadUrl() {
-  // 优先使用 GitHub 镜像下载链接（国内速度快）
-  VERSION_INFO.githubMirrorUrl = `https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`;
+  // 使用多个镜像源，优先使用可用的镜像
+  const mirrors = [
+    `https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`,
+    `https://mirror.ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`,
+    `https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`,
+  ];
+  
+  // 默认使用第一个镜像，如果失败会自动切换
+  VERSION_INFO.githubMirrorUrl = mirrors[0];
   VERSION_INFO.updateUrl = VERSION_INFO.githubMirrorUrl;
+  VERSION_INFO.backupUrls = mirrors.slice(1); // 备用链接
 
   // 如果配置了对象存储，尝试生成签名链接（作为备选）
   if (VERSION_INFO.apkKey) {
@@ -219,18 +227,25 @@ router.get('/check', (req, res) => {
   const needUpdate = compareVersions(currentVersion, VERSION_INFO.latestVersion) < 0;
   const forceUpdate = needUpdate && compareVersions(currentVersion, VERSION_INFO.minVersion) < 0;
 
-  // 确保 updateUrl 不为空
+  // 确保 updateUrl 不为空，提供多个下载源
   let updateUrl = VERSION_INFO.updateUrl;
+  const backupUrls: string[] = [];
+  
   if (!updateUrl) {
     // 使用 GitHub 镜像链接作为备选
     updateUrl = `https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`;
   }
+  
+  // 添加备用下载链接
+  backupUrls.push(`https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`);
+  backupUrls.push(`https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`);
 
   res.json({
     needUpdate,
     forceUpdate,
     latestVersion: VERSION_INFO.latestVersion,
     updateUrl,
+    backupUrls,
     releaseNotes: VERSION_INFO.releaseNotes,
   });
 });
