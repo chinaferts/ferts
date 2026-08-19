@@ -39,6 +39,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Auto bump version
+        run: |
+          chmod +x scripts/bump-version.sh
+          bash scripts/bump-version.sh
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add client/app.config.ts package.json server/src/routes/versions.ts
+          git commit -m "chore: 自动更新版本号到 $(node -p "require('./package.json').version")" || echo "No version bump needed"
+          git pull --rebase origin main
+          git push origin main
+
       - name: Get version from package.json
         id: get_version
         run: |
