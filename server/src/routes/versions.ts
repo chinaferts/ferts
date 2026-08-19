@@ -43,17 +43,21 @@ async function initDownloadUrl() {
   }
 }
 
-// 从 GitHub Release 同步 APK
+// 从 GitHub Release 同步 APK（带超时）
 async function syncFromGitHubRelease() {
   try {
-    const { execSync } = await import('child_process');
     const version = VERSION_INFO.latestVersion;
     const githubUrl = `https://github.com/chinaferts/ferts/releases/download/v${version}/app-release.apk`;
     
     console.log('[Version] 从 GitHub 下载 APK:', githubUrl);
     
-    // 下载 APK
-    const response = await fetch(githubUrl);
+    // 下载 APK（带超时）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 秒超时
+    
+    const response = await fetch(githubUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
       console.error('[Version] GitHub APK 下载失败:', response.status);
       return;
@@ -78,13 +82,17 @@ async function syncFromGitHubRelease() {
     VERSION_INFO.updateUrl = downloadUrl;
     
     console.log('[Version] APK 同步成功，key:', key);
-  } catch (error) {
-    console.error('[Version] APK 同步失败:', error);
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.error('[Version] GitHub APK 下载超时，请手动上传 APK');
+    } else {
+      console.error('[Version] APK 同步失败:', error);
+    }
   }
 }
 
-// 如果已有 APK key，初始化下载链接
-initDownloadUrl();
+// 如果已有 APK key，初始化下载链接（异步执行，不阻塞服务启动）
+initDownloadUrl().catch(err => console.error('[Version] 初始化失败:', err));
 
 /**
  * 获取最新版本信息
