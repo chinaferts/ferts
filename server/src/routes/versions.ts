@@ -48,18 +48,46 @@ async function syncFromGitHubRelease() {
   try {
     const version = VERSION_INFO.latestVersion;
     const githubUrl = `https://github.com/chinaferts/ferts/releases/download/v${version}/app-release.apk`;
+    // 使用 GitHub 镜像加速
+    const mirrorUrl = `https://ghproxy.com/${githubUrl}`;
     
-    console.log('[Version] 从 GitHub 下载 APK:', githubUrl);
+    console.log('[Version] 从 GitHub 镜像下载 APK:', mirrorUrl);
     
     // 下载 APK（带超时）
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 秒超时
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 秒超时
     
-    const response = await fetch(githubUrl, { signal: controller.signal });
+    const response = await fetch(mirrorUrl, { signal: controller.signal });
     clearTimeout(timeoutId);
     
     if (!response.ok) {
-      console.error('[Version] GitHub APK 下载失败:', response.status);
+      console.error('[Version] GitHub 镜像 APK 下载失败:', response.status, '尝试直接下载...');
+      // 镜像失败，尝试直接下载
+      const directController = new AbortController();
+      const directTimeoutId = setTimeout(() => directController.abort(), 120000); // 120 秒超时
+      const directResponse = await fetch(githubUrl, { signal: directController.signal });
+      clearTimeout(directTimeoutId);
+      
+      if (!directResponse.ok) {
+        console.error('[Version] GitHub 直接下载也失败:', directResponse.status);
+        return;
+      }
+      
+      const buffer = Buffer.from(await directResponse.arrayBuffer());
+      const key = await storage.uploadFile({
+        fileContent: buffer,
+        fileName: 'app-release.apk',
+        contentType: 'application/vnd.android.package-archive',
+      });
+      
+      const downloadUrl = await storage.generatePresignedUrl({
+        key,
+        expireTime: 31536000,
+      });
+      
+      VERSION_INFO.apkKey = key;
+      VERSION_INFO.updateUrl = downloadUrl;
+      console.log('[Version] APK 同步成功（直接下载），key:', key);
       return;
     }
     
@@ -81,7 +109,7 @@ async function syncFromGitHubRelease() {
     VERSION_INFO.apkKey = key;
     VERSION_INFO.updateUrl = downloadUrl;
     
-    console.log('[Version] APK 同步成功，key:', key);
+    console.log('[Version] APK 同步成功（镜像下载），key:', key);
   } catch (error: any) {
     if (error.name === 'AbortError') {
       console.error('[Version] GitHub APK 下载超时，请手动上传 APK');

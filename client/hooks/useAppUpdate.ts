@@ -65,7 +65,12 @@ export function useAppUpdate(): UseAppUpdateReturn {
         
         setCurrentVersion(version);
         setNewVersion(data.latestVersion);
-        setUpdateUrl(data.updateUrl);
+        // 如果有对象存储链接，使用对象存储；否则使用 GitHub 镜像加速
+        let downloadUrl = data.updateUrl;
+        if (!downloadUrl || downloadUrl.includes('github.com')) {
+          downloadUrl = `https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${data.latestVersion}/app-release.apk`;
+        }
+        setUpdateUrl(downloadUrl);
         setReleaseNotes(data.releaseNotes);
         setForceUpdate(data.forceUpdate);
         setHasUpdate(true);
