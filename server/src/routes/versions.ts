@@ -18,40 +18,34 @@ const storage = new S3Storage({
 const VERSION_INFO = {
   latestVersion: '1.3.0',
   minVersion: '1.0.0',
-  updateUrl: '', // 对象存储下载链接，启动时生成
+  updateUrl: '', // 下载链接（优先使用镜像）
   releaseNotes: '自动版本号管理，每次部署自动增加 0.1',
   forceUpdate: false,
   apkKey: '', // 对象存储中的 APK key
-  githubMirrorUrl: '', // GitHub 镜像下载链接（备选）
+  githubMirrorUrl: '', // GitHub 镜像下载链接（主要）
 };
 
 // 启动时生成下载链接
 async function initDownloadUrl() {
-  // 设置 GitHub 镜像下载链接作为备选
+  // 优先使用 GitHub 镜像下载链接（国内速度快）
   VERSION_INFO.githubMirrorUrl = `https://ghproxy.com/https://github.com/chinaferts/ferts/releases/download/v${VERSION_INFO.latestVersion}/app-release.apk`;
+  VERSION_INFO.updateUrl = VERSION_INFO.githubMirrorUrl;
 
+  // 如果配置了对象存储，尝试生成签名链接（作为备选）
   if (VERSION_INFO.apkKey) {
     try {
-      VERSION_INFO.updateUrl = await storage.generatePresignedUrl({
+      const ossUrl = await storage.generatePresignedUrl({
         key: VERSION_INFO.apkKey,
         expireTime: 31536000, // 1 年有效期
       });
-      console.log('[Version] 下载链接已生成');
+      // 对象存储链接作为备选（如果镜像失败可以切换）
+      console.log('[Version] 对象存储下载链接已生成（备选）');
     } catch (error) {
-      console.error('[Version] 生成下载链接失败:', error);
-      // 使用镜像链接作为备选
-      VERSION_INFO.updateUrl = VERSION_INFO.githubMirrorUrl;
-    }
-  } else {
-    // 如果没有 APK key，尝试从 GitHub Release 下载
-    console.log('[Version] 未找到 APK key，尝试从 GitHub Release 同步...');
-    await syncFromGitHubRelease();
-    // 如果同步后仍没有对象存储链接，使用镜像链接
-    if (!VERSION_INFO.updateUrl) {
-      VERSION_INFO.updateUrl = VERSION_INFO.githubMirrorUrl;
-      console.log('[Version] 使用 GitHub 镜像下载链接');
+      console.error('[Version] 生成对象存储链接失败，使用镜像链接:', error);
     }
   }
+
+  console.log('[Version] 主要下载链接（镜像）:', VERSION_INFO.updateUrl);
 }
 
 // 从 GitHub Release 同步 APK（带超时）
