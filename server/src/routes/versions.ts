@@ -1,15 +1,90 @@
 import express from 'express';
+import multer from 'multer';
+import { S3Storage } from 'coze-coding-dev-sdk';
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
+
+// 初始化对象存储
+const storage = new S3Storage({
+  endpointUrl: process.env.COZE_BUCKET_ENDPOINT_URL,
+  accessKey: '',
+  secretKey: '',
+  bucketName: process.env.COZE_BUCKET_NAME,
+  region: 'cn-beijing',
+});
 
 // 版本信息存储（实际项目中应该从数据库或配置文件读取）
 const VERSION_INFO = {
   latestVersion: '1.3.0',
   minVersion: '1.0.0',
-  updateUrl: 'https://github.com/chinaferts/ferts/releases/download/v1.3.0/app-release.apk', // APK 下载链接
+  updateUrl: '', // 对象存储下载链接，启动时生成
   releaseNotes: '自动版本号管理，每次部署自动增加 0.1',
   forceUpdate: false,
+  apkKey: '', // 对象存储中的 APK key
 };
+
+// 启动时生成下载链接
+async function initDownloadUrl() {
+  if (VERSION_INFO.apkKey) {
+    try {
+      VERSION_INFO.updateUrl = await storage.generatePresignedUrl({
+        key: VERSION_INFO.apkKey,
+        expireTime: 31536000, // 1 年有效期
+      });
+      console.log('[Version] 下载链接已生成');
+    } catch (error) {
+      console.error('[Version] 生成下载链接失败:', error);
+    }
+  } else {
+    // 如果没有 APK key，尝试从 GitHub Release 下载
+    console.log('[Version] 未找到 APK key，尝试从 GitHub Release 同步...');
+    await syncFromGitHubRelease();
+  }
+}
+
+// 从 GitHub Release 同步 APK
+async function syncFromGitHubRelease() {
+  try {
+    const { execSync } = await import('child_process');
+    const version = VERSION_INFO.latestVersion;
+    const githubUrl = `https://github.com/chinaferts/ferts/releases/download/v${version}/app-release.apk`;
+    
+    console.log('[Version] 从 GitHub 下载 APK:', githubUrl);
+    
+    // 下载 APK
+    const response = await fetch(githubUrl);
+    if (!response.ok) {
+      console.error('[Version] GitHub APK 下载失败:', response.status);
+      return;
+    }
+    
+    const buffer = Buffer.from(await response.arrayBuffer());
+    
+    // 上传到对象存储
+    const key = await storage.uploadFile({
+      fileContent: buffer,
+      fileName: 'app-release.apk',
+      contentType: 'application/vnd.android.package-archive',
+    });
+    
+    // 生成下载链接
+    const downloadUrl = await storage.generatePresignedUrl({
+      key,
+      expireTime: 31536000, // 1 年有效期
+    });
+    
+    VERSION_INFO.apkKey = key;
+    VERSION_INFO.updateUrl = downloadUrl;
+    
+    console.log('[Version] APK 同步成功，key:', key);
+  } catch (error) {
+    console.error('[Version] APK 同步失败:', error);
+  }
+}
+
+// 如果已有 APK key，初始化下载链接
+initDownloadUrl();
 
 /**
  * 获取最新版本信息
@@ -18,6 +93,72 @@ const VERSION_INFO = {
  */
 router.get('/latest', (req, res) => {
   res.json(VERSION_INFO);
+});
+
+/**
+ * 上传 APK 文件
+ * POST /api/v1/versions/upload-apk
+ * Body: FormData with 'apk' file field
+ * 响应：{ success, downloadUrl }
+ */
+router.post('/upload-apk', upload.single('apk'), async (req, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: '请上传 APK 文件' });
+      return;
+    }
+
+    const fileName = `app-release.apk`;
+    const key = await storage.uploadFile({
+      fileContent: req.file.buffer,
+      fileName,
+      contentType: 'application/vnd.android.package-archive',
+    });
+
+    // 生成下载链接
+    const downloadUrl = await storage.generatePresignedUrl({
+      key,
+      expireTime: 31536000, // 1 年有效期
+    });
+
+    // 更新版本信息
+    VERSION_INFO.apkKey = key;
+    VERSION_INFO.updateUrl = downloadUrl;
+
+    console.log('[Version] APK 上传成功，key:', key);
+
+    res.json({
+      success: true,
+      downloadUrl,
+      key,
+    });
+  } catch (error) {
+    console.error('[Version] APK 上传失败:', error);
+    res.status(500).json({ error: '上传失败' });
+  }
+});
+
+/**
+ * 手动同步 APK（从 GitHub Release 下载并上传到对象存储）
+ * POST /api/v1/versions/sync-apk
+ * 响应：{ success, downloadUrl }
+ */
+router.post('/sync-apk', async (req, res) => {
+  try {
+    await syncFromGitHubRelease();
+    
+    if (VERSION_INFO.updateUrl) {
+      res.json({
+        success: true,
+        downloadUrl: VERSION_INFO.updateUrl,
+      });
+    } else {
+      res.status(500).json({ error: '同步失败，未生成下载链接' });
+    }
+  } catch (error) {
+    console.error('[Version] 手动同步失败:', error);
+    res.status(500).json({ error: '同步失败' });
+  }
 });
 
 /**

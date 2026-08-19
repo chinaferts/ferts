@@ -31,7 +31,7 @@ echo "✅ 已更新 package.json"
 
 # 更新 server/src/routes/versions.ts 中的版本号
 if [ -f "server/src/routes/versions.ts" ]; then
-  sed -i "s/version: '$CURRENT_VERSION'/version: '$NEW_VERSION'/" server/src/routes/versions.ts
+  sed -i "s/latestVersion: '$CURRENT_VERSION'/latestVersion: '$NEW_VERSION'/" server/src/routes/versions.ts
   echo "✅ 已更新 server/src/routes/versions.ts"
 fi
 
