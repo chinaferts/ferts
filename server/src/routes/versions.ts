@@ -8,7 +8,7 @@ const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/lat
 
 // 版本信息存储 - updateUrl 由 GitHub Release 动态获取
 const VERSION_INFO = {
-  latestVersion: '1.10.0',
+  latestVersion: '1.11.0',
   minVersion: '1.0.0',
   releaseNotes: '自动版本号管理，每次部署自动增加 0.1',
   forceUpdate: false,
