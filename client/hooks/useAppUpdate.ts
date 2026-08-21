@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { getApiBaseUrl } from '@/utils/api';
 
 const VERSION_STORAGE_KEY = 'last_known_version';
 const DISMISSED_VERSION_KEY = 'dismissed_version';
@@ -46,8 +47,11 @@ export function useAppUpdate(): UseAppUpdateReturn {
       const version = getCurrentVersion();
       
       // 调用版本检查 API
+      // 服务端文件：server/src/routes/versions.ts
+      // 接口：GET /api/v1/versions/latest
+      const baseUrl = getApiBaseUrl();
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/versions/latest`
+        `${baseUrl}/api/v1/versions/latest`
       );
       
       if (!response.ok) return;

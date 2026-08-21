@@ -5,8 +5,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCSSVariable } from 'uniwind';
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
+import { getApiBaseUrl } from '@/utils/api';
 
-const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+const API_BASE_URL = getApiBaseUrl();
 
 export default function SettingsScreen() {
   const { t } = useLanguage();
@@ -35,7 +36,7 @@ export default function SettingsScreen() {
           onPress: async () => {
             setLoadingRecords(true);
             try {
-              const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/admin/cleanup-records`, {
+              const res = await fetch(`${API_BASE_URL}/api/v1/inspections/admin/cleanup-records`, {
                 method: 'DELETE',
                 headers: {
                   'Content-Type': 'application/json',
@@ -71,7 +72,7 @@ export default function SettingsScreen() {
           onPress: async () => {
             setLoadingPhotos(true);
             try {
-              const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/inspections/admin/cleanup-photos`, {
+              const res = await fetch(`${API_BASE_URL}/api/v1/inspections/admin/cleanup-photos`, {
                 method: 'DELETE',
                 headers: {
                   'Content-Type': 'application/json',
