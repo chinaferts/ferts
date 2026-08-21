@@ -61,6 +61,9 @@ jobs:
         env:
           EXPO_PUBLIC_BACKEND_BASE_URL: https://6458c7a8-0b18-46c1-a294-8cd82523b342.dev.coze.site
         run: |
+          # 写入 .env 文件确保 Expo 构建时能正确读取后端地址
+          echo "EXPO_PUBLIC_BACKEND_BASE_URL=https://6458c7a8-0b18-46c1-a294-8cd82523b342.dev.coze.site" > client/.env
+          cat client/.env
           cd client
           npx expo prebuild --platform android --no-install
           cd android
