@@ -46,30 +46,39 @@ router.get('/latest', async (req, res) => {
       );
       
       if (apkAsset) {
+        // 使用 GitHub 镜像加速下载（国内访问 GitHub 可能被拦截）
+        const mirrorUrl = `https://ghfast.top/${apkAsset.browser_download_url}`;
+        const directUrl = apkAsset.browser_download_url;
+        
         return res.json({
           latestVersion: githubVersion,
           minVersion: VERSION_INFO.minVersion,
-          updateUrl: apkAsset.browser_download_url,
+          updateUrl: mirrorUrl,
+          backupUrls: [directUrl],
           releaseNotes: release.tag_name,
           forceUpdate: VERSION_INFO.forceUpdate,
         });
       }
     }
     
-    // GitHub API 失败时，使用本地配置兜底
+    // GitHub API 失败时，使用本地配置兜底（使用镜像加速）
+    const fallbackDirectUrl = `https://github.com/${GITHUB_REPO}/releases/latest/download/app-release.apk`;
     res.json({
       latestVersion: VERSION_INFO.latestVersion,
       minVersion: VERSION_INFO.minVersion,
-      updateUrl: `https://github.com/${GITHUB_REPO}/releases/latest/download/app-release.apk`,
+      updateUrl: `https://ghfast.top/${fallbackDirectUrl}`,
+      backupUrls: [fallbackDirectUrl],
       releaseNotes: VERSION_INFO.releaseNotes,
       forceUpdate: VERSION_INFO.forceUpdate,
     });
   } catch (error) {
-    // 网络错误时，使用本地配置兜底
+    // 网络错误时，使用本地配置兜底（使用镜像加速）
+    const fallbackDirectUrl = `https://github.com/${GITHUB_REPO}/releases/latest/download/app-release.apk`;
     res.json({
       latestVersion: VERSION_INFO.latestVersion,
       minVersion: VERSION_INFO.minVersion,
-      updateUrl: `https://github.com/${GITHUB_REPO}/releases/latest/download/app-release.apk`,
+      updateUrl: `https://ghfast.top/${fallbackDirectUrl}`,
+      backupUrls: [fallbackDirectUrl],
       releaseNotes: VERSION_INFO.releaseNotes,
       forceUpdate: VERSION_INFO.forceUpdate,
     });

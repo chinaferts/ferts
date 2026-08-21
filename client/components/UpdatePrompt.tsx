@@ -10,19 +10,38 @@ export function UpdatePrompt() {
     // 关闭提示
     await dismissUpdate();
     
-    // 如果有下载链接，打开链接下载 APK
+    // 生成镜像下载链接（国内加速）
+    const getMirrorUrls = (githubUrl: string): string[] => {
+      if (!githubUrl || !githubUrl.includes('github.com')) return [githubUrl];
+      return [
+        `https://ghfast.top/${githubUrl}`,
+        `https://gh-proxy.com/${githubUrl}`,
+        `https://mirror.ghproxy.com/${githubUrl.replace('https://', '')}`,
+        githubUrl, // 原始链接作为最后兜底
+      ];
+    };
+
+    // 尝试下载链接（优先镜像）
+    const tryDownload = async (urls: string[]) => {
+      for (const url of urls) {
+        try {
+          await Linking.openURL(url);
+          return;
+        } catch {
+          continue;
+        }
+      }
+    };
+
     if (updateUrl) {
-      Linking.openURL(updateUrl);
+      await tryDownload(getMirrorUrls(updateUrl));
     } else if (backupUrls && backupUrls.length > 0) {
-      // 尝试备用链接
-      Linking.openURL(backupUrls[0]);
+      await tryDownload(getMirrorUrls(backupUrls[0]));
     } else {
       // 如果是 web 平台，刷新页面
       if (Platform.OS === 'web') {
         window.location.reload();
       }
-      // 如果是原生平台，提示用户重新打开应用
-      // 在实际应用中，这里可以集成 CodePush 或其他热更新方案
     }
   };
 
