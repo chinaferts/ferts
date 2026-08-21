@@ -4,40 +4,20 @@ import { useAppUpdate } from '@/hooks/useAppUpdate';
 import { FontAwesome6 } from '@expo/vector-icons';
 
 export function UpdatePrompt() {
-  const { hasUpdate, forceUpdate, currentVersion, newVersion, updateUrl, backupUrls, releaseNotes, dismissUpdate } = useAppUpdate();
+  const { hasUpdate, forceUpdate, currentVersion, newVersion, updateUrl, releaseNotes, dismissUpdate } = useAppUpdate();
 
   const handleUpdate = async () => {
     // 关闭提示
     await dismissUpdate();
     
-    // 生成镜像下载链接（国内加速）
-    const getMirrorUrls = (githubUrl: string): string[] => {
-      if (!githubUrl || !githubUrl.includes('github.com')) return [githubUrl];
-      return [
-        `https://ghfast.top/${githubUrl}`,
-        `https://gh-proxy.com/${githubUrl}`,
-        `https://mirror.ghproxy.com/${githubUrl.replace('https://', '')}`,
-        githubUrl, // 原始链接作为最后兜底
-      ];
-    };
-
-    // 尝试下载链接（优先镜像）
-    const tryDownload = async (urls: string[]) => {
-      for (const url of urls) {
-        try {
-          await Linking.openURL(url);
-          return;
-        } catch {
-          continue;
-        }
-      }
-    };
-
     if (updateUrl) {
-      await tryDownload(getMirrorUrls(updateUrl));
-    } else if (backupUrls && backupUrls.length > 0) {
-      await tryDownload(getMirrorUrls(backupUrls[0]));
-    } else {
+      try {
+        await Linking.openURL(updateUrl);
+      } catch (err) {
+        console.error('打开下载链接失败:', err);
+        alert('打开下载链接失败，请手动访问 GitHub Releases 页面下载');
+      }
+    }
       // 如果是 web 平台，刷新页面
       if (Platform.OS === 'web') {
         window.location.reload();
