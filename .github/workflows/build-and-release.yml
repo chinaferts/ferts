@@ -58,6 +58,8 @@ jobs:
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build Android APK
+        env:
+          EXPO_PUBLIC_BACKEND_BASE_URL: https://6458c7a8-0b18-46c1-a294-8cd82523b342.dev.coze.site
         run: |
           cd client
           npx expo prebuild --platform android --no-install
