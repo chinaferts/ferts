@@ -5,8 +5,8 @@ const projectId = process.env.COZE_PROJECT_ID || process.env.EXPO_PUBLIC_COZE_PR
 const slugAppName = projectId ? `app${projectId}` : 'myapp';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
-  // 使用 COZE_PROJECT_DOMAIN_DEFAULT 作为后端 URL 的兜底值
-  const backendBaseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || process.env.COZE_PROJECT_DOMAIN_DEFAULT || '';
+  // 使用硬编码的后端 URL 作为默认值，确保 GitHub Actions 构建的 APK 也能连接后端
+  const backendBaseUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'https://6458c7a8-0b18-46c1-a294-8cd82523b342.dev.coze.site';
   
   return {
     ...config,
