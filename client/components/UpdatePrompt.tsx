@@ -18,10 +18,9 @@ export function UpdatePrompt() {
         alert('打开下载链接失败，请手动访问 GitHub Releases 页面下载');
       }
     }
-      // 如果是 web 平台，刷新页面
-      if (Platform.OS === 'web') {
-        window.location.reload();
-      }
+    // 如果是 web 平台，刷新页面
+    if (Platform.OS === 'web') {
+      window.location.reload();
     }
   };
 
